@@ -1,13 +1,19 @@
 import React from 'react';
-import { TouchableOpacity, Text, Image, StyleSheet } from 'react-native';
+import { TouchableOpacity, Image, Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts } from '../constants/Constants';
 
 const FloatingMapButton = ({ onPress }) => {
+  const insets = useSafeAreaInsets();
+
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={[
+        styles.container,
+        { bottom: insets.bottom }, // Safe area add karo
+      ]}
+      activeOpacity={0.9}
       onPress={onPress}
-      activeOpacity={0.8}
     >
       <Image
         source={require('../assets/images/icons/map.png')}
@@ -22,22 +28,18 @@ const FloatingMapButton = ({ onPress }) => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 80,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primary,
-    paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 50,
+    paddingVertical: 14,
+    borderRadius: 30,
     shadowColor: Colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 8,
   },
   icon: {
     width: 20,
@@ -46,8 +48,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   text: {
-    fontFamily: Fonts.kantumruyMedium,
-    fontSize: 14,
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 16,
     color: Colors.white,
   },
 });

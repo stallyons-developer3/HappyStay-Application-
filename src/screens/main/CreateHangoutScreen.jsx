@@ -39,7 +39,11 @@ const interestOptions = [
   { id: '8', name: 'Night Club' },
 ];
 
-const CreateHangoutScreen = ({ navigation }) => {
+const CreateHangoutScreen = ({ navigation, route }) => {
+  // Check if Edit Mode
+  const isEdit = route?.params?.isEdit || false;
+  const hangoutData = route?.params?.hangout || null;
+
   // Current Step
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -156,9 +160,9 @@ const CreateHangoutScreen = ({ navigation }) => {
     setCurrentStep(2);
   };
 
-  // Handle Create
+  // Handle Create / Update
   const handleCreate = () => {
-    const hangoutData = {
+    const hangoutFormData = {
       title,
       typology,
       ageLimit,
@@ -170,7 +174,13 @@ const CreateHangoutScreen = ({ navigation }) => {
       description,
       isPrivate,
     };
-    console.log('Hangout Created:', hangoutData);
+
+    if (isEdit) {
+      console.log('Hangout Updated:', hangoutFormData);
+    } else {
+      console.log('Hangout Created:', hangoutFormData);
+    }
+
     navigation.goBack();
   };
 
@@ -192,17 +202,15 @@ const CreateHangoutScreen = ({ navigation }) => {
     <>
       {/* Subtitle */}
       <Text style={styles.subtitle}>
-        Set up the details for your hangout and{'\n'}invite others to join
+        {isEdit
+          ? 'Update the details for your hangout'
+          : 'Set up the details for your hangout and\ninvite others to join'}
       </Text>
 
       {/* Title Input */}
       <Text style={styles.inputLabel}>Title</Text>
       <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={title}
-          onChangeText={setTitle}
-        />
+        <TextInput style={styles.input} value={title} onChangeText={setTitle} />
       </View>
 
       {/* Typology Dropdown */}
@@ -341,21 +349,21 @@ const CreateHangoutScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Create Button */}
+      {/* Create / Update Button */}
       <TouchableOpacity
         style={styles.primaryButton}
         activeOpacity={0.8}
         onPress={handleCreate}
       >
-        <Text style={styles.primaryButtonText}>Create</Text>
+        <Text style={styles.primaryButtonText}>
+          {isEdit ? 'Update' : 'Create'}
+        </Text>
       </TouchableOpacity>
     </>
   );
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -381,7 +389,9 @@ const CreateHangoutScreen = ({ navigation }) => {
               resizeMode="contain"
             />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Plan a Hangout</Text>
+          <Text style={styles.headerTitle}>
+            {isEdit ? 'Edit Hangout' : 'Plan a Hangout'}
+          </Text>
         </View>
 
         {/* Form Content */}

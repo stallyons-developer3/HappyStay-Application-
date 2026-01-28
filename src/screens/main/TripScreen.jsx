@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import { Linking } from 'react-native';
 
 // Components
 import Header from '../../components/Header';
@@ -102,8 +103,6 @@ const TripScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.primary} barStyle="light-content" />
-
       {/* Scrollable Content */}
       <ScrollView
         style={styles.scrollView}
@@ -148,7 +147,15 @@ const TripScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Floating Map Button */}
-      <FloatingMapButton onPress={() => console.log('Open Map')} />
+      <FloatingMapButton
+        onPress={() =>
+          Linking.openURL(
+            Platform.OS === 'ios'
+              ? 'maps://?q=37.7749,-122.4194'
+              : 'geo:37.7749, -122.4194?q=37.7749,-122.4194',
+          )
+        }
+      />
 
       {/* Booking Modal */}
       <Modal
@@ -257,7 +264,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 30,
     paddingBottom: 20,
   },
 
@@ -269,7 +275,7 @@ const styles = StyleSheet.create({
 
   // Bottom Spacing
   bottomSpacing: {
-    height: 100,
+    height: 0,
   },
 
   // Modal
@@ -351,9 +357,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
     width: 120,
-    display: 'flex',
-    alignItems: 'center',
-    margin: 'auto',
+    alignSelf: 'center',
   },
   bookNowText: {
     fontFamily: Fonts.poppinsBold,

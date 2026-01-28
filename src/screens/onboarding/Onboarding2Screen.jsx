@@ -62,7 +62,6 @@ const Onboarding2Screen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
 
       <Text style={styles.title}>Activity Typology</Text>
       <Text style={styles.subtitle}>

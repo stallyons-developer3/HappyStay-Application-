@@ -51,7 +51,6 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
 
       <ScrollView
         style={styles.scrollView}

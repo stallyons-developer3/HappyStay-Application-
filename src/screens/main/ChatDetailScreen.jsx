@@ -80,7 +80,6 @@ const ChatDetailScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
 
       {/* Header */}
       <View style={styles.header}>

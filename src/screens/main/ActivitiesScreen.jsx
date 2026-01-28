@@ -7,6 +7,8 @@ import Header from '../../components/Header';
 import SearchBar from '../../components/SearchBar';
 import ActivityCard from '../../components/ActivityCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
+import { Linking, Platform } from 'react-native';
+
 
 // Dummy Data
 const activitiesData = [
@@ -122,7 +124,7 @@ const ActivitiesScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Floating Map Button */}
-      <FloatingMapButton onPress={() => console.log('Map pressed')} />
+      <FloatingMapButton onPress={() => Linking.openURL(Platform.OS === 'ios' ? 'maps://?q=37.7749,-122.4194' : 'geo:37.7749, -122.4194?q=37.7749,-122.4194')}  />
     </View>
   );
 };
@@ -142,7 +144,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
   bottomSpacing: {
-    height: 100,
+    height: 0,
   },
 });
 

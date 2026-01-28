@@ -15,11 +15,6 @@ const { width, height } = Dimensions.get('window');
 const WelcomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      <StatusBar
-        translucent
-        backgroundColor={Colors.transparent}
-        barStyle="light-content"
-      />
 
       {/* Background Image */}
       <View style={styles.imageContainer}>

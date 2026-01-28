@@ -56,7 +56,6 @@ const ChatScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -145,7 +144,7 @@ const styles = StyleSheet.create({
 
   // Bottom Spacing
   bottomSpacing: {
-    height: 80,
+    height: 20,
   },
 });
 

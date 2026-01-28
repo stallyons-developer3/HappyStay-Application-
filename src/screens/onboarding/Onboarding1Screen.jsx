@@ -86,7 +86,6 @@ const Onboarding1Screen = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

@@ -64,7 +64,6 @@ const Onboarding3Screen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
 
       <Text style={styles.title}>What describe better your trips?</Text>
       <Text style={styles.subtitle}>

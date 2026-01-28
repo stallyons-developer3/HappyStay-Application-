@@ -22,7 +22,6 @@ const Header = ({
 }) => {
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.primary} barStyle="light-content" />
 
       {/* Top Row - Profile, Title, Notification */}
       <View style={styles.topRow}>

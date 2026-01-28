@@ -20,8 +20,6 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
-
       {/* Back Arrow */}
       <TouchableOpacity
         style={styles.backButton}
@@ -81,7 +79,10 @@ const LoginScreen = ({ navigation }) => {
       </View>
 
       {/* Forgot Password */}
-      <TouchableOpacity style={styles.forgotContainer}>
+      <TouchableOpacity
+        style={styles.forgotContainer}
+        onPress={() => navigation.navigate(Screens.ForgotPassword)}
+      >
         <Text style={styles.forgotText}>Forgot Password ?</Text>
       </TouchableOpacity>
 

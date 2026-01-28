@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Image, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Colors, Fonts } from '../constants/Constants';
+import { Colors, Fonts, Screens } from '../constants/Constants';
 
 // Screens
 import HomeScreen from '../screens/main/HomeScreen';
@@ -12,93 +12,138 @@ import ManageScreen from '../screens/main/ManageScreen';
 
 const Tab = createBottomTabNavigator();
 
-// Tab Icons
-const tabIcons = {
-  Home: {
-    active: require('../assets/images/icons/home-active.png'),
-    inactive: require('../assets/images/icons/home.png'),
-  },
-  Activities: {
-    active: require('../assets/images/icons/activities-active.png'),
-    inactive: require('../assets/images/icons/activities.png'),
-  },
-  Hangouts: {
-    active: require('../assets/images/icons/hangouts-active.png'),
-    inactive: require('../assets/images/icons/hangouts.png'),
-  },
-  Chat: {
-    active: require('../assets/images/icons/chat-active.png'),
-    inactive: require('../assets/images/icons/chat.png'),
-  },
-  Manage: {
-    active: require('../assets/images/icons/manage-active.png'),
-    inactive: require('../assets/images/icons/manage.png'),
-  },
-};
-
 const BottomTabNavigator = () => {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={{
         headerShown: false,
-        tabBarIcon: ({ focused }) => (
-          <View style={styles.iconContainer}>
+        tabBarStyle: {
+          backgroundColor: Colors.white,
+          height: 65,
+          paddingBottom: 10,
+          paddingTop: 10,
+          borderTopWidth: 0,
+          elevation: 10,
+          shadowColor: Colors.shadow,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+        },
+        tabBarLabelStyle: {
+          fontFamily: Fonts.kantumruyMedium,
+          fontSize: 11,
+          marginTop: 2,
+        },
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.textLight,
+      }}
+    >
+      {/* Home Tab */}
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
             <Image
-              source={
-                focused
-                  ? tabIcons[route.name].active
-                  : tabIcons[route.name].inactive
-              }
+              source={require('../assets/images/icons/home.png')}
               style={[
                 styles.icon,
                 { tintColor: focused ? Colors.primary : Colors.textLight },
               ]}
               resizeMode="contain"
             />
-            {route.name === 'Chat' && (
+          ),
+        }}
+      />
+
+      {/* Activities Tab */}
+      <Tab.Screen
+        name="Activities"
+        component={ActivitiesScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <Image
+              source={require('../assets/images/icons/activities.png')}
+              style={[
+                styles.icon,
+                { tintColor: focused ? Colors.primary : Colors.textLight },
+              ]}
+              resizeMode="contain"
+            />
+          ),
+        }}
+      />
+
+      {/* Hangouts Tab */}
+      <Tab.Screen
+        name="Hangouts"
+        component={HangoutsScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <Image
+              source={require('../assets/images/icons/hangouts.png')}
+              style={[
+                styles.icon,
+                { tintColor: focused ? Colors.primary : Colors.textLight },
+              ]}
+              resizeMode="contain"
+            />
+          ),
+        }}
+      />
+
+      {/* Chat Tab with Badge */}
+      <Tab.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <View style={styles.iconContainer}>
+              <Image
+                source={require('../assets/images/icons/chat.png')}
+                style={[
+                  styles.icon,
+                  { tintColor: focused ? Colors.primary : Colors.textLight },
+                ]}
+                resizeMode="contain"
+              />
+              {/* Badge */}
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>5</Text>
               </View>
-            )}
-          </View>
-        ),
-        tabBarLabel: ({ focused }) => (
-          <Text
-            style={[
-              styles.label,
-              { color: focused ? Colors.primary : Colors.textLight },
-            ]}
-          >
-            {route.name}
-          </Text>
-        ),
-        tabBarStyle: styles.tabBar,
-      })}
-    >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Activities" component={ActivitiesScreen} />
-      <Tab.Screen name="Hangouts" component={HangoutsScreen} />
-      <Tab.Screen name="Chat" component={ChatScreen} />
-      <Tab.Screen name="Manage" component={ManageScreen} />
+            </View>
+          ),
+        }}
+      />
+
+      {/* Manage Tab */}
+      <Tab.Screen
+        name="Manage"
+        component={ManageScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <Image
+              source={require('../assets/images/icons/manage.png')}
+              style={[
+                styles.icon,
+                { tintColor: focused ? Colors.primary : Colors.textLight },
+              ]}
+              resizeMode="contain"
+            />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 };
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    paddingTop: 8,
-    paddingBottom: 8,
-    height: 65,
-  },
-  iconContainer: {
-    position: 'relative',
-  },
   icon: {
     width: 24,
     height: 24,
+  },
+  iconContainer: {
+    position: 'relative',
   },
   badge: {
     position: 'absolute',
@@ -115,10 +160,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.poppinsBold,
     fontSize: 10,
     color: Colors.white,
-  },
-  label: {
-    fontFamily: Fonts.kantumruyMedium,
-    fontSize: 11,
   },
 });
 

@@ -79,11 +79,6 @@ const PropertyDetailScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle="dark-content"
-      />
 
       <ScrollView
         style={styles.scrollView}

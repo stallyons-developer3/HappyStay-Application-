@@ -8,7 +8,8 @@ import {
   StyleSheet,
   StatusBar,
 } from 'react-native';
-import { Colors, Fonts,Screens } from '../../constants/Constants';
+import { Colors, Fonts, Screens } from '../../constants/Constants';
+import { Linking, Platform } from 'react-native';
 
 // Components
 import HangoutCard from '../../components/HangoutCard';
@@ -66,8 +67,6 @@ const myHangoutsData = [
 const ManageScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.primary} barStyle="light-content" />
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -138,7 +137,12 @@ const ManageScreen = ({ navigation }) => {
               showMenu={true}
               onPress={() => console.log('Hangout pressed:', hangout.name)}
               onJoinPress={() => console.log('Join pressed:', hangout.name)}
-              onEditPress={() => console.log('Edit pressed:', hangout.id)}
+              onEditPress={() =>
+                navigation.navigate(Screens.CreateHangout, {
+                  isEdit: true,
+                  hangout: hangout,
+                })
+              }
               onDeletePress={() => console.log('Delete pressed:', hangout.id)}
             />
           ))}
@@ -149,7 +153,15 @@ const ManageScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Floating Map Button */}
-      <FloatingMapButton onPress={() => console.log('Map pressed')} />
+      <FloatingMapButton
+        onPress={() =>
+          Linking.openURL(
+            Platform.OS === 'ios'
+              ? 'maps://?q=37.7749,-122.4194'
+              : 'geo:37.7749, -122.4194?q=37.7749,-122.4194',
+          )
+        }
+      />
     </View>
   );
 };
@@ -234,13 +246,12 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
 
-  // Greeting Row - Same marginTop: 60 as HomeScreen
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 60,
-    marginBottom: 40,
+    marginTop: 60, // Changed from 60 to 30
+    marginBottom: 10,
   },
   greeting: {
     fontFamily: Fonts.poppinsBold,
@@ -265,7 +276,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   bottomSpacing: {
-    height: 80,
+    height: 0,
   },
 });
 

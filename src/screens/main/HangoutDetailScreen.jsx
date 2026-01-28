@@ -9,6 +9,8 @@ import {
   StatusBar,
 } from 'react-native';
 import { Colors, Fonts } from '../../constants/Constants';
+import { Linking, Platform } from 'react-native';
+
 
 // Dummy Requests Data
 const requestsData = [
@@ -68,7 +70,6 @@ const HangoutDetailScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor={Colors.primary} barStyle="light-content" />
 
       <ScrollView
         style={styles.scrollView}
@@ -201,7 +202,7 @@ const HangoutDetailScreen = ({ navigation, route }) => {
       <TouchableOpacity
         style={styles.floatingMapButton}
         activeOpacity={0.9}
-        onPress={() => console.log('Open Map')}
+        onPress={() => Linking.openURL(Platform.OS === 'ios' ? 'maps://?q=37.7749,-122.4194' : 'geo:37.7749, -122.4194?q=37.7749,-122.4194')} 
       >
         <Image
           source={require('../../assets/images/icons/map.png')}
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
 
   // Bottom Spacing
   bottomSpacing: {
-    height: 100,
+    height: 0,
   },
 
   // Floating Map Button

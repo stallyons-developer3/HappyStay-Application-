@@ -49,6 +49,7 @@ export const Screens = {
   Welcome: 'Welcome',
   Login: 'Login',
   Register: 'Register',
+  ForgotPassword: 'ForgotPassword',
   Onboarding1: 'Onboarding1',
   Onboarding2: 'Onboarding2',
   Onboarding3: 'Onboarding3',

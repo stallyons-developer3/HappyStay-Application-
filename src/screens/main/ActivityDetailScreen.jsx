@@ -56,11 +56,6 @@ const ActivityDetailScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle="light-content"
-      />
 
       <ScrollView
         style={styles.scrollView}
