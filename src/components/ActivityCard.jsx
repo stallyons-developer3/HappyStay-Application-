@@ -1,0 +1,191 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+} from 'react-native';
+import { Colors, Fonts } from '../constants/Constants';
+
+const { width } = Dimensions.get('window');
+
+const ActivityCard = ({
+  image,
+  title,
+  price,
+  description,
+  time,
+  date,
+  location,
+  onPress,
+  onMapPress,
+}) => {
+  return (
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onPress}
+      activeOpacity={0.9}
+    >
+      {/* Image with Padding */}
+      <View style={styles.imageContainer}>
+        <Image source={image} style={styles.image} resizeMode="cover" />
+      </View>
+
+      {/* Content */}
+      <View style={styles.content}>
+        {/* Title & Price Row */}
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.price}>{price}</Text>
+        </View>
+
+        {/* Description */}
+        <Text style={styles.description} numberOfLines={3}>
+          {description}
+        </Text>
+
+        {/* Info Row */}
+        <View style={styles.infoRow}>
+          {/* Time */}
+          <View style={styles.infoItem}>
+            <Image
+              source={require('../assets/images/icons/clock.png')}
+              style={styles.infoIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.infoText}>{time}</Text>
+          </View>
+
+          {/* Date */}
+          <View style={styles.infoItem}>
+            <Image
+              source={require('../assets/images/icons/calendar-small.png')}
+              style={styles.infoIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.infoText}>{date}</Text>
+          </View>
+
+          {/* Location */}
+          <View style={styles.infoItem}>
+            <Image
+              source={require('../assets/images/icons/map-pin.png')}
+              style={styles.infoIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.infoText}>{location}</Text>
+          </View>
+
+          {/* Open Map */}
+          <TouchableOpacity
+            style={styles.mapButton}
+            onPress={onMapPress}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={require('../assets/images/icons/map.png')}
+              style={styles.mapIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.mapText}>Open Map</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 12,
+    shadowColor: Colors.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  imageContainer: {
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: 180,
+  },
+  content: {
+    paddingTop: 14,
+    paddingHorizontal: 4,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  title: {
+    fontFamily: Fonts.kantumruyBold,
+    fontSize: 14,
+    color: Colors.primary,
+  },
+  price: {
+    fontFamily: Fonts.kantumruyBold,
+    fontSize: 14,
+    color: Colors.primary,
+  },
+  description: {
+    fontFamily: Fonts.kantumruyRegular,
+    fontSize: 12,
+    color: Colors.textBlack,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoIcon: {
+    width: 14,
+    height: 14,
+    tintColor: Colors.primary,
+    marginRight: 4,
+  },
+  infoText: {
+    fontFamily: Fonts.kantumruyRegular,
+    fontSize: 12,
+    color: Colors.textGray,
+  },
+  mapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mapIcon: {
+    width: 14,
+    height: 14,
+    tintColor: Colors.primary,
+    marginRight: 4,
+  },
+  mapText: {
+    fontFamily: Fonts.kantumruyMedium,
+    fontSize: 12,
+    color: Colors.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.primary,
+  },
+});
+
+export default ActivityCard;
