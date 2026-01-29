@@ -153,15 +153,7 @@ const ManageScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Floating Map Button */}
-      <FloatingMapButton
-        onPress={() =>
-          Linking.openURL(
-            Platform.OS === 'ios'
-              ? 'maps://?q=37.7749,-122.4194'
-              : 'geo:37.7749, -122.4194?q=37.7749,-122.4194',
-          )
-        }
-      />
+      <FloatingMapButton onPress={() => navigation.navigate(Screens.Map)} />
     </View>
   );
 };

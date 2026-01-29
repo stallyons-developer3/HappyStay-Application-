@@ -10,7 +10,7 @@ const FloatingMapButton = ({ onPress }) => {
     <TouchableOpacity
       style={[
         styles.container,
-        { bottom: insets.bottom }, // Safe area add karo
+        { bottom: 30 + insets.bottom }, // Safe area add karo
       ]}
       activeOpacity={0.9}
       onPress={onPress}

@@ -19,6 +19,7 @@ import Header from '../../components/Header';
 import SearchBar from '../../components/SearchBar';
 import TripCard from '../../components/TripCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
+import FilterModal from '../../components/FilterModal';
 
 // Static Trip Data
 const tripsData = [
@@ -44,6 +45,7 @@ const tripsData = [
 
 const TripScreen = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   // Booking Modal State
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -101,6 +103,12 @@ const TripScreen = ({ navigation }) => {
     setShowBookingModal(false);
   };
 
+  // Handle Filter Apply
+  const handleFilterApply = filters => {
+    console.log('Applied Filters:', filters);
+    // Apply filters to your data here
+  };
+
   return (
     <View style={styles.container}>
       {/* Scrollable Content */}
@@ -116,7 +124,7 @@ const TripScreen = ({ navigation }) => {
           greeting={`Select Your\nTrip`}
           notificationCount={5}
           onProfilePress={() => navigation.navigate(Screens.Profile)}
-          onNotificationPress={() => console.log('Notifications')}
+          onNotificationPress={() => navigation.navigate(Screens.Notification)}
         />
 
         {/* Search Bar */}
@@ -125,6 +133,7 @@ const TripScreen = ({ navigation }) => {
           value={searchText}
           onChangeText={setSearchText}
           onSearch={() => console.log('Search:', searchText)}
+          onActionPress={() => setShowFilterModal(true)}
         />
 
         {/* Trip Cards */}
@@ -147,15 +156,7 @@ const TripScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Floating Map Button */}
-      <FloatingMapButton
-        onPress={() =>
-          Linking.openURL(
-            Platform.OS === 'ios'
-              ? 'maps://?q=37.7749,-122.4194'
-              : 'geo:37.7749, -122.4194?q=37.7749,-122.4194',
-          )
-        }
-      />
+      <FloatingMapButton onPress={() => navigation.navigate(Screens.Map)} />
 
       {/* Booking Modal */}
       <Modal
@@ -251,6 +252,12 @@ const TripScreen = ({ navigation }) => {
           minimumDate={checkInDate}
         />
       )}
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onApply={handleFilterApply}
+      />
     </View>
   );
 };

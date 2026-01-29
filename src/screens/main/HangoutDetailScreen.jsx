@@ -11,7 +11,6 @@ import {
 import { Colors, Fonts } from '../../constants/Constants';
 import { Linking, Platform } from 'react-native';
 
-
 // Dummy Requests Data
 const requestsData = [
   {
@@ -70,7 +69,6 @@ const HangoutDetailScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -202,7 +200,7 @@ const HangoutDetailScreen = ({ navigation, route }) => {
       <TouchableOpacity
         style={styles.floatingMapButton}
         activeOpacity={0.9}
-        onPress={() => Linking.openURL(Platform.OS === 'ios' ? 'maps://?q=37.7749,-122.4194' : 'geo:37.7749, -122.4194?q=37.7749,-122.4194')} 
+        onPress={() => navigation.navigate(Screens.Map)}
       >
         <Image
           source={require('../../assets/images/icons/map.png')}
@@ -370,8 +368,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.poppinsSemiBold,
     fontSize: 16,
     color: Colors.textBlack,
-    textDecorationLine:'underline',
-    textDecorationColor:Colors.textBlack
+    textDecorationLine: 'underline',
+    textDecorationColor: Colors.textBlack,
   },
   requestDate: {
     fontFamily: Fonts.kantumruyRegular,

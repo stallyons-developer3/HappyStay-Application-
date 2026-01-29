@@ -8,7 +8,7 @@ import SearchBar from '../../components/SearchBar';
 import ActivityCard from '../../components/ActivityCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
 import { Linking, Platform } from 'react-native';
-
+import FilterModal from '../../components/FilterModal';
 
 // Dummy Data
 const activitiesData = [
@@ -49,6 +49,7 @@ const activitiesData = [
 
 const ActivitiesScreen = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   // Handle tab press
   const handleTabPress = tabName => {
@@ -70,6 +71,12 @@ const ActivitiesScreen = ({ navigation }) => {
     }
   };
 
+  // Handle Filter Apply
+  const handleFilterApply = filters => {
+    console.log('Applied Filters:', filters);
+    // Apply filters to your data here
+  };
+
   return (
     <View style={styles.container}>
       {/* Scrollable Content */}
@@ -87,7 +94,7 @@ const ActivitiesScreen = ({ navigation }) => {
           showNotification={true}
           notificationCount={5}
           onProfilePress={() => navigation.navigate(Screens.Profile)}
-          onNotificationPress={() => console.log('Notification pressed')}
+          onNotificationPress={() => navigation.navigate(Screens.Notification)}
         />
 
         {/* Search Bar */}
@@ -96,7 +103,7 @@ const ActivitiesScreen = ({ navigation }) => {
           value={searchText}
           onChangeText={setSearchText}
           onSearch={() => console.log('Search:', searchText)}
-          onActionPress={() => console.log('Filter pressed')}
+          onActionPress={() => setShowFilterModal(true)}
         />
 
         {/* Activity Cards */}
@@ -124,7 +131,14 @@ const ActivitiesScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Floating Map Button */}
-      <FloatingMapButton onPress={() => Linking.openURL(Platform.OS === 'ios' ? 'maps://?q=37.7749,-122.4194' : 'geo:37.7749, -122.4194?q=37.7749,-122.4194')}  />
+      <FloatingMapButton onPress={() => navigation.navigate(Screens.Map)} />
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onApply={handleFilterApply}
+      />
     </View>
   );
 };

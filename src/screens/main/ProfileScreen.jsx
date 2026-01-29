@@ -46,7 +46,7 @@ const ProfileScreen = ({ navigation }) => {
   // Handle Logout
   const handleLogout = () => {
     console.log('Logout');
-    // navigation.replace(Screens.Login);
+    navigation.replace(Screens.Login);
   };
 
   return (

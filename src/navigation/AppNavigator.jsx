@@ -23,6 +23,9 @@ import EditProfileScreen from '../screens/main/EditProfileScreen';
 import TripScreen from '../screens/main/TripScreen';
 import PropertyDetailScreen from '../screens/main/PropertyDetailScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import NotificationScreen from '../screens/main/NotificationScreen';
+import MapScreen from '../screens/main/MapScreen';
+
 
 const Stack = createNativeStackNavigator();
 
@@ -39,7 +42,10 @@ const AppNavigator = () => {
           <Stack.Screen name={Screens.Welcome} component={WelcomeScreen} />
           <Stack.Screen name={Screens.Login} component={LoginScreen} />
           <Stack.Screen name={Screens.Register} component={RegisterScreen} />
-          <Stack.Screen name={Screens.ForgotPassword} component={ForgotPasswordScreen} />
+          <Stack.Screen
+            name={Screens.ForgotPassword}
+            component={ForgotPasswordScreen}
+          />
 
           {/* Onboarding Screens */}
           <Stack.Screen
@@ -87,6 +93,12 @@ const AppNavigator = () => {
             name={Screens.CreateHangout}
             component={CreateHangoutScreen}
           />
+
+          <Stack.Screen
+            name={Screens.Notification}
+            component={NotificationScreen}
+          />
+          <Stack.Screen name={Screens.Map} component={MapScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </>

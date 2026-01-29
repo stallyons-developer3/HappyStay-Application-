@@ -75,6 +75,9 @@ export const Screens = {
 
   // Create Screens
   CreateHangout: 'CreateHangout',
+
+  Notification: 'Notification',
+  Map: 'Map',
 };
 
 // Default export for backward compatibility

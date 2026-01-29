@@ -3,7 +3,6 @@ import { View, ScrollView, StyleSheet } from 'react-native';
 import { Colors, Screens } from '../../constants/Constants';
 import { Linking, Platform } from 'react-native';
 
-
 // Components
 import Header from '../../components/Header';
 import SearchBar from '../../components/SearchBar';
@@ -11,6 +10,7 @@ import ActivityCard from '../../components/ActivityCard';
 import HangoutCard from '../../components/HangoutCard';
 import PromotionCard from '../../components/PromotionCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
+import FilterModal from '../../components/FilterModal';
 
 // Dummy Data
 const activityData = {
@@ -48,6 +48,7 @@ const promotionData = {
 
 const HomeScreen = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   // Handle tab press
   const handleTabPress = tabName => {
@@ -69,6 +70,12 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  // Handle Filter Apply
+  const handleFilterApply = filters => {
+    console.log('Applied Filters:', filters);
+    // Apply filters to your data here
+  };
+
   return (
     <View style={styles.container}>
       {/* Scrollable Content */}
@@ -84,9 +91,9 @@ const HomeScreen = ({ navigation }) => {
           showGreeting={true}
           showProfile={true}
           showNotification={true}
-          notificationCount={5}
+          notificationCount={2}
           onProfilePress={() => navigation.navigate(Screens.Profile)}
-          onNotificationPress={() => console.log('Notification pressed')}
+          onNotificationPress={() => navigation.navigate(Screens.Notification)}
         />
 
         {/* Search Bar */}
@@ -95,7 +102,7 @@ const HomeScreen = ({ navigation }) => {
           value={searchText}
           onChangeText={setSearchText}
           onSearch={() => console.log('Search:', searchText)}
-          onActionPress={() => console.log('Filter pressed')}
+          onActionPress={() => setShowFilterModal(true)}
         />
 
         {/* Activity Card */}
@@ -139,7 +146,14 @@ const HomeScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Floating Map Button */}
-      <FloatingMapButton onPress={() => Linking.openURL(Platform.OS === 'ios' ? 'maps://?q=37.7749,-122.4194' : 'geo:37.7749, -122.4194?q=37.7749,-122.4194')}  />
+      <FloatingMapButton onPress={() => navigation.navigate(Screens.Map)} />
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onApply={handleFilterApply}
+      />
     </View>
   );
 };

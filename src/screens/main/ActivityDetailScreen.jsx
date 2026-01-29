@@ -10,7 +10,8 @@ import {
   StatusBar,
   Dimensions,
 } from 'react-native';
-import { Colors, Fonts } from '../../constants/Constants';
+import { Colors, Fonts, Screens } from '../../constants/Constants';
+import { Screen } from 'react-native-screens';
 
 const { width } = Dimensions.get('window');
 
@@ -177,7 +178,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.chatButton}
               activeOpacity={0.8}
-              onPress={() => console.log('Join Chat')}
+              onPress={() => navigation.navigate(Screens.ChatDetail)}
             >
               <Text style={styles.chatButtonText}>Join Chat</Text>
             </TouchableOpacity>
