@@ -96,6 +96,7 @@ const ManageScreen = ({ navigation }) => {
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.notificationContainer}
+              onPress={() => navigation.navigate(Screens.Notification)}
             >
               <View style={styles.notificationIconWrapper}>
                 <Image

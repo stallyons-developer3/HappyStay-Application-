@@ -15,14 +15,15 @@ const Header = ({
   showGreeting = false,
   showProfile = true,
   showNotification = true,
+  showBackIcon = false,
   notificationCount = 0,
   profileImage,
   onProfilePress,
   onNotificationPress,
+  onBackPress,
 }) => {
   return (
     <View style={styles.container}>
-
       {/* Top Row - Profile, Title, Notification */}
       <View style={styles.topRow}>
         {/* Left - Profile & Title */}
@@ -67,7 +68,19 @@ const Header = ({
           </TouchableOpacity>
         )}
       </View>
-
+      {showBackIcon && (
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={onBackPress}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../assets/images/arrow-left.png')}
+            style={styles.backicon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      )}
       {/* Greeting Text */}
       {showGreeting && greeting ? (
         <Text style={styles.greeting}>{greeting}</Text>
@@ -149,6 +162,12 @@ const styles = StyleSheet.create({
     color: Colors.white,
     marginTop: 60,
     marginBottom: 40,
+  },
+  backicon: {
+    width: 30,
+    height: 20,
+    tintColor: 'white',
+    marginTop: 20,
   },
 });
 

@@ -121,6 +121,8 @@ const TripScreen = ({ navigation }) => {
         <Header
           title="Trip"
           showGreeting={true}
+          showBackIcon={true}
+          onBackPress={() => navigation.goBack()}
           greeting={`Select Your\nTrip`}
           notificationCount={5}
           onProfilePress={() => navigation.navigate(Screens.Profile)}

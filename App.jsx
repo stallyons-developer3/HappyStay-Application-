@@ -8,7 +8,7 @@ const App = () => {
   useEffect(() => {
     if (Platform.OS === 'android') {
       StatusBar.setBackgroundColor(Colors.primary);
-      StatusBar.setBarStyle('light-content');
+      StatusBar.setBarStyle('dark-content');
     }
   }, []);
 

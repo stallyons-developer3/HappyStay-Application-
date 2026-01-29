@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Screens, Colors } from '../constants/Constants';
 
 // Navigators
@@ -26,82 +27,116 @@ import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import NotificationScreen from '../screens/main/NotificationScreen';
 import MapScreen from '../screens/main/MapScreen';
 
-
 const Stack = createNativeStackNavigator();
+
+// Wrapper component for screens that need SafeAreaView
+const withSafeArea = (WrappedComponent, edges = ['top']) => {
+  return props => (
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: Colors.primary }}
+      edges={edges}
+    >
+      <WrappedComponent {...props} />
+    </SafeAreaView>
+  );
+};
 
 const AppNavigator = () => {
   return (
-    <>
-      <NavigationContainer>
-        <Stack.Navigator
-          initialRouteName={Screens.Splash}
-          screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
-        >
-          {/* Auth Screens */}
-          <Stack.Screen name={Screens.Splash} component={SplashScreen} />
-          <Stack.Screen name={Screens.Welcome} component={WelcomeScreen} />
-          <Stack.Screen name={Screens.Login} component={LoginScreen} />
-          <Stack.Screen name={Screens.Register} component={RegisterScreen} />
-          <Stack.Screen
-            name={Screens.ForgotPassword}
-            component={ForgotPasswordScreen}
-          />
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName={Screens.Splash}
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          contentStyle: { backgroundColor: Colors.white },
+        }}
+      >
+        {/* Auth Screens - top & bottom safe area */}
+        <Stack.Screen
+          name={Screens.Splash}
+          component={withSafeArea(SplashScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.Welcome}
+          component={withSafeArea(WelcomeScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.Login}
+          component={withSafeArea(LoginScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.Register}
+          component={withSafeArea(RegisterScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.ForgotPassword}
+          component={withSafeArea(ForgotPasswordScreen, ['top', 'bottom'])}
+        />
 
-          {/* Onboarding Screens */}
-          <Stack.Screen
-            name={Screens.Onboarding1}
-            component={Onboarding1Screen}
-          />
-          <Stack.Screen
-            name={Screens.Onboarding2}
-            component={Onboarding2Screen}
-          />
-          <Stack.Screen
-            name={Screens.Onboarding3}
-            component={Onboarding3Screen}
-          />
+        {/* Onboarding Screens - top & bottom safe area */}
+        <Stack.Screen
+          name={Screens.Onboarding1}
+          component={withSafeArea(Onboarding1Screen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.Onboarding2}
+          component={withSafeArea(Onboarding2Screen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.Onboarding3}
+          component={withSafeArea(Onboarding3Screen, ['top', 'bottom'])}
+        />
 
-          {/* Main App - Bottom Tabs */}
-          <Stack.Screen name={Screens.MainApp} component={BottomTabNavigator} />
+        {/* Main App - Bottom Tabs (only top safe area, bottom handled by tab bar) */}
+        <Stack.Screen name={Screens.MainApp} component={BottomTabNavigator} />
 
-          {/* Detail Screens */}
-          <Stack.Screen
-            name={Screens.ActivityDetail}
-            component={ActivityDetailScreen}
-          />
-          <Stack.Screen
-            name={Screens.HangoutDetail}
-            component={HangoutDetailScreen}
-          />
-          <Stack.Screen
-            name={Screens.ChatDetail}
-            component={ChatDetailScreen}
-          />
-          <Stack.Screen name={Screens.Profile} component={ProfileScreen} />
-          <Stack.Screen
-            name={Screens.EditProfile}
-            component={EditProfileScreen}
-          />
-          <Stack.Screen name={Screens.Trip} component={TripScreen} />
-          <Stack.Screen
-            name={Screens.PropertyDetail}
-            component={PropertyDetailScreen}
-          />
+        {/* Detail Screens - top & bottom safe area */}
+        <Stack.Screen
+          name={Screens.ActivityDetail}
+          component={withSafeArea(ActivityDetailScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.HangoutDetail}
+          component={withSafeArea(HangoutDetailScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.ChatDetail}
+          component={withSafeArea(ChatDetailScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.Profile}
+          component={withSafeArea(ProfileScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.EditProfile}
+          component={withSafeArea(EditProfileScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.Trip}
+          component={withSafeArea(TripScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.PropertyDetail}
+          component={withSafeArea(PropertyDetailScreen, ['top', 'bottom'])}
+        />
 
-          {/* Create Screens */}
-          <Stack.Screen
-            name={Screens.CreateHangout}
-            component={CreateHangoutScreen}
-          />
+        {/* Create Screens */}
+        <Stack.Screen
+          name={Screens.CreateHangout}
+          component={withSafeArea(CreateHangoutScreen, ['top', 'bottom'])}
+        />
 
-          <Stack.Screen
-            name={Screens.Notification}
-            component={NotificationScreen}
-          />
-          <Stack.Screen name={Screens.Map} component={MapScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </>
+        <Stack.Screen
+          name={Screens.Notification}
+          component={withSafeArea(NotificationScreen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={Screens.Map}
+          component={withSafeArea(MapScreen, ['top', 'bottom'])}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 

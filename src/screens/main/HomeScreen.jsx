@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet, StatusBar } from 'react-native';
 import { Colors, Screens } from '../../constants/Constants';
 import { Linking, Platform } from 'react-native';
 
@@ -11,6 +11,7 @@ import HangoutCard from '../../components/HangoutCard';
 import PromotionCard from '../../components/PromotionCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
 import FilterModal from '../../components/FilterModal';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Dummy Data
 const activityData = {
