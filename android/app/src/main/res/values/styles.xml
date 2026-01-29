@@ -8,7 +8,7 @@
         <item name="android:windowBackground">@android:color/white</item>
         
         <!-- StatusBar -->
-        <item name="android:statusBarColor">#27AE60</item>
+        <item name="android:statusBarColor">@colors/primaryColor</item>
         <item name="android:windowLightStatusBar">false</item>
         
         <!-- Navigation Bar -->
