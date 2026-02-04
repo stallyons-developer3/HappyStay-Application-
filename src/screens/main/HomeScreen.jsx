@@ -129,7 +129,7 @@ const HomeScreen = ({ navigation }) => {
           description={hangoutData.description}
           peopleCount={hangoutData.peopleCount}
           peopleImages={hangoutData.peopleImages}
-          onPress={() => console.log('Hangout pressed')}
+          onPress={() => navigation.navigate(Screens.HangoutDetail)}
           onJoinPress={() => console.log('Join pressed')}
         />
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Linking,
+  Modal,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
 
@@ -64,6 +66,43 @@ const propertyData = {
 };
 
 const PropertyDetailScreen = ({ navigation }) => {
+  // Booking Modal State
+  const [showBookingModal, setShowBookingModal] = useState(false);
+
+  // Date States
+  const [checkInDate, setCheckInDate] = useState(new Date());
+  const [checkOutDate, setCheckOutDate] = useState(new Date());
+  const [checkInSelected, setCheckInSelected] = useState(false);
+  const [checkOutSelected, setCheckOutSelected] = useState(false);
+  const [showCheckInPicker, setShowCheckInPicker] = useState(false);
+  const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
+
+  // Format Date
+  const formatDate = date => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day} - ${month} - ${year}`;
+  };
+
+  // Handle Check-in Date Change
+  const onCheckInChange = (event, selectedDate) => {
+    setShowCheckInPicker(false);
+    if (selectedDate) {
+      setCheckInDate(selectedDate);
+      setCheckInSelected(true);
+    }
+  };
+
+  // Handle Check-out Date Change
+  const onCheckOutChange = (event, selectedDate) => {
+    setShowCheckOutPicker(false);
+    if (selectedDate) {
+      setCheckOutDate(selectedDate);
+      setCheckOutSelected(true);
+    }
+  };
+
   // Handle Get Direction
   const handleGetDirection = () => {
     navigation.navigate(Screens.Map);
@@ -71,7 +110,18 @@ const PropertyDetailScreen = ({ navigation }) => {
 
   // Handle Request Booking
   const handleRequestBooking = () => {
-    console.log('Request Booking');
+    setCheckInSelected(false);
+    setCheckOutSelected(false);
+    setShowBookingModal(true);
+  };
+
+  // Handle Book Now
+  const handleBookNow = () => {
+    console.log('Booking:', {
+      checkIn: formatDate(checkInDate),
+      checkOut: formatDate(checkOutDate),
+    });
+    setShowBookingModal(false);
   };
 
   return (
@@ -240,6 +290,101 @@ const PropertyDetailScreen = ({ navigation }) => {
           size="full"
         />
       </View>
+
+      {/* Booking Modal */}
+      <Modal
+        visible={showBookingModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowBookingModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Booking</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowBookingModal(false)}
+              >
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Check-in */}
+            <Text style={styles.dateLabel}>Check-in</Text>
+            <TouchableOpacity
+              style={styles.dateInput}
+              activeOpacity={0.7}
+              onPress={() => setShowCheckInPicker(true)}
+            >
+              <Text
+                style={
+                  checkInSelected ? styles.dateText : styles.datePlaceholder
+                }
+              >
+                {checkInSelected ? formatDate(checkInDate) : 'Select'}
+              </Text>
+              <Image
+                source={require('../../assets/images/calender.png')}
+                style={styles.calendarIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+
+            {/* Check-out */}
+            <Text style={styles.dateLabel}>Check-out</Text>
+            <TouchableOpacity
+              style={styles.dateInput}
+              activeOpacity={0.7}
+              onPress={() => setShowCheckOutPicker(true)}
+            >
+              <Text
+                style={
+                  checkOutSelected ? styles.dateText : styles.datePlaceholder
+                }
+              >
+                {checkOutSelected ? formatDate(checkOutDate) : 'Select'}
+              </Text>
+              <Image
+                source={require('../../assets/images/calender.png')}
+                style={styles.calendarIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+
+            {/* Book Now Button */}
+            <TouchableOpacity
+              style={styles.bookNowButton}
+              activeOpacity={0.8}
+              onPress={handleBookNow}
+            >
+              <Text style={styles.bookNowText}>Book Now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Pickers */}
+      {showCheckInPicker && (
+        <DateTimePicker
+          value={checkInDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onCheckInChange}
+          minimumDate={new Date()}
+        />
+      )}
+
+      {showCheckOutPicker && (
+        <DateTimePicker
+          value={checkOutDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onCheckOutChange}
+          minimumDate={checkInDate}
+        />
+      )}
     </View>
   );
 };
@@ -317,8 +462,8 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: Colors.borderLight,
-    marginTop: 22,
-    marginBottom: 13,
+    marginTop: 20,
+    marginBottom: 8,
   },
 
   // Amenities
@@ -462,16 +607,94 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingBottom: 24,
   },
-  bookingButton: {
-    backgroundColor: Colors.primary,
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+  modalContainer: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    width: '100%',
+    borderRadius: 3,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    position: 'relative',
+  },
+  modalTitle: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.primary,
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  modalClose: {
+    fontSize: 14,
+    color: Colors.textBlack,
+    fontWeight: '700',
+  },
+
+  // Date Input
+  dateLabel: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.textBlack,
+    marginBottom: 8,
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundGray,
+    borderRadius: 30,
+    paddingHorizontal: 20,
     paddingVertical: 16,
+    marginBottom: 16,
+  },
+  dateText: {
+    flex: 1,
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textDark,
+  },
+  datePlaceholder: {
+    flex: 1,
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textLight,
+  },
+  calendarIcon: {
+    width: 24,
+    height: 24,
+    tintColor: Colors.textDark,
+  },
+
+  // Book Now Button
+  bookNowButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 10,
     borderRadius: 30,
     alignItems: 'center',
+    marginTop: 8,
+    width: 120,
+    alignSelf: 'center',
   },
-  bookingButtonText: {
+  bookNowText: {
     fontFamily: Fonts.poppinsBold,
-    fontSize: 18,
+    fontSize: 12,
     color: Colors.white,
+    textTransform: 'lowercase',
   },
 });
 
