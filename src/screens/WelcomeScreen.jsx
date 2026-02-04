@@ -9,13 +9,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Colors, Fonts, Screens } from '../constants/Constants';
+import Button from '../components/common/Button';
 
 const { width, height } = Dimensions.get('window');
 
 const WelcomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
-
       {/* Background Image */}
       <View style={styles.imageContainer}>
         <Image
@@ -35,13 +35,11 @@ const WelcomeScreen = ({ navigation }) => {
           without fear of rising ticket prices.
         </Text>
 
-        <TouchableOpacity
-          style={styles.button}
-          activeOpacity={0.8}
+        <Button
+          title="Get Started"
           onPress={() => navigation.navigate(Screens.Login)}
-        >
-          <Text style={styles.buttonText}>Get Started</Text>
-        </TouchableOpacity>
+          size="full"
+        />
       </View>
     </View>
   );
@@ -53,7 +51,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   imageContainer: {
-    flex: 1,
+    height: height * 0.65,
   },
   backgroundImage: {
     width: '100%',
@@ -64,18 +62,18 @@ const styles = StyleSheet.create({
   bottomContainer: {
     backgroundColor: Colors.white,
     paddingHorizontal: 30,
-    paddingTop: 40,
+    paddingTop: 20,
     paddingBottom: 40,
     alignItems: 'center',
   },
   title: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 34,
     color: Colors.primary,
-    marginBottom: 16,
+    marginBottom: 10,
   },
   description: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textGray,
     textAlign: 'center',
@@ -85,8 +83,8 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: Colors.primary,
     width: '100%',
-    paddingVertical: 10,
-    borderRadius: 30,
+    paddingVertical: 15,
+    borderRadius: 50,
     alignItems: 'center',
   },
   buttonText: {

@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  StatusBar,
-} from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, Fonts } from '../constants/Constants';
 
 const Header = ({
@@ -68,6 +61,8 @@ const Header = ({
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Back Icon */}
       {showBackIcon && (
         <TouchableOpacity
           style={styles.backButton}
@@ -81,9 +76,14 @@ const Header = ({
           />
         </TouchableOpacity>
       )}
+
       {/* Greeting Text */}
       {showGreeting && greeting ? (
-        <Text style={styles.greeting}>{greeting}</Text>
+        <Text
+          style={[styles.greeting, showBackIcon && styles.greetingWithBack]}
+        >
+          {greeting}
+        </Text>
       ) : null}
     </View>
   );
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   title: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.white,
   },
@@ -127,9 +127,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   notificationIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 50,
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -152,22 +152,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   badgeText: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 10,
     color: Colors.white,
   },
-  greeting: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 28,
-    color: Colors.white,
-    marginTop: 60,
-    marginBottom: 40,
+  backButton: {
+    marginTop: 20,
   },
   backicon: {
     width: 30,
     height: 20,
     tintColor: 'white',
-    marginTop: 20,
+  },
+  greeting: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 28,
+    color: Colors.white,
+    marginTop: 60,
+    marginBottom: 40,
+  },
+  greetingWithBack: {
+    marginTop:30,
+    marginBottom: 30,
   },
 });
 

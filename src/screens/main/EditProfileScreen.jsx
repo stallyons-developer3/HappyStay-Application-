@@ -4,17 +4,17 @@ import {
   Text,
   Image,
   StyleSheet,
-  StatusBar,
   TextInput,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Modal,
-  FlatList,
+  Animated,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import Button from '../../components/common/Button';
 
 // Countries Data with Flags
 const countries = [
@@ -28,6 +28,11 @@ const countries = [
   { id: '8', name: 'Germany', flag: '🇩🇪' },
   { id: '9', name: 'France', flag: '🇫🇷' },
   { id: '10', name: 'Japan', flag: '🇯🇵' },
+  { id: '11', name: 'China', flag: '🇨🇳' },
+  { id: '12', name: 'Brazil', flag: '🇧🇷' },
+  { id: '13', name: 'Saudi Arabia', flag: '🇸🇦' },
+  { id: '14', name: 'UAE', flag: '🇦🇪' },
+  { id: '15', name: 'Turkey', flag: '🇹🇷' },
 ];
 
 // Gender Options
@@ -42,8 +47,6 @@ const EditProfileScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [userName, setUserName] = useState('');
-  const [search, setSearch] = useState('');
-  const [bio, setBio] = useState('');
 
   // Nationality State
   const [selectedCountry, setSelectedCountry] = useState(null);
@@ -57,6 +60,20 @@ const EditProfileScreen = ({ navigation }) => {
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateSelected, setDateSelected] = useState(false);
+
+  // Scrollbar Animation States
+  const [scrollIndicator] = useState(new Animated.Value(0));
+  const [contentHeight, setContentHeight] = useState(1);
+  const [scrollViewHeight, setScrollViewHeight] = useState(1);
+
+  const scrollIndicatorHeight = 60;
+  const scrollTrackHeight = scrollViewHeight - 20;
+  const scrollableHeight = contentHeight - scrollViewHeight;
+  const indicatorPosition = scrollIndicator.interpolate({
+    inputRange: [0, scrollableHeight > 0 ? scrollableHeight : 1],
+    outputRange: [0, scrollTrackHeight - scrollIndicatorHeight],
+    extrapolate: 'clamp',
+  });
 
   // Format Date
   const formatDate = date => {
@@ -93,33 +110,11 @@ const EditProfileScreen = ({ navigation }) => {
     navigation.goBack();
   };
 
-  // Render Country Item
-  const renderCountryItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.modalItem}
-      onPress={() => selectCountry(item)}
-    >
-      <Text style={styles.countryFlag}>{item.flag}</Text>
-      <Text style={styles.modalItemText}>{item.name}</Text>
-    </TouchableOpacity>
-  );
-
-  // Render Gender Item
-  const renderGenderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.modalItem}
-      onPress={() => selectGender(item)}
-    >
-      <Text style={styles.modalItemText}>{item.name}</Text>
-    </TouchableOpacity>
-  );
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -127,7 +122,6 @@ const EditProfileScreen = ({ navigation }) => {
       >
         {/* Header */}
         <View style={styles.header}>
-          {/* Back Button */}
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
@@ -142,7 +136,7 @@ const EditProfileScreen = ({ navigation }) => {
         </View>
 
         {/* Title */}
-        <Text style={styles.title}>Personal Data</Text>
+        <Text style={styles.title}>Edit Personal Data</Text>
 
         {/* Profile Image */}
         <View style={styles.profileContainer}>
@@ -204,6 +198,25 @@ const EditProfileScreen = ({ navigation }) => {
           />
         </View>
 
+        {/* Gender Dropdown */}
+        <Text style={styles.inputLabel}>Gender</Text>
+        <TouchableOpacity
+          style={styles.inputContainer}
+          activeOpacity={0.7}
+          onPress={() => setShowGenderModal(true)}
+        >
+          <Text
+            style={selectedGender ? styles.inputText : styles.placeholderText}
+          >
+            {selectedGender ? selectedGender.name : 'Select'}
+          </Text>
+          <Image
+            source={require('../../assets/images/arrow-down.png')}
+            style={styles.dropdownIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+
         {/* Nationality Dropdown */}
         <Text style={styles.inputLabel}>Nationality</Text>
         <TouchableOpacity
@@ -231,39 +244,8 @@ const EditProfileScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        {/* Gender Dropdown */}
-        <Text style={styles.inputLabel}>Gender</Text>
-        <TouchableOpacity
-          style={styles.inputContainer}
-          activeOpacity={0.7}
-          onPress={() => setShowGenderModal(true)}
-        >
-          <Text
-            style={selectedGender ? styles.inputText : styles.placeholderText}
-          >
-            {selectedGender ? selectedGender.name : 'Select'}
-          </Text>
-          <Image
-            source={require('../../assets/images/arrow-down.png')}
-            style={styles.dropdownIcon}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-
-        {/* Search Input */}
-        <Text style={styles.inputLabel}>Location</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="search"
-            placeholderTextColor={Colors.textLight}
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
-
         {/* Date Picker */}
-        <Text style={styles.inputLabel}>Date of Birth</Text>
+        <Text style={styles.inputLabel}>Age</Text>
         <TouchableOpacity
           style={styles.inputContainer}
           activeOpacity={0.7}
@@ -281,29 +263,13 @@ const EditProfileScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        {/* Bio Text Area */}
-        <Text style={styles.inputLabel}>Bio</Text>
-        <View style={styles.textAreaContainer}>
-          <TextInput
-            style={styles.textArea}
-            placeholder="Enter"
-            placeholderTextColor={Colors.textLight}
-            value={bio}
-            onChangeText={setBio}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
         {/* Save Button */}
-        <TouchableOpacity
-          style={styles.saveButton}
-          activeOpacity={0.8}
+        <Button
+          title="Update"
           onPress={handleSave}
-        >
-          <Text style={styles.saveButtonText}>Save</Text>
-        </TouchableOpacity>
+          size="full"
+          style={{ marginTop: 10 }}
+        />
       </ScrollView>
 
       {/* Date Picker */}
@@ -332,12 +298,40 @@ const EditProfileScreen = ({ navigation }) => {
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-            <FlatList
-              data={countries}
-              keyExtractor={item => item.id}
-              renderItem={renderCountryItem}
-              showsVerticalScrollIndicator={false}
-            />
+
+            <View style={styles.listContainer}>
+              <ScrollView
+                style={styles.countryList}
+                showsVerticalScrollIndicator={false}
+                onScroll={Animated.event(
+                  [{ nativeEvent: { contentOffset: { y: scrollIndicator } } }],
+                  { useNativeDriver: false },
+                )}
+                scrollEventThrottle={16}
+                onContentSizeChange={(w, h) => setContentHeight(h)}
+                onLayout={e => setScrollViewHeight(e.nativeEvent.layout.height)}
+              >
+                {countries.map(item => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.countryItem}
+                    onPress={() => selectCountry(item)}
+                  >
+                    <Text style={styles.countryFlag}>{item.flag}</Text>
+                    <Text style={styles.countryName}>{item.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <View style={styles.scrollbarTrack}>
+                <Animated.View
+                  style={[
+                    styles.scrollbarThumb,
+                    { transform: [{ translateY: indicatorPosition }] },
+                  ]}
+                />
+              </View>
+            </View>
           </View>
         </View>
       </Modal>
@@ -350,19 +344,23 @@ const EditProfileScreen = ({ navigation }) => {
         onRequestClose={() => setShowGenderModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={styles.genderModalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Gender</Text>
               <TouchableOpacity onPress={() => setShowGenderModal(false)}>
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-            <FlatList
-              data={genderOptions}
-              keyExtractor={item => item.id}
-              renderItem={renderGenderItem}
-              showsVerticalScrollIndicator={false}
-            />
+
+            {genderOptions.map(item => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.genderItem}
+                onPress={() => selectGender(item)}
+              >
+                <Text style={styles.genderName}>{item.name}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
       </Modal>
@@ -401,7 +399,7 @@ const styles = StyleSheet.create({
 
   // Title
   title: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.primary,
     textAlign: 'center',
@@ -423,7 +421,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.white,
     backgroundColor: Colors.white,
     padding: 4,
-    // Subtle shadow like other cards
     shadowColor: Colors.shadow,
     shadowOffset: {
       width: 0,
@@ -455,7 +452,7 @@ const styles = StyleSheet.create({
 
   // Input Label
   inputLabel: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
     marginBottom: 8,
@@ -465,28 +462,28 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.backgroundGray,
+    backgroundColor: Colors.background,
     borderRadius: 50,
-    paddingVertical: 18,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     marginBottom: 16,
   },
   input: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
-    color: Colors.textDark,
+    color: Colors.textGray,
     padding: 0,
   },
   inputText: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textDark,
   },
   placeholderText: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
   },
@@ -498,15 +495,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   flagPlaceholder: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#FF0000',
-    marginRight: 12,
+    marginRight: 10,
   },
   selectedFlag: {
-    fontSize: 28,
-    marginRight: 12,
+    fontSize: 24,
+    marginRight: 10,
   },
   dropdownIcon: {
     width: 16,
@@ -516,37 +513,6 @@ const styles = StyleSheet.create({
   calendarIcon: {
     width: 24,
     height: 24,
-    tintColor: Colors.primary,
-  },
-
-  // Text Area
-  textAreaContainer: {
-    backgroundColor: Colors.backgroundGray,
-    borderRadius: 20,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    minHeight: 120,
-  },
-  textArea: {
-    fontFamily: Fonts.kantumruyRegular,
-    fontSize: 14,
-    color: Colors.textDark,
-    padding: 0,
-    minHeight: 80,
-  },
-
-  // Save Button
-  saveButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 20,
-    color: Colors.white,
   },
 
   // Modal
@@ -559,7 +525,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
-    maxHeight: '60%',
+    height: '70%',
+    paddingBottom: 30,
+  },
+  genderModalContainer: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
     paddingBottom: 30,
   },
   modalHeader: {
@@ -572,7 +544,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   modalTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.textBlack,
   },
@@ -580,22 +552,57 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: Colors.textGray,
   },
-  modalItem: {
+
+  // List Container
+  listContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  countryList: {
+    flex: 1,
+  },
+  countryItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  modalItemText: {
-    fontFamily: Fonts.kantumruyRegular,
-    fontSize: 16,
-    color: Colors.textDark,
+    borderBottomColor: Colors.border,
   },
   countryFlag: {
     fontSize: 28,
     marginRight: 15,
+  },
+  countryName: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 16,
+    color: Colors.textDark,
+  },
+  genderItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  genderName: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 16,
+    color: Colors.textDark,
+  },
+
+  // Scrollbar
+  scrollbarTrack: {
+    width: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    marginRight: 8,
+    marginVertical: 10,
+  },
+  scrollbarThumb: {
+    width: 4,
+    height: 60,
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
   },
 });
 

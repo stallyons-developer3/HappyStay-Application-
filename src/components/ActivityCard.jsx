@@ -85,7 +85,7 @@ const ActivityCard = ({
             activeOpacity={0.7}
           >
             <Image
-              source={require('../assets/images/icons/map.png')}
+              source={require('../assets/images/icons/map-card.png')}
               style={styles.mapIcon}
               resizeMode="contain"
             />
@@ -132,17 +132,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontFamily: Fonts.kantumruyBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.primary,
   },
   price: {
-    fontFamily: Fonts.kantumruyBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.primary,
   },
   description: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
     lineHeight: 20,
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   infoText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textGray,
   },
@@ -180,12 +180,13 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   mapText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: Colors.primary,
     borderBottomWidth: 1,
     borderBottomColor: Colors.primary,
+    textTransform: 'lowercase',
   },
 });
-
+ 
 export default ActivityCard;

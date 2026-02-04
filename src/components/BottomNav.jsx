@@ -120,12 +120,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   badgeText: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 10,
     color: Colors.white,
   },
   label: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 11,
   },
 });

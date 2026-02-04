@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   StyleSheet,
   Modal,
   ScrollView,
 } from 'react-native';
 import { Colors, Fonts } from '../constants/Constants';
+import Button from './common/Button';
 
 // Filter Options
 const categoryOptions = [
@@ -38,22 +38,47 @@ const sortOptions = [
 ];
 
 const FilterModal = ({ visible, onClose, onApply }) => {
-  const [selectedCategory, setSelectedCategory] = useState('1');
-  const [selectedPrice, setSelectedPrice] = useState('1');
+  // Arrays for multiple selection
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedPrices, setSelectedPrices] = useState([]);
   const [selectedSort, setSelectedSort] = useState('1');
+
+  // Toggle Category - Multiple Selection
+  const toggleCategory = id => {
+    if (selectedCategories.includes(id)) {
+      // Already selected - remove it
+      setSelectedCategories(selectedCategories.filter(item => item !== id));
+    } else {
+      // Not selected - add it
+      setSelectedCategories([...selectedCategories, id]);
+    }
+  };
+
+  // Toggle Price - Multiple Selection
+  const togglePrice = id => {
+    if (selectedPrices.includes(id)) {
+      // Already selected - remove it
+      setSelectedPrices(selectedPrices.filter(item => item !== id));
+    } else {
+      // Not selected - add it
+      setSelectedPrices([...selectedPrices, id]);
+    }
+  };
 
   // Handle Reset
   const handleReset = () => {
-    setSelectedCategory('1');
-    setSelectedPrice('1');
+    setSelectedCategories([]);
+    setSelectedPrices([]);
     setSelectedSort('1');
   };
 
   // Handle Apply
   const handleApply = () => {
     const filters = {
-      category: categoryOptions.find(c => c.id === selectedCategory),
-      price: priceOptions.find(p => p.id === selectedPrice),
+      categories: selectedCategories.map(id =>
+        categoryOptions.find(c => c.id === id),
+      ),
+      prices: selectedPrices.map(id => priceOptions.find(p => p.id === id)),
       sort: sortOptions.find(s => s.id === selectedSort),
     };
     onApply(filters);
@@ -71,20 +96,26 @@ const FilterModal = ({ visible, onClose, onApply }) => {
         <View style={styles.modalContainer}>
           {/* Header */}
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={styles.closeText}>✕</Text>
-            </TouchableOpacity>
+            <View style={styles.closeButton}>
+              <TouchableOpacity onPress={onClose}>
+                <Text style={styles.closeText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
             <Text style={styles.modalTitle}>Filter</Text>
-            <TouchableOpacity onPress={handleReset}>
-              <Text style={styles.resetText}>Reset</Text>
-            </TouchableOpacity>
+
+            <View style={styles.resetButton}>
+              <TouchableOpacity onPress={handleReset}>
+                <Text style={styles.resetText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <ScrollView
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
           >
-            {/* Category Section */}
+            {/* Category Section - Multiple Selection */}
             <Text style={styles.sectionTitle}>Category</Text>
             <View style={styles.optionsContainer}>
               {categoryOptions.map(option => (
@@ -92,15 +123,16 @@ const FilterModal = ({ visible, onClose, onApply }) => {
                   key={option.id}
                   style={[
                     styles.optionChip,
-                    selectedCategory === option.id && styles.optionChipSelected,
+                    selectedCategories.includes(option.id) &&
+                      styles.optionChipSelected,
                   ]}
                   activeOpacity={0.7}
-                  onPress={() => setSelectedCategory(option.id)}
+                  onPress={() => toggleCategory(option.id)}
                 >
                   <Text
                     style={[
                       styles.optionText,
-                      selectedCategory === option.id &&
+                      selectedCategories.includes(option.id) &&
                         styles.optionTextSelected,
                     ]}
                   >
@@ -110,7 +142,7 @@ const FilterModal = ({ visible, onClose, onApply }) => {
               ))}
             </View>
 
-            {/* Price Range Section */}
+            {/* Price Range Section - Multiple Selection */}
             <Text style={styles.sectionTitle}>Price Range</Text>
             <View style={styles.optionsContainer}>
               {priceOptions.map(option => (
@@ -118,15 +150,17 @@ const FilterModal = ({ visible, onClose, onApply }) => {
                   key={option.id}
                   style={[
                     styles.optionChip,
-                    selectedPrice === option.id && styles.optionChipSelected,
+                    selectedPrices.includes(option.id) &&
+                      styles.optionChipSelected,
                   ]}
                   activeOpacity={0.7}
-                  onPress={() => setSelectedPrice(option.id)}
+                  onPress={() => togglePrice(option.id)}
                 >
                   <Text
                     style={[
                       styles.optionText,
-                      selectedPrice === option.id && styles.optionTextSelected,
+                      selectedPrices.includes(option.id) &&
+                        styles.optionTextSelected,
                     ]}
                   >
                     {option.name}
@@ -135,7 +169,7 @@ const FilterModal = ({ visible, onClose, onApply }) => {
               ))}
             </View>
 
-            {/* Sort By Section */}
+            {/* Sort By Section - Single Selection (Radio) */}
             <Text style={styles.sectionTitle}>Sort By</Text>
             <View style={styles.sortContainer}>
               {sortOptions.map(option => (
@@ -170,13 +204,7 @@ const FilterModal = ({ visible, onClose, onApply }) => {
 
           {/* Apply Button */}
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.applyButton}
-              activeOpacity={0.8}
-              onPress={handleApply}
-            >
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
-            </TouchableOpacity>
+            <Button title="Apply Filters" onPress={handleApply} size="full" />
           </View>
         </View>
       </View>
@@ -196,8 +224,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 30,
     maxHeight: '85%',
   },
-
-  // Header
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -207,38 +233,49 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
   },
-  closeIcon: {
-    width: 24,
-    height: 24,
-    tintColor: Colors.textBlack,
+  closeButton: {
+    width: 80, // Fixed width
+    alignItems: 'flex-start',
+  },
+  closeText: {
+    fontSize: 24,
+    color: Colors.textBlack,
   },
   modalTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.primary,
   },
+  resetButton: {
+    width: 80, // Same fixed width as close
+    alignItems: 'flex-end',
+  },
   resetText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 14,
     color: Colors.primary,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    textTransform: 'lowercase',
   },
-
-  // Scroll View
+  closeText: {
+    fontSize: 24,
+    color: Colors.textBlack,
+  },
   scrollView: {
     paddingHorizontal: 24,
     paddingTop: 20,
   },
-
-  // Section Title
   sectionTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.textBlack,
     marginBottom: 16,
     marginTop: 8,
   },
-
-  // Options Container (Chips)
   optionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -256,15 +293,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   optionText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.textDark,
   },
   optionTextSelected: {
     color: Colors.white,
   },
-
-  // Sort Container (Radio Buttons)
   sortContainer: {
     marginBottom: 20,
   },
@@ -277,12 +312,12 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.borderLight,
   },
   sortText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 15,
     color: Colors.textDark,
   },
   sortTextSelected: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.RobotoBold,
     color: Colors.primary,
   },
   radioOuter: {
@@ -303,8 +338,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: Colors.primary,
   },
-
-  // Button Container
   buttonContainer: {
     paddingHorizontal: 24,
     paddingVertical: 20,
@@ -315,17 +348,13 @@ const styles = StyleSheet.create({
   applyButton: {
     backgroundColor: Colors.primary,
     paddingVertical: 16,
-    borderRadius: 30,
+    borderRadius: 50,
     alignItems: 'center',
   },
   applyButtonText: {
     fontFamily: Fonts.poppinsBold,
-    fontSize: 16,
+    fontSize: 20,
     color: Colors.white,
-  },
-  closeText: {
-    fontSize: 24,
-    color: Colors.textBlack,
   },
 });
 

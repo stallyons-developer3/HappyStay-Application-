@@ -27,9 +27,9 @@ const myHangoutsData = [
     peopleCount: 4,
     peopleImages: [
       require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
+      require('../../assets/images/user1.png'),
+      require('../../assets/images/user2.png'),
+      require('../../assets/images/user3.png'),
     ],
   },
   {
@@ -42,9 +42,9 @@ const myHangoutsData = [
     peopleCount: 4,
     peopleImages: [
       require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
+      require('../../assets/images/user1.png'),
+      require('../../assets/images/user2.png'),
+      require('../../assets/images/user3.png'),
     ],
   },
   {
@@ -57,9 +57,9 @@ const myHangoutsData = [
     peopleCount: 4,
     peopleImages: [
       require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
+      require('../../assets/images/user1.png'),
+      require('../../assets/images/user2.png'),
+      require('../../assets/images/user3.png'),
     ],
   },
 ];
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   headerTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.white,
   },
@@ -209,9 +209,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   notificationIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 32,
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   badgeText: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 10,
     color: Colors.white,
   },
@@ -243,11 +243,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 60, // Changed from 60 to 30
+    marginTop: 50, // Changed from 60 to 30
     marginBottom: 10,
   },
   greeting: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 28,
     color: Colors.white,
     lineHeight: 38,
@@ -262,6 +262,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.poppinsBold,
     fontSize: 14,
     color: Colors.primary,
+    textTransform: 'lowercase',
   },
 
   // Cards
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   bottomSpacing: {
-    height: 0,
+    height: 100,
   },
 });
 

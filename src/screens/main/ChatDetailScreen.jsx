@@ -7,14 +7,20 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
 } from 'react-native';
+import { Shadow } from 'react-native-shadow-2';
 import { Colors, Fonts } from '../../constants/Constants';
 
 // Components
 import ChatBubble from '../../components/ChatBubble';
+
+const { width } = Dimensions.get('window');
+
+// Calculate input width: screen - paddingHorizontal(40) - sendButton(48) - gap(12)
+const INPUT_WIDTH = width - 40 - 48 - 12;
 
 // Static Chat Data
 const chatMessages = [
@@ -80,7 +86,6 @@ const ChatDetailScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-
       {/* Header */}
       <View style={styles.header}>
         {/* Back Button */}
@@ -130,22 +135,29 @@ const ChatDetailScreen = ({ navigation }) => {
         ))}
       </ScrollView>
 
-      {/* Message Input - Fixed at Bottom (Same as ActivityDetailScreen) */}
+      {/* Message Input - Fixed at Bottom */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <View style={styles.inputContainer}>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Message"
-              placeholderTextColor={Colors.textLight}
-              value={message}
-              onChangeText={setMessage}
-              multiline
-            />
-          </View>
+          <Shadow
+            distance={8}
+            startColor="rgba(0, 0, 0, 0.06)"
+            endColor="rgba(0, 0, 0, 0)"
+            offset={[0, 0]}
+          >
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Message"
+                placeholderTextColor={Colors.textLight}
+                value={message}
+                onChangeText={setMessage}
+                multiline
+              />
+            </View>
+          </Shadow>
 
           {/* Send Button */}
           <TouchableOpacity
@@ -199,7 +211,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   headerTitle: {
-    fontFamily: Fonts.poppinsSemiBold,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 16,
     color: Colors.textBlack,
     marginLeft: 12,
@@ -214,7 +226,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
 
-  // Input Container (Same style as ActivityDetailScreen)
+  // Input Container
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -223,25 +235,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   inputWrapper: {
-    flex: 1,
+    width: INPUT_WIDTH,
     backgroundColor: Colors.white,
     borderRadius: 37,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 12,
     marginRight: 12,
-    shadowColor: Colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   textInput: {
-    fontFamily: Fonts.kantumruyRegular,
-    fontSize: 12,
-    color: Colors.textDark,
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
     padding: 0,
     maxHeight: 80,
   },

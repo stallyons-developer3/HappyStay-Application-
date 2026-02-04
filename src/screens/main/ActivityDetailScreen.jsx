@@ -7,13 +7,15 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  StatusBar,
   Dimensions,
 } from 'react-native';
+import { Shadow } from 'react-native-shadow-2';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
-import { Screen } from 'react-native-screens';
 
 const { width } = Dimensions.get('window');
+
+// Calculate input width: screen - paddingHorizontal(40) - sendButton(48) - gap(12)
+const INPUT_WIDTH = width - 40 - 48 - 12;
 
 // Dummy Comments Data
 const commentsData = [
@@ -31,21 +33,8 @@ const commentsData = [
   },
 ];
 
-const ActivityDetailScreen = ({ navigation, route }) => {
+const ActivityDetailScreen = ({ navigation }) => {
   const [commentText, setCommentText] = useState('');
-
-  // Activity data (from route params or default)
-  const activity = route?.params?.activity || {
-    image: require('../../assets/images/bonfire.png'),
-    title: 'Bonfire',
-    category: 'Party',
-    time: '8:00 PM - 5:00 AM',
-    date: '12-01-2026',
-    description:
-      'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has.',
-    price: '$12',
-    peopleJoined: 36,
-  };
 
   // Send comment
   const handleSendComment = () => {
@@ -57,7 +46,6 @@ const ActivityDetailScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -66,9 +54,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
         {/* Hero Image */}
         <View style={styles.imageContainer}>
           <Image
-            source={
-              activity.image || require('../../assets/images/bonfire.png')
-            }
+            source={require('../../assets/images/bonfire.png')}
             style={styles.heroImage}
             resizeMode="cover"
           />
@@ -91,9 +77,9 @@ const ActivityDetailScreen = ({ navigation, route }) => {
         <View style={styles.content}>
           {/* Title Row */}
           <View style={styles.titleRow}>
-            <Text style={styles.title}>{activity.title}</Text>
+            <View style={styles.titleLeft}>
+              <Text style={styles.title}>Bonfire</Text>
 
-            <View style={styles.titleInfo}>
               {/* Location */}
               <View style={styles.infoItem}>
                 <Image
@@ -101,7 +87,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
                   style={styles.infoIcon}
                   resizeMode="contain"
                 />
-                <Text style={styles.infoText}>{activity.location}</Text>
+                <Text style={styles.infoText}>Pool Site</Text>
               </View>
 
               {/* Age Range */}
@@ -111,13 +97,13 @@ const ActivityDetailScreen = ({ navigation, route }) => {
                   style={styles.infoIcon}
                   resizeMode="contain"
                 />
-                <Text style={styles.infoText}>{activity.ageRange}</Text>
+                <Text style={styles.infoText}>18-30</Text>
               </View>
+            </View>
 
-              {/* Category Tag */}
-              <View style={styles.categoryTag}>
-                <Text style={styles.categoryText}>Party</Text>
-              </View>
+            {/* Category Tag - Right Aligned */}
+            <View style={styles.categoryTag}>
+              <Text style={styles.categoryText}>Party</Text>
             </View>
           </View>
 
@@ -130,7 +116,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
                 style={styles.infoIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.infoText}>{activity.time}</Text>
+              <Text style={styles.infoText}>8:00 PM - 5:00 AM</Text>
             </View>
 
             {/* Date */}
@@ -140,13 +126,13 @@ const ActivityDetailScreen = ({ navigation, route }) => {
                 style={styles.infoIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.infoText}>{activity.date}</Text>
+              <Text style={styles.infoText}>12-01-2026</Text>
             </View>
 
             {/* Open Map */}
             <TouchableOpacity style={styles.mapButton} activeOpacity={0.7}>
               <Image
-                source={require('../../assets/images/icons/map.png')}
+                source={require('../../assets/images/icons/map-card.png')}
                 style={styles.mapIcon}
                 resizeMode="contain"
               />
@@ -155,14 +141,16 @@ const ActivityDetailScreen = ({ navigation, route }) => {
           </View>
 
           {/* Description */}
-          <Text style={styles.description}>{activity.description}</Text>
+          <Text style={styles.description}>
+            It is a long established fact that a reader will be distracted by
+            the readable content of a page when looking at its layout. The point
+            of using Lorem Ipsum is that it has.
+          </Text>
 
           {/* Price & People Row */}
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{activity.price}</Text>
-            <Text style={styles.peopleJoined}>
-              {activity.peopleJoined} Peoples Joined
-            </Text>
+            <Text style={styles.price}>$12</Text>
+            <Text style={styles.peopleJoined}>36 People Joined</Text>
           </View>
 
           {/* Action Buttons */}
@@ -170,7 +158,6 @@ const ActivityDetailScreen = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.joinButton}
               activeOpacity={0.8}
-              onPress={() => console.log('Request to Join')}
             >
               <Text style={styles.joinButtonText}>Request to Join</Text>
             </TouchableOpacity>
@@ -206,15 +193,22 @@ const ActivityDetailScreen = ({ navigation, route }) => {
 
       {/* Comment Input - Fixed at Bottom */}
       <View style={styles.commentInputContainer}>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.commentInput}
-            placeholder="Write a comment"
-            placeholderTextColor={Colors.textLight}
-            value={commentText}
-            onChangeText={setCommentText}
-          />
-        </View>
+        <Shadow
+          distance={8}
+          startColor="rgba(0, 0, 0, 0.06)"
+          endColor="rgba(0, 0, 0, 0)"
+          offset={[0, 0]}
+        >
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Write a comment"
+              placeholderTextColor={Colors.textLight}
+              value={commentText}
+              onChangeText={setCommentText}
+            />
+          </View>
+        </Shadow>
         <TouchableOpacity
           style={styles.sendButton}
           onPress={handleSendComment}
@@ -280,19 +274,20 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     marginBottom: 12,
   },
-  title: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 22,
-    color: Colors.primary,
-    marginRight: 12,
-  },
-  titleInfo: {
+  titleLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
+    flex: 1,
+  },
+  title: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 20,
+    color: Colors.primary,
+    marginRight: 12,
   },
   infoItem: {
     flexDirection: 'row',
@@ -302,11 +297,10 @@ const styles = StyleSheet.create({
   infoIcon: {
     width: 14,
     height: 14,
-
     marginRight: 4,
   },
   infoText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textGray,
   },
@@ -317,7 +311,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   categoryText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 12,
     color: Colors.white,
   },
@@ -339,15 +333,16 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   mapText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: Colors.primary,
     textDecorationLine: 'underline',
+    textTransform: 'lowercase',
   },
 
   // Description
   description: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textGray,
     lineHeight: 22,
@@ -362,14 +357,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   price: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.primary,
   },
   peopleJoined: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 16,
-    color: Colors.textBlack,
+    color: Colors.primary,
   },
 
   // Action Buttons
@@ -386,9 +381,10 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   joinButtonText: {
-    fontFamily: Fonts.kantumruyBold,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: Colors.white,
+    textTransform: 'lowercase',
   },
   chatButton: {
     flex: 1,
@@ -398,14 +394,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chatButtonText: {
-    fontFamily: Fonts.kantumruyBold,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: Colors.white,
+    textTransform: 'lowercase',
   },
 
   // Comments Section
   commentsTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.primary,
     marginBottom: 16,
@@ -430,15 +427,15 @@ const styles = StyleSheet.create({
     maxWidth: width - 100,
   },
   commentName: {
-    fontFamily: Fonts.poppinsSemiBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.textBlack,
     marginBottom: 2,
   },
   commentText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
-    color: Colors.textGray,
+    color: '#23232380',
   },
 
   // Comment Input
@@ -454,26 +451,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
   },
   inputWrapper: {
-    flex: 1,
+    width: INPUT_WIDTH,
     backgroundColor: Colors.white,
-    borderRadius: 25,
+    borderRadius: 37,
     paddingHorizontal: 20,
     paddingVertical: 12,
     marginRight: 12,
-    shadowColor: Colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    borderRadius:37
   },
   commentInput: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
-    color: Colors.textDark,
+    color: Colors.textGray,
     padding: 0,
   },
   sendButton: {

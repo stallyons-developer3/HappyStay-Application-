@@ -2,6 +2,14 @@
   "migIndex": 1,
   "data": [
     {
+      "path": "src/assets/fonts/Kantumruy-Bold.ttf",
+      "sha1": "5da4bab181f4a7075220347863e6f7ed4941877d"
+    },
+    {
+      "path": "src/assets/fonts/Kantumruy-Regular.ttf",
+      "sha1": "972882cb44d2f0edd7beb005dec7ea23b1df518e"
+    },
+    {
       "path": "src/assets/fonts/KantumruyPro-Bold.ttf",
       "sha1": "5146e42617443770ec18e06a7bacade609cf7787"
     },
@@ -132,6 +140,14 @@
     {
       "path": "src/assets/fonts/Poppins-ThinItalic.ttf",
       "sha1": "fb8fccca21550e71135f92bbaf8a2e8a12c90465"
+    },
+    {
+      "path": "src/assets/fonts/Roboto-Bold.ttf",
+      "sha1": "783de2321d7e6d21f880a10437a9f2c7b45ed198"
+    },
+    {
+      "path": "src/assets/fonts/Roboto-Regular.ttf",
+      "sha1": "3bff51436aa7eb995d84cfc592cc63e1316bb400"
     }
   ]
 }

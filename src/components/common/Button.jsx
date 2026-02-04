@@ -5,13 +5,13 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import Colors from '../../constants/Constants';
+import { Colors, Fonts } from '../../constants/Constants';
 
 const Button = ({
   title,
   onPress,
-  variant = 'primary', // 'primary' | 'outline' | 'text'
-  size = 'large', // 'small' | 'medium' | 'large' | 'full'
+  variant = 'primary',
+  size = 'large',
   disabled = false,
   loading = false,
   style,
@@ -136,13 +136,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   fullButton: {
-    paddingVertical: 16,
+    paddingVertical: 15,
     width: '100%',
   },
 
   // Text Styles
   buttonText: {
-    fontFamily: 'Poppins-Bold',
+    fontFamily: Fonts.poppinsBold,
+    textTransform: 'lowercase',
   },
   primaryButtonText: {
     color: Colors.white,

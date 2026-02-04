@@ -8,10 +8,7 @@ const FloatingMapButton = ({ onPress }) => {
 
   return (
     <TouchableOpacity
-      style={[
-        styles.container,
-        { bottom: 30 + insets.bottom }, // Safe area add karo
-      ]}
+      style={[styles.container, { bottom: 75 + insets.bottom }]}
       activeOpacity={0.9}
       onPress={onPress}
     >
@@ -20,7 +17,7 @@ const FloatingMapButton = ({ onPress }) => {
         style={styles.icon}
         resizeMode="contain"
       />
-      <Text style={styles.text}>Map</Text>
+      <Text style={styles.text}>map</Text>
     </TouchableOpacity>
   );
 };

@@ -22,9 +22,9 @@ const hangoutsData = [
     peopleCount: 4,
     peopleImages: [
       require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
+      require('../../assets/images/user1.png'),
+      require('../../assets/images/user2.png'),
+      require('../../assets/images/user3.png'),
     ],
   },
   {
@@ -37,9 +37,9 @@ const hangoutsData = [
     peopleCount: 4,
     peopleImages: [
       require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
+      require('../../assets/images/user1.png'),
+      require('../../assets/images/user2.png'),
+      require('../../assets/images/user3.png'),
     ],
   },
   {
@@ -52,9 +52,9 @@ const hangoutsData = [
     peopleCount: 6,
     peopleImages: [
       require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/profile.png'),
+      require('../../assets/images/user1.png'),
+      require('../../assets/images/user2.png'),
+      require('../../assets/images/user3.png'),
     ],
   },
 ];
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
   bottomSpacing: {
-    height: 0,
+    height: 100,
   },
 });
 

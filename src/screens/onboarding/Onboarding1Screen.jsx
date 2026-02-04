@@ -4,19 +4,18 @@ import {
   Text,
   Image,
   StyleSheet,
-  StatusBar,
   TextInput,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Modal,
-  FlatList,
+  Animated,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import Button from '../../components/common/Button';
 
-// Countries Data with Flags
 const countries = [
   { id: '1', name: 'Indonesia', flag: '🇮🇩' },
   { id: '2', name: 'Pakistan', flag: '🇵🇰' },
@@ -35,20 +34,39 @@ const countries = [
   { id: '15', name: 'Turkey', flag: '🇹🇷' },
 ];
 
+const genders = [
+  { id: '1', name: 'Male' },
+  { id: '2', name: 'Female' },
+  { id: '3', name: 'Other' },
+];
+
 const Onboarding1Screen = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [userName, setUserName] = useState('');
 
-  // Nationality State
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [showCountryModal, setShowCountryModal] = useState(false);
 
-  // Date State
+  const [selectedGender, setSelectedGender] = useState(null);
+  const [showGenderModal, setShowGenderModal] = useState(false);
+
   const [date, setDate] = useState(new Date(1999, 9, 18));
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Format Date
+  const [scrollIndicator] = useState(new Animated.Value(0));
+  const [contentHeight, setContentHeight] = useState(1);
+  const [scrollViewHeight, setScrollViewHeight] = useState(1);
+
+  const scrollIndicatorHeight = 60;
+  const scrollTrackHeight = scrollViewHeight - 20;
+  const scrollableHeight = contentHeight - scrollViewHeight;
+  const indicatorPosition = scrollIndicator.interpolate({
+    inputRange: [0, scrollableHeight > 0 ? scrollableHeight : 1],
+    outputRange: [0, scrollTrackHeight - scrollIndicatorHeight],
+    extrapolate: 'clamp',
+  });
+
   const formatDate = date => {
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -56,7 +74,6 @@ const Onboarding1Screen = ({ navigation }) => {
     return `${day} - ${month} - ${year}`;
   };
 
-  // Handle Date Change
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) {
@@ -64,34 +81,25 @@ const Onboarding1Screen = ({ navigation }) => {
     }
   };
 
-  // Select Country
   const selectCountry = country => {
     setSelectedCountry(country);
     setShowCountryModal(false);
   };
 
-  // Render Country Item
-  const renderCountryItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.countryItem}
-      onPress={() => selectCountry(item)}
-    >
-      <Text style={styles.countryFlag}>{item.flag}</Text>
-      <Text style={styles.countryName}>{item.name}</Text>
-    </TouchableOpacity>
-  );
+  const selectGender = gender => {
+    setSelectedGender(gender);
+    setShowGenderModal(false);
+  };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header */}
         <Text style={styles.title}>Welcome! Let's get started</Text>
         <Text style={styles.subtitle}>
           Please provide the following information to{'\n'}
@@ -99,27 +107,6 @@ const Onboarding1Screen = ({ navigation }) => {
           years old to use this app.
         </Text>
 
-        {/* Profile Picture with Ring */}
-        <View style={styles.profileContainer}>
-          <View style={styles.profileRing}>
-            <View style={styles.profileImageWrapper}>
-              <Image
-                source={require('../../assets/images/profile.png')}
-                style={styles.profileImage}
-                resizeMode="cover"
-              />
-            </View>
-          </View>
-          <TouchableOpacity style={styles.cameraButton}>
-            <Image
-              source={require('../../assets/images/camera.png')}
-              style={styles.cameraIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* First Name Input */}
         <Text style={styles.inputLabel}>First Name</Text>
         <View style={styles.inputContainer}>
           <TextInput
@@ -131,7 +118,6 @@ const Onboarding1Screen = ({ navigation }) => {
           />
         </View>
 
-        {/* Last Name Input */}
         <Text style={styles.inputLabel}>Last Name</Text>
         <View style={styles.inputContainer}>
           <TextInput
@@ -143,8 +129,7 @@ const Onboarding1Screen = ({ navigation }) => {
           />
         </View>
 
-        {/* User Name Input */}
-        <Text style={styles.inputLabel}>User Name</Text>
+        <Text style={styles.inputLabel}>Username</Text>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -155,7 +140,24 @@ const Onboarding1Screen = ({ navigation }) => {
           />
         </View>
 
-        {/* Nationality Dropdown */}
+        <Text style={styles.inputLabel}>Gender</Text>
+        <TouchableOpacity
+          style={styles.inputContainer}
+          activeOpacity={0.7}
+          onPress={() => setShowGenderModal(true)}
+        >
+          <Text
+            style={selectedGender ? styles.selectedText : styles.dropdownText}
+          >
+            {selectedGender ? selectedGender.name : 'Select'}
+          </Text>
+          <Image
+            source={require('../../assets/images/arrow-down.png')}
+            style={styles.dropdownIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+
         <Text style={styles.inputLabel}>Nationality</Text>
         <TouchableOpacity
           style={styles.inputContainer}
@@ -184,7 +186,6 @@ const Onboarding1Screen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        {/* Age Date Picker */}
         <Text style={styles.inputLabel}>Age</Text>
         <TouchableOpacity
           style={styles.inputContainer}
@@ -199,7 +200,6 @@ const Onboarding1Screen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        {/* Date Picker */}
         {showDatePicker && (
           <DateTimePicker
             value={date}
@@ -210,17 +210,14 @@ const Onboarding1Screen = ({ navigation }) => {
           />
         )}
 
-        {/* Continue Button */}
-        <TouchableOpacity
-          style={styles.continueButton}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate(Screens.Onboarding2)}
-        >
-          <Text style={styles.continueButtonText}>Continue</Text>
-        </TouchableOpacity>
+        <Button
+          title="Continue"
+          onPress={() => navigation.navigate(Screens.Onboarding3)}
+          size="full"
+        />
       </ScrollView>
 
-      {/* Country Selection Modal */}
+      {/* Country Modal */}
       <Modal
         visible={showCountryModal}
         transparent={true}
@@ -229,7 +226,6 @@ const Onboarding1Screen = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Nationality</Text>
               <TouchableOpacity onPress={() => setShowCountryModal(false)}>
@@ -237,13 +233,68 @@ const Onboarding1Screen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Country List */}
-            <FlatList
-              data={countries}
-              keyExtractor={item => item.id}
-              renderItem={renderCountryItem}
-              showsVerticalScrollIndicator={false}
-            />
+            <View style={styles.listContainer}>
+              <ScrollView
+                style={styles.countryList}
+                showsVerticalScrollIndicator={false}
+                onScroll={Animated.event(
+                  [{ nativeEvent: { contentOffset: { y: scrollIndicator } } }],
+                  { useNativeDriver: false },
+                )}
+                scrollEventThrottle={16}
+                onContentSizeChange={(w, h) => setContentHeight(h)}
+                onLayout={e => setScrollViewHeight(e.nativeEvent.layout.height)}
+              >
+                {countries.map(item => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.countryItem}
+                    onPress={() => selectCountry(item)}
+                  >
+                    <Text style={styles.countryFlag}>{item.flag}</Text>
+                    <Text style={styles.countryName}>{item.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <View style={styles.scrollbarTrack}>
+                <Animated.View
+                  style={[
+                    styles.scrollbarThumb,
+                    { transform: [{ translateY: indicatorPosition }] },
+                  ]}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Gender Modal */}
+      <Modal
+        visible={showGenderModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowGenderModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.genderModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Gender</Text>
+              <TouchableOpacity onPress={() => setShowGenderModal(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {genders.map(item => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.genderItem}
+                onPress={() => selectGender(item)}
+              >
+                <Text style={styles.genderName}>{item.name}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
       </Modal>
@@ -263,60 +314,22 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   title: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.textBlack,
     textAlign: 'center',
     marginBottom: 12,
   },
   subtitle: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textBlack,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 25,
   },
-  profileContainer: {
-    alignItems: 'center',
-    marginBottom: 25,
-    position: 'relative',
-  },
-  profileRing: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImageWrapper: {
-    width: 115,
-    height: 115,
-    borderRadius: 57.5,
-    overflow: 'hidden',
-  },
-  profileImage: {
-    width: '100%',
-    height: '100%',
-  },
-  cameraButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: '32%',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraIcon: {
-    width: 36,
-    height: 36,
-  },
   inputLabel: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
     marginBottom: 8,
@@ -332,9 +345,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
-    color: Colors.textDark,
+    color: Colors.textGray,
     padding: 0,
   },
   dropdownContent: {
@@ -354,12 +367,19 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   selectedCountryText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textDark,
+  },
+  selectedText: {
+    flex: 1,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textDark,
   },
   dropdownText: {
-    fontFamily: Fonts.kantumruyRegular,
+    flex: 1,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
   },
@@ -370,9 +390,9 @@ const styles = StyleSheet.create({
   },
   dateText: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
-    color: Colors.textDark,
+    color: Colors.textGray,
   },
   calendarIcon: {
     width: 24,
@@ -390,8 +410,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: Colors.white,
   },
-
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -401,7 +419,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
-    maxHeight: '70%',
+    height: '70%',
+    paddingBottom: 30,
+  },
+  genderModalContainer: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
     paddingBottom: 30,
   },
   modalHeader: {
@@ -414,13 +438,20 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   modalTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.textBlack,
   },
   modalClose: {
     fontSize: 20,
     color: Colors.textGray,
+  },
+  listContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  countryList: {
+    flex: 1,
   },
   countryItem: {
     flexDirection: 'row',
@@ -435,9 +466,33 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   countryName: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 16,
     color: Colors.textDark,
+  },
+  genderItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  genderName: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 16,
+    color: Colors.textDark,
+  },
+  scrollbarTrack: {
+    width: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    marginRight: 8,
+    marginVertical: 10,
+  },
+  scrollbarThumb: {
+    width: 4,
+    height: 60,
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
   },
 });
 

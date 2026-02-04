@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   title: {
-    fontFamily: Fonts.kantumruyBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.primary,
     marginBottom: 4,
@@ -101,12 +101,12 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   locationText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textGray,
   },
   dateText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textGray,
     marginTop: 2,
@@ -120,9 +120,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   bookingButtonText: {
-    fontFamily: Fonts.kantumruyBold,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: Colors.white,
+    textTransform: 'lowercase',
   },
 });
 

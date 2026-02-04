@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     tintColor: Colors.textBlack,
   },
   headerTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.primary,
     marginLeft: 8,

@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
   },
   message: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     lineHeight: 22,
   },
@@ -108,25 +108,26 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
   },
   linkText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     textDecorationLine: 'underline',
     marginTop: 4,
   },
   sentLink: {
-    color: Colors.white,
+    color: '#0000FF',
   },
   receivedLink: {
-    color: Colors.primary,
+    color: '#0000FF',
   },
   time: {
-    fontFamily: Fonts.kantumruyRegular,
-    fontSize: 11,
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
     marginTop: 6,
     alignSelf: 'flex-end',
+    color: Colors.white,
   },
   sentTime: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255)',
   },
   receivedTime: {
     color: Colors.textGray,

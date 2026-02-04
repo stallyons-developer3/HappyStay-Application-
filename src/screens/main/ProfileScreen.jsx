@@ -9,6 +9,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import Button from '../../components/common/Button';
 
 // Components
 import TripCard from '../../components/TripCard';
@@ -51,7 +52,6 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -147,22 +147,10 @@ const ProfileScreen = ({ navigation }) => {
         {/* Buttons */}
         <View style={styles.buttonsContainer}>
           {/* Trips Button */}
-          <TouchableOpacity
-            style={styles.tripsButton}
-            activeOpacity={0.8}
-            onPress={handleTrips}
-          >
-            <Text style={styles.tripsButtonText}>Trips</Text>
-          </TouchableOpacity>
+          <Button title="Trips" onPress={handleTrips} size="full" />
 
           {/* Logout Button */}
-          <TouchableOpacity
-            style={styles.logoutButton}
-            activeOpacity={0.8}
-            onPress={handleLogout}
-          >
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
+          <Button title="Logout" onPress={handleLogout} size="full" />
         </View>
       </ScrollView>
     </View>
@@ -199,7 +187,7 @@ const styles = StyleSheet.create({
     tintColor: Colors.textBlack,
   },
   headerTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.primary,
     textAlign: 'center',
@@ -247,15 +235,15 @@ const styles = StyleSheet.create({
     tintColor: Colors.white,
   },
   profileName: {
-    fontFamily: Fonts.poppinsSemiBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.textBlack,
     marginBottom: 4,
   },
   profileEmail: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
-    color: Colors.textGray,
+    color: Colors.textDark,
   },
 
   // Section
@@ -263,7 +251,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.textBlack,
     marginBottom: 16,

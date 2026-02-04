@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     tintColor: Colors.textBlack,
   },
   headerTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.primary,
     marginLeft: 8,
@@ -264,21 +264,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationTitle: {
-    fontFamily: Fonts.poppinsSemiBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.textBlack,
   },
   notificationDescription: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 13,
     color: Colors.textGray,
     marginTop: 4,
     lineHeight: 20,
   },
   notificationTime: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 11,
-    color: Colors.textLight,
+    color: Colors.textGray,
     marginTop: 8,
   },
 
@@ -295,13 +295,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.textBlack,
     marginBottom: 8,
   },
   emptyDescription: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textGray,
   },

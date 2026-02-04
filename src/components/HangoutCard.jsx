@@ -66,7 +66,7 @@ const HangoutCard = ({
                     style={[styles.dropdownIcon, { tintColor: '#5B93FF' }]}
                     resizeMode="contain"
                   />
-                  <Text style={styles.editText}>Edit</Text>
+                  <Text style={styles.editText}>edit</Text>
                 </TouchableOpacity>
 
                 {/* Delete Item */}
@@ -116,7 +116,6 @@ const HangoutCard = ({
         title="Request to Join"
         size="full"
         onPress={onJoinPress}
-        style={styles.joinButton}
       />
     </TouchableOpacity>
   );
@@ -155,7 +154,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   name: {
-    fontFamily: Fonts.poppinsRegular,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.textBlack,
   },
@@ -163,7 +162,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   menuButton: {
-    padding: 8,
+    padding: 0,
   },
   menuIcon: {
     width: 20,
@@ -201,7 +200,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   editText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 14,
     color: '#5B93FF',
   },
@@ -216,9 +215,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   deleteText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 14,
     color: '#E71D36',
+    textTransform: 'lowercase',
   },
 
   // Icon
@@ -229,29 +229,26 @@ const styles = StyleSheet.create({
   },
 
   activityType: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.primary,
     marginBottom: 8,
   },
   description: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
     lineHeight: 20,
     marginBottom: 12,
   },
   peopleCount: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.textBlack,
     marginBottom: 8,
   },
   avatarSection: {
     marginBottom: 16,
-  },
-  joinButton: {
-    borderRadius: 50,
   },
 });
 

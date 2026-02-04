@@ -20,7 +20,12 @@ const BottomTabNavigator = () => {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        sceneContainerStyle: {
+          backgroundColor: Colors.backgroundGray,
+          borderRadius: 50,
+        },
         tabBarStyle: {
+          position: 'absolute',
           backgroundColor: Colors.white,
           height: 65 + insets.bottom,
           paddingBottom: 10 + insets.bottom,
@@ -31,10 +36,12 @@ const BottomTabNavigator = () => {
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 8,
+          borderTopEndRadius: 35,
+          borderTopStartRadius: 35,
         },
         tabBarLabelStyle: {
-          fontFamily: Fonts.kantumruyMedium,
-          fontSize: 11,
+          fontFamily: Fonts.poppinsMedium,
+          fontSize: 10,
           marginTop: 2,
         },
         tabBarActiveTintColor: Colors.primary,

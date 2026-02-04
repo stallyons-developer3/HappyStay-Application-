@@ -56,7 +56,6 @@ const ChatScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
@@ -127,7 +126,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textDark,
     padding: 0,
@@ -144,7 +143,7 @@ const styles = StyleSheet.create({
 
   // Bottom Spacing
   bottomSpacing: {
-    height: 20,
+    height: 100,
   },
 });
 

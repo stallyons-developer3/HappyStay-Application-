@@ -51,6 +51,8 @@
 	<false/>
 	<key>UIAppFonts</key>
 	<array>
+		<string>Kantumruy-Bold.ttf</string>
+		<string>Kantumruy-Regular.ttf</string>
 		<string>KantumruyPro-Bold.ttf</string>
 		<string>KantumruyPro-BoldItalic.ttf</string>
 		<string>KantumruyPro-ExtraLight.ttf</string>
@@ -83,6 +85,8 @@
 		<string>Poppins-SemiBoldItalic.ttf</string>
 		<string>Poppins-Thin.ttf</string>
 		<string>Poppins-ThinItalic.ttf</string>
+		<string>Roboto-Bold.ttf</string>
+		<string>Roboto-Regular.ttf</string>
 	</array>
 </dict>
 </plist>

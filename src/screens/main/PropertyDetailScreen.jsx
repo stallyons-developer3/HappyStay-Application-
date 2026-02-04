@@ -6,11 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  StatusBar,
   Dimensions,
   Linking,
 } from 'react-native';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import Button from '../../components/common/Button';
 
 const { width } = Dimensions.get('window');
 
@@ -66,10 +66,7 @@ const propertyData = {
 const PropertyDetailScreen = ({ navigation }) => {
   // Handle Get Direction
   const handleGetDirection = () => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      propertyData.directions.address,
-    )}`;
-    Linking.openURL(url);
+    navigation.navigate(Screens.Map);
   };
 
   // Handle Request Booking
@@ -79,7 +76,6 @@ const PropertyDetailScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -138,6 +134,8 @@ const PropertyDetailScreen = ({ navigation }) => {
             ))}
           </View>
 
+          <View style={styles.divider} />
+
           {/* Restaurant Menu Section */}
           <Text style={styles.sectionTitle}>Restaurant Menu</Text>
           <ScrollView
@@ -154,6 +152,8 @@ const PropertyDetailScreen = ({ navigation }) => {
               />
             ))}
           </ScrollView>
+
+          <View style={styles.divider} />
 
           {/* Directions Section */}
           <Text style={styles.sectionTitle}>Directions</Text>
@@ -182,6 +182,8 @@ const PropertyDetailScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
+          <View style={styles.divider} />
+
           {/* Services Section */}
           <Text style={styles.sectionTitle}>Services</Text>
           <View style={styles.servicesContainer}>
@@ -197,6 +199,8 @@ const PropertyDetailScreen = ({ navigation }) => {
             ))}
           </View>
 
+          <View style={styles.divider} />
+
           {/* House Rules Section */}
           <Text style={styles.sectionTitle}>House Rules</Text>
           <View style={styles.rulesContainer}>
@@ -211,6 +215,8 @@ const PropertyDetailScreen = ({ navigation }) => {
               </View>
             ))}
           </View>
+
+          <View style={styles.divider} />
 
           {/* Wi-Fi Details Section */}
           <Text style={styles.sectionTitle}>Wi-Fi Details</Text>
@@ -228,13 +234,11 @@ const PropertyDetailScreen = ({ navigation }) => {
 
       {/* Request Booking Button - Fixed at Bottom */}
       <View style={styles.bottomButtonContainer}>
-        <TouchableOpacity
-          style={styles.bookingButton}
-          activeOpacity={0.8}
+        <Button
+          title="Request Booking"
           onPress={handleRequestBooking}
-        >
-          <Text style={styles.bookingButtonText}>Request Booking</Text>
-        </TouchableOpacity>
+          size="full"
+        />
       </View>
     </View>
   );
@@ -287,7 +291,7 @@ const styles = StyleSheet.create({
 
   // Main Title
   mainTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.primary,
     marginBottom: 10,
@@ -295,19 +299,17 @@ const styles = StyleSheet.create({
 
   // Section Title
   sectionTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.textBlack,
     marginBottom: 12,
-    marginTop: 8,
   },
 
   // Opening Hours
   hoursText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 16,
     color: Colors.textBlack,
-    marginBottom: 8,
     lineHeight: 22,
   },
 
@@ -315,7 +317,8 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: Colors.borderLight,
-    marginVertical: 16,
+    marginTop: 22,
+    marginBottom: 13,
   },
 
   // Amenities
@@ -323,7 +326,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    gap: 8,
   },
   amenityItem: {
     width: (width - 52) / 2,
@@ -332,7 +335,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 12,
-    marginBottom: 12,
     backgroundColor: '#F7F8FB',
   },
   amenityIcon: {
@@ -341,7 +343,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   amenityText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 13,
     color: Colors.textDark,
     flex: 1,
@@ -362,13 +364,12 @@ const styles = StyleSheet.create({
   directionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    justifyContent: 'flex-start',
+    gap: 15,
   },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
   directionIcon: {
     width: 16,
@@ -376,7 +377,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   addressText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
   },
@@ -391,23 +392,24 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   getDirectionText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: Colors.textBlack,
     textDecorationLine: 'underline',
+    textTransform: 'lowercase',
   },
 
   // Services
   servicesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 8,
+    gap: 8,
+    rowGap: 12,
   },
   serviceItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 20,
-    marginBottom: 12,
+    marginRight: 12,
   },
   checkIcon: {
     width: 20,
@@ -415,22 +417,21 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   serviceText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
   },
 
   // House Rules
   rulesContainer: {
-    marginBottom: 16,
+    gap: 10,
   },
   ruleItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 14,
   },
   ruleText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
     flex: 1,
@@ -439,10 +440,9 @@ const styles = StyleSheet.create({
 
   // Wi-Fi Details
   wifiText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textGray,
-    marginBottom: 6,
     lineHeight: 22,
   },
 

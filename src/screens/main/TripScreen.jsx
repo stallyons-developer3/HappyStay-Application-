@@ -123,7 +123,7 @@ const TripScreen = ({ navigation }) => {
           showGreeting={true}
           showBackIcon={true}
           onBackPress={() => navigation.goBack()}
-          greeting={`Select Your\nTrip`}
+          greeting={`Select Your Trip`}
           notificationCount={5}
           onProfilePress={() => navigation.navigate(Screens.Profile)}
           onNotificationPress={() => navigation.navigate(Screens.Notification)}
@@ -135,7 +135,7 @@ const TripScreen = ({ navigation }) => {
           value={searchText}
           onChangeText={setSearchText}
           onSearch={() => console.log('Search:', searchText)}
-          onActionPress={() => setShowFilterModal(true)}
+          showActionButton={false}
         />
 
         {/* Trip Cards */}
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 60,
   },
 
   // Cards Container
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
 
   // Bottom Spacing
   bottomSpacing: {
-    height: 0,
+    height: 70,
   },
 
   // Modal
@@ -301,6 +301,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 24,
     width: '100%',
+    borderRadius:3
   },
   modalHeader: {
     flexDirection: 'row',
@@ -310,7 +311,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   modalTitle: {
-    fontFamily: Fonts.kantumruyBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.primary,
   },
@@ -320,13 +321,14 @@ const styles = StyleSheet.create({
     top: 0,
   },
   modalClose: {
-    fontSize: 20,
-    color: Colors.textGray,
+    fontSize: 14,
+    color: Colors.textBlack,
+    fontWeight:'700'
   },
 
   // Date Input
   dateLabel: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
     marginBottom: 8,
@@ -342,13 +344,13 @@ const styles = StyleSheet.create({
   },
   dateText: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textDark,
   },
   datePlaceholder: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
   },
@@ -372,6 +374,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: Colors.white,
+    textTransform: 'lowercase',
   },
 });
 

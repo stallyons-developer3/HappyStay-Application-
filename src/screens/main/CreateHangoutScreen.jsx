@@ -7,17 +7,16 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  StatusBar,
   Modal,
   FlatList,
   Switch,
   Platform,
+  StatusBar,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { WebView } from 'react-native-webview';
 import { Colors, Fonts } from '../../constants/Constants';
 
-// Typology Options
 const typologyOptions = [
   { id: '1', name: 'Nature & Active' },
   { id: '2', name: 'Sightseeing' },
@@ -27,7 +26,6 @@ const typologyOptions = [
   { id: '6', name: 'Transport' },
 ];
 
-// Interest Options
 const interestOptions = [
   { id: '1', name: 'Hiking' },
   { id: '2', name: 'Swimming' },
@@ -40,42 +38,34 @@ const interestOptions = [
 ];
 
 const CreateHangoutScreen = ({ navigation, route }) => {
-  // Check if Edit Mode
   const isEdit = route?.params?.isEdit || false;
   const hangoutData = route?.params?.hangout || null;
 
-  // Current Step
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Step 1 Form Data
   const [title, setTitle] = useState('');
   const [typology, setTypology] = useState(null);
   const [ageLimit, setAgeLimit] = useState('');
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
 
-  // Step 2 Form Data
   const [interest, setInterest] = useState(null);
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
 
-  // Map Coordinates
   const [markerPosition, setMarkerPosition] = useState({
     latitude: 24.8607,
     longitude: 67.0011,
   });
 
-  // Modal States
   const [showTypologyModal, setShowTypologyModal] = useState(false);
   const [showInterestModal, setShowInterestModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  // WebView Ref
   const webViewRef = useRef(null);
 
-  // OpenStreetMap HTML with Leaflet
   const mapHTML = `
     <!DOCTYPE html>
     <html>
@@ -111,7 +101,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     </html>
   `;
 
-  // Handle Map Message
   const handleMapMessage = event => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
@@ -124,7 +113,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     }
   };
 
-  // Format Date
   const formatDate = date => {
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -132,14 +120,12 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     return `${day}/${month}/${year}`;
   };
 
-  // Format Time
   const formatTime = time => {
     const hours = time.getHours().toString().padStart(2, '0');
     const minutes = time.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
   };
 
-  // Handle Date Change
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) {
@@ -147,7 +133,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     }
   };
 
-  // Handle Time Change
   const onTimeChange = (event, selectedTime) => {
     setShowTimePicker(false);
     if (selectedTime) {
@@ -155,12 +140,10 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     }
   };
 
-  // Handle Next
   const handleNext = () => {
     setCurrentStep(2);
   };
 
-  // Handle Create / Update
   const handleCreate = () => {
     const hangoutFormData = {
       title,
@@ -184,7 +167,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     navigation.goBack();
   };
 
-  // Render Dropdown Item
   const renderDropdownItem = (item, onSelect, closeModal) => (
     <TouchableOpacity
       style={styles.dropdownItem}
@@ -197,23 +179,42 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     </TouchableOpacity>
   );
 
-  // Render Step 1
   const renderStep1 = () => (
-    <>
-      {/* Subtitle */}
+    <View style={styles.step1Container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../../assets/images/arrow-left.png')}
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {isEdit ? 'Edit Hangout' : 'Plan a Hangout'}
+        </Text>
+      </View>
+
       <Text style={styles.subtitle}>
         {isEdit
           ? 'Update the details for your hangout'
           : 'Set up the details for your hangout and\ninvite others to join'}
       </Text>
 
-      {/* Title Input */}
       <Text style={styles.inputLabel}>Title</Text>
       <View style={styles.inputContainer}>
-        <TextInput style={styles.input} value={title} onChangeText={setTitle} />
+        <TextInput
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Enter"
+          placeholderTextColor={Colors.textLight}
+        />
       </View>
 
-      {/* Typology Dropdown */}
       <Text style={styles.inputLabel}>Typology</Text>
       <TouchableOpacity
         style={styles.inputContainer}
@@ -221,7 +222,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         onPress={() => setShowTypologyModal(true)}
       >
         <Text style={typology ? styles.inputText : styles.placeholderText}>
-          {typology ? typology.name : ''}
+          {typology ? typology.name : 'Select'}
         </Text>
         <Image
           source={require('../../assets/images/arrow-down.png')}
@@ -230,19 +231,19 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         />
       </TouchableOpacity>
 
-      {/* Age Limit Input */}
       <Text style={styles.inputLabel}>Age Limit</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           value={ageLimit}
           onChangeText={setAgeLimit}
+          placeholder="Enter"
+          placeholderTextColor={Colors.textLight}
+          keyboardType="numeric"
         />
       </View>
 
-      {/* Date & Time Row */}
       <View style={styles.dateTimeRow}>
-        {/* Date */}
         <View style={styles.dateTimeItemLeft}>
           <Text style={styles.inputLabel}>Date</Text>
           <TouchableOpacity
@@ -250,11 +251,10 @@ const CreateHangoutScreen = ({ navigation, route }) => {
             activeOpacity={0.7}
             onPress={() => setShowDatePicker(true)}
           >
-            <Text style={styles.inputText}>{formatDate(date)}</Text>
+            <Text style={styles.dateTimeText}>{formatDate(date)}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Time */}
         <View style={styles.dateTimeItemRight}>
           <Text style={styles.inputLabel}>Time</Text>
           <TouchableOpacity
@@ -262,15 +262,13 @@ const CreateHangoutScreen = ({ navigation, route }) => {
             activeOpacity={0.7}
             onPress={() => setShowTimePicker(true)}
           >
-            <Text style={styles.inputText}>{formatTime(time)}</Text>
+            <Text style={styles.dateTimeText}>{formatTime(time)}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Spacer */}
       <View style={styles.spacer} />
 
-      {/* Next Button */}
       <TouchableOpacity
         style={styles.primaryButton}
         activeOpacity={0.8}
@@ -278,13 +276,33 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       >
         <Text style={styles.primaryButtonText}>Next</Text>
       </TouchableOpacity>
-    </>
+    </View>
   );
 
-  // Render Step 2
   const renderStep2 = () => (
-    <>
-      {/* Interest Dropdown */}
+    <ScrollView
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setCurrentStep(1)}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../../assets/images/arrow-left.png')}
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {isEdit ? 'Edit Hangout' : 'Plan a Hangout'}
+        </Text>
+      </View>
+
       <Text style={styles.inputLabel}>Interest</Text>
       <TouchableOpacity
         style={styles.inputContainer}
@@ -292,7 +310,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         onPress={() => setShowInterestModal(true)}
       >
         <Text style={interest ? styles.inputText : styles.placeholderText}>
-          {interest ? interest.name : ''}
+          {interest ? interest.name : 'Select'}
         </Text>
         <Image
           source={require('../../assets/images/arrow-down.png')}
@@ -301,17 +319,17 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         />
       </TouchableOpacity>
 
-      {/* Location Input */}
       <Text style={styles.inputLabel}>Location</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           value={location}
           onChangeText={setLocation}
+          placeholder="Enter"
+          placeholderTextColor={Colors.textLight}
         />
       </View>
 
-      {/* OpenStreetMap */}
       <View style={styles.mapContainer}>
         <WebView
           ref={webViewRef}
@@ -323,7 +341,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         />
       </View>
 
-      {/* Description */}
       <Text style={styles.inputLabel}>Description</Text>
       <View style={styles.textAreaContainer}>
         <TextInput
@@ -333,14 +350,13 @@ const CreateHangoutScreen = ({ navigation, route }) => {
           multiline
           numberOfLines={4}
           textAlignVertical="top"
+          placeholder="Enter"
+          placeholderTextColor={Colors.textLight}
         />
       </View>
 
-      {/* Private Toggle */}
       <View style={styles.toggleRow}>
-        <Text style={styles.toggleLabel}>
-          Is it private or just a public hangout?
-        </Text>
+        <Text style={styles.toggleLabel}>Is it private?</Text>
         <Switch
           value={isPrivate}
           onValueChange={setIsPrivate}
@@ -349,7 +365,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         />
       </View>
 
-      {/* Create / Update Button */}
       <TouchableOpacity
         style={styles.primaryButton}
         activeOpacity={0.8}
@@ -359,46 +374,13 @@ const CreateHangoutScreen = ({ navigation, route }) => {
           {isEdit ? 'Update' : 'Create'}
         </Text>
       </TouchableOpacity>
-    </>
+    </ScrollView>
   );
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              if (currentStep === 2) {
-                setCurrentStep(1);
-              } else {
-                navigation.goBack();
-              }
-            }}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('../../assets/images/arrow-left.png')}
-              style={styles.backIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {isEdit ? 'Edit Hangout' : 'Plan a Hangout'}
-          </Text>
-        </View>
+      {currentStep === 1 ? renderStep1() : renderStep2()}
 
-        {/* Form Content */}
-        {currentStep === 1 ? renderStep1() : renderStep2()}
-      </ScrollView>
-
-      {/* Date Picker */}
       {showDatePicker && (
         <DateTimePicker
           value={date}
@@ -409,7 +391,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         />
       )}
 
-      {/* Time Picker */}
       {showTimePicker && (
         <DateTimePicker
           value={time}
@@ -419,7 +400,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         />
       )}
 
-      {/* Typology Modal */}
       <Modal
         visible={showTypologyModal}
         transparent={true}
@@ -448,7 +428,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         </View>
       </Modal>
 
-      {/* Interest Modal */}
       <Modal
         visible={showInterestModal}
         transparent={true}
@@ -485,6 +464,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
+  step1Container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+  },
   scrollView: {
     flex: 1,
   },
@@ -493,7 +477,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
 
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -511,24 +494,22 @@ const styles = StyleSheet.create({
     tintColor: Colors.textBlack,
   },
   headerTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.textBlack,
     marginLeft: 8,
   },
 
-  // Subtitle
   subtitle: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textGray,
     lineHeight: 22,
     marginBottom: 24,
   },
 
-  // Input
   inputLabel: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textBlack,
     marginBottom: 8,
@@ -542,23 +523,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     marginBottom: 20,
+    minHeight: 50,
   },
   input: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textDark,
     padding: 0,
   },
   inputText: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textDark,
   },
   placeholderText: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
   },
@@ -568,7 +550,6 @@ const styles = StyleSheet.create({
     tintColor: Colors.textDark,
   },
 
-  // Date & Time Row
   dateTimeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -586,42 +567,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     marginBottom: 20,
+    minHeight: 50,
+    justifyContent: 'center',
+  },
+  dateTimeText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textDark,
   },
 
-  // Spacer
   spacer: {
     flex: 1,
-    minHeight: 120,
   },
 
-  // Primary Button
   primaryButton: {
     backgroundColor: Colors.primary,
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
-    marginTop: 20,
   },
   primaryButtonText: {
     fontFamily: Fonts.poppinsBold,
     fontSize: 18,
     color: Colors.white,
+    textTransform: 'lowercase',
   },
 
-  // Map
   mapContainer: {
     height: 180,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#00000050',
+    borderColor: '#fff',
   },
   map: {
     flex: 1,
   },
 
-  // Text Area
   textAreaContainer: {
     borderWidth: 1.5,
     borderColor: '#00000050',
@@ -632,14 +615,13 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   textArea: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textDark,
     padding: 0,
     minHeight: 90,
   },
 
-  // Toggle
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -647,14 +629,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   toggleLabel: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textBlack,
     flex: 1,
     marginRight: 12,
   },
 
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -677,7 +658,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   modalTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.textBlack,
   },
@@ -692,7 +673,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   dropdownItemText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 16,
     color: Colors.textDark,
   },

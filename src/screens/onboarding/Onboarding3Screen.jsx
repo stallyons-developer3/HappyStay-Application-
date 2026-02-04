@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import Button from '../../components/common/Button';
 
 const { width } = Dimensions.get('window');
 const chipWidth = (width - 48 - 16) / 2;
@@ -64,11 +65,8 @@ const Onboarding3Screen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-
-      <Text style={styles.title}>What describe better your trips?</Text>
-      <Text style={styles.subtitle}>
-        Select 1 to 3 options. They will be visible on{'\n'}your profile
-      </Text>
+      <Text style={styles.title}>What best describes your trips?</Text>
+      <Text style={styles.subtitle}>Select 1 to 3 options. They will be visible on your profile</Text>
 
       <View style={styles.chipsContainer}>
         <View style={styles.row}>
@@ -95,13 +93,11 @@ const Onboarding3Screen = ({ navigation }) => {
       </View>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.confirmButton}
-          activeOpacity={0.8}
-          onPress={() => navigation.replace('MainApp')}
-        >
-          <Text style={styles.confirmButtonText}>Confirm</Text>
-        </TouchableOpacity>
+        <Button
+          title="Continue"
+          onPress={() => navigation.navigate(Screens.Onboarding2)}
+          size="full"
+        />
       </View>
     </View>
   );
@@ -115,13 +111,13 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   title: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.textBlack,
     marginBottom: 12,
   },
   subtitle: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textBlack,
     lineHeight: 22,
@@ -150,7 +146,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   chipText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.poppinsRegular,
     fontSize: 14,
     color: Colors.textBlack,
   },

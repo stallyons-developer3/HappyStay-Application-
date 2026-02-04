@@ -57,23 +57,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.primary,
     marginBottom: 4,
   },
   description: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
     lineHeight: 18,
     marginVertical: 8,
   },
   link: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.poppinsRegular,
     fontSize: 12,
     color: Colors.textBlack,
     textDecorationLine: 'underline',
+    textTransform: 'lowercase',
   },
 });
 

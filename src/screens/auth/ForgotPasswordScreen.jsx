@@ -7,8 +7,12 @@ import {
   TextInput,
   TouchableOpacity,
   Dimensions,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import Button from '../../components/common/Button';
 
 const { width } = Dimensions.get('window');
 
@@ -22,62 +26,69 @@ const ForgotPasswordScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Back Arrow */}
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
-        <Image
-          source={require('../../assets/images/arrow-left.png')}
-          style={styles.backIcon}
-          resizeMode="contain"
-        />
-      </TouchableOpacity>
-
-      {/* Header */}
-      <Text style={styles.title}>Forgot Password</Text>
-      <Text style={styles.subtitle}>
-        Enter your email address and we'll send{'\n'}you a link to reset your
-        password
-      </Text>
-
-      {/* Email Input */}
-      <Text style={styles.inputLabel}>Email</Text>
-      <View style={styles.inputContainer}>
-        <Image
-          source={require('../../assets/images/email.png')}
-          style={styles.inputIcon}
-          resizeMode="contain"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your email"
-          placeholderTextColor={Colors.textLight}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-        />
-      </View>
-
-      {/* Send Button */}
-      <TouchableOpacity
-        style={styles.sendButton}
-        activeOpacity={0.8}
-        onPress={handleSendLink}
-      >
-        <Text style={styles.sendButtonText}>Send Reset Link</Text>
-      </TouchableOpacity>
-
-      {/* Back to Login */}
-      <View style={styles.backToLoginContainer}>
-        <Text style={styles.backToLoginText}>Remember your password? </Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backToLoginLink}>Sign In</Text>
+        {/* Back Arrow */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Image
+            source={require('../../assets/images/arrow-left.png')}
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
-      </View>
-    </View>
+
+        {/* Header */}
+        <Text style={styles.title}>Forgot Password</Text>
+        <Text style={styles.subtitle}>
+          Enter your email address and we'll send{'\n'}you a link to reset your
+          password
+        </Text>
+
+        {/* Email Input */}
+        <Text style={styles.inputLabel}>Email</Text>
+        <View style={styles.inputContainer}>
+          <Image
+            source={require('../../assets/images/email.png')}
+            style={styles.inputIcon}
+            resizeMode="contain"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your email"
+            placeholderTextColor={Colors.textLight}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
+        </View>
+
+        {/* Send Button */}
+        <Button
+          title="Send Reset Link"
+          onPress={() => navigation.navigate(Screens.Login)}
+          size="full"
+        />
+
+        {/* Back to Login */}
+        <View style={styles.backToLoginContainer}>
+          <Text style={styles.backToLoginText}>Remember your password? </Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.backToLoginLink}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -85,7 +96,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   backButton: {
     marginTop: 50,
@@ -99,20 +114,20 @@ const styles = StyleSheet.create({
     height: 24,
   },
   title: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 30,
     color: Colors.primary,
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
     lineHeight: 22,
     marginBottom: 40,
   },
   inputLabel: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textLight,
     marginBottom: 8,
@@ -130,12 +145,11 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     marginRight: 12,
-    tintColor: Colors.textLight,
   },
   input: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
-    fontSize: 16,
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
     color: Colors.textGray,
     padding: 0,
   },
@@ -157,14 +171,15 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   backToLoginText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
   },
   backToLoginLink: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.poppinsRegular,
     fontSize: 14,
     color: Colors.primary,
+    textTransform: 'lowercase',
   },
 });
 

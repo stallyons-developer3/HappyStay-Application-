@@ -4,7 +4,7 @@ import { Colors, Fonts } from '../constants/Constants';
 
 const ChatRow = ({ image, title, message, isAI = false, onPress }) => {
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.container, isAI && styles.aiContainer]}
       onPress={onPress}
       activeOpacity={0.7}
@@ -63,16 +63,16 @@ const styles = StyleSheet.create({
     marginLeft: 14,
   },
   title: {
-    fontFamily: Fonts.kantumruyBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.textBlack,
-    marginBottom: 2,
+    marginBottom: 5,
   },
   aiTitle: {
     color: Colors.white,
   },
   message: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textGray,
   },

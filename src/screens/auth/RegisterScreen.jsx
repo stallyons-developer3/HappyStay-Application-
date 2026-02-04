@@ -4,7 +4,6 @@ import {
   Text,
   Image,
   StyleSheet,
-  StatusBar,
   TextInput,
   TouchableOpacity,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import Button from '../../components/common/Button';
 
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -26,10 +26,10 @@ const RegisterScreen = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled" // ✅ Added
       >
         {/* Back Arrow */}
         <TouchableOpacity
@@ -101,7 +101,11 @@ const RegisterScreen = ({ navigation }) => {
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
             <Image
-              source={require('../../assets/images/eye_close.png')}
+              source={
+                showPassword
+                  ? require('../../assets/images/eye_open.png') // ✅ Added
+                  : require('../../assets/images/eye_close.png')
+              }
               style={styles.eyeIcon}
               resizeMode="contain"
             />
@@ -128,7 +132,11 @@ const RegisterScreen = ({ navigation }) => {
             onPress={() => setShowConfirmPassword(!showConfirmPassword)}
           >
             <Image
-              source={require('../../assets/images/eye_close.png')}
+              source={
+                showConfirmPassword
+                  ? require('../../assets/images/eye_open.png') // ✅ Added
+                  : require('../../assets/images/eye_close.png')
+              }
               style={styles.eyeIcon}
               resizeMode="contain"
             />
@@ -136,13 +144,11 @@ const RegisterScreen = ({ navigation }) => {
         </View>
 
         {/* Sign Up Button */}
-        <TouchableOpacity
-          style={styles.signUpButton}
-          activeOpacity={0.8}
+        <Button
+          title="Sign up"
           onPress={() => navigation.navigate(Screens.Onboarding1)}
-        >
-          <Text style={styles.signUpButtonText}>Sign up</Text>
-        </TouchableOpacity>
+          size="full"
+        />
 
         {/* OR Divider */}
         <View style={styles.orContainer}>
@@ -205,19 +211,19 @@ const styles = StyleSheet.create({
     height: 24,
   },
   title: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 30,
     color: Colors.primary,
     marginBottom: 8,
   },
   subtitle: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
     marginBottom: 25,
   },
   inputLabel: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textLight,
     marginBottom: 8,
@@ -238,8 +244,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: Fonts.kantumruyRegular,
-    fontSize: 16,
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14, 
     color: Colors.textGray,
     padding: 0,
   },
@@ -264,6 +270,7 @@ const styles = StyleSheet.create({
   orContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 25,
     marginBottom: 25,
   },
   orLine: {
@@ -272,7 +279,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   orText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
     marginHorizontal: 15,
@@ -292,9 +299,10 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   socialButtonText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.poppinsRegular, 
     fontSize: 14,
     color: Colors.textGray,
+    textTransform: 'lowercase',
   },
   signInContainer: {
     flexDirection: 'row',
@@ -302,14 +310,15 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   signInText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
   },
   signInLink: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.poppinsRegular,
     fontSize: 14,
     color: Colors.primary,
+    textTransform: 'lowercase',
   },
 });
 

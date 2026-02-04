@@ -15,6 +15,7 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import Onboarding1Screen from '../screens/onboarding/Onboarding1Screen';
 import Onboarding2Screen from '../screens/onboarding/Onboarding2Screen';
 import Onboarding3Screen from '../screens/onboarding/Onboarding3Screen';
+import Onboarding4Screen from '../screens/onboarding/Onboarding4Screen';
 import ActivityDetailScreen from '../screens/main/ActivityDetailScreen';
 import CreateHangoutScreen from '../screens/main/CreateHangoutScreen';
 import HangoutDetailScreen from '../screens/main/HangoutDetailScreen';
@@ -49,7 +50,7 @@ const AppNavigator = () => {
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
-          contentStyle: { backgroundColor: Colors.white },
+          contentStyle: { backgroundColor: Colors.backgroundGray },
         }}
       >
         {/* Auth Screens - top & bottom safe area */}
@@ -86,6 +87,10 @@ const AppNavigator = () => {
         <Stack.Screen
           name={Screens.Onboarding3}
           component={withSafeArea(Onboarding3Screen, ['top', 'bottom'])}
+        />
+        <Stack.Screen
+          name={'Onboarding4'}
+          component={withSafeArea(Onboarding4Screen, ['top', 'bottom'])}
         />
 
         {/* Main App - Bottom Tabs (only top safe area, bottom handled by tab bar) */}

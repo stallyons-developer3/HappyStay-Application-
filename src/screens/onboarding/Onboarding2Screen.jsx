@@ -1,109 +1,47 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  StatusBar,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
+import React from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
-
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 24 - 24 - 16) / 2;
-
-// Activities Data
-const activities = [
-  {
-    id: '1',
-    name: 'Nature & Active',
-    image: require('../../assets/images/mountain.png'),
-  },
-  {
-    id: '2',
-    name: 'Sightseeing',
-    image: require('../../assets/images/sightseeing.png'),
-  },
-  {
-    id: '3',
-    name: 'Party',
-    image: require('../../assets/images/party.png'),
-  },
-  {
-    id: '4',
-    name: 'Events',
-    image: require('../../assets/images/events.png'),
-  },
-  {
-    id: '5',
-    name: 'Food & Drink',
-    image: require('../../assets/images/foods.png'),
-  },
-  {
-    id: '6',
-    name: 'Transport',
-    image: require('../../assets/images/transport.png'),
-  },
-];
+import Button from '../../components/common/Button';
 
 const Onboarding2Screen = ({ navigation }) => {
-  const [selectedActivities, setSelectedActivities] = useState([]);
-
-  const toggleActivity = id => {
-    if (selectedActivities.includes(id)) {
-      setSelectedActivities(selectedActivities.filter(item => item !== id));
-    } else {
-      setSelectedActivities([...selectedActivities, id]);
-    }
-  };
-
-  const isSelected = id => selectedActivities.includes(id);
-
   return (
     <View style={styles.container}>
+      {/* Header */}
+      <Text style={styles.title}>Profile Picture</Text>
 
-      <Text style={styles.title}>Activity Typology</Text>
-      <Text style={styles.subtitle}>
-        Which activities typology are proposing?
+      {/* Tagline */}
+      <Text style={styles.tagline}>
+        Let's put a face to your name!{'\n'}
+        Upload a photo so others can recognize you.
       </Text>
 
-      <View style={styles.gridContainer}>
-        {activities.map(activity => (
-          <TouchableOpacity
-            key={activity.id}
-            style={[
-              styles.card,
-              isSelected(activity.id) && styles.cardSelected,
-            ]}
-            activeOpacity={0.8}
-            onPress={() => toggleActivity(activity.id)}
-          >
+      {/* Profile Container */}
+      <View style={styles.profileContainer}>
+        <View style={styles.profileRing}>
+          <View style={styles.profileImageWrapper}>
             <Image
-              source={activity.image}
-              style={styles.cardImage}
-              resizeMode="contain"
+              source={require('../../assets/images/profile.png')}
+              style={styles.profileImage}
+              resizeMode="cover"
             />
-            <Text
-              style={[
-                styles.cardText,
-                isSelected(activity.id) && styles.cardTextSelected,
-              ]}
-            >
-              {activity.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
+          </View>
+        </View>
+        <TouchableOpacity style={styles.cameraButton}>
+          <Image
+            source={require('../../assets/images/camera.png')}
+            style={styles.cameraIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
       </View>
 
+      {/* Bottom Button */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.continueButton}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate(Screens.Onboarding3)}
-        >
-          <Text style={styles.continueButtonText}>Continue</Text>
-        </TouchableOpacity>
+        <Button
+          title="Continue"
+          onPress={() => navigation.navigate(Screens.Onboarding4)}
+          size="full"
+        />
       </View>
     </View>
   );
@@ -117,52 +55,56 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   title: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.textBlack,
     textAlign: 'center',
     marginBottom: 12,
   },
-  subtitle: {
-    fontFamily: Fonts.kantumruyRegular,
+  tagline: {
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
-    color: Colors.textBlack,
+    color: Colors.textGray,
     textAlign: 'center',
-    marginBottom: 30,
+    lineHeight: 22,
+    marginBottom: 40,
   },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  profileContainer: {
+    alignItems: 'center',
+    position: 'relative',
   },
-  card: {
-    width: cardWidth,
-    height: cardWidth,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    borderWidth: 1.5,
+  profileRing: {
+    width: 180,
+    height: 180,
+    borderRadius: 100,
+    borderWidth: 1,
     borderColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  cardSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+  profileImageWrapper: {
+    width: 165,
+    height: 165,
+    borderRadius: 82.5,
+    overflow: 'hidden',
   },
-  cardImage: {
-    width: 60,
-    height: 60,
-    marginBottom: 12,
+  profileImage: {
+    width: '100%',
+    height: '100%',
   },
-  cardText: {
-    fontFamily: Fonts.kantumruyRegular,
-    fontSize: 14,
-    color: Colors.textBlack,
-    textAlign: 'center',
+  cameraButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: '22%',
+    width: 50,
+    height: 50,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  cardTextSelected: {
-    color: Colors.white,
+  cameraIcon: {
+    width: 36,
+    height: 36,
   },
   buttonContainer: {
     flex: 1,

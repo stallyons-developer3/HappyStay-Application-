@@ -35,11 +35,9 @@ export const Fonts = {
   poppinsSemiBold: 'Poppins-SemiBold',
   poppinsBold: 'Poppins-Bold',
 
-  // KantumruyPro Family
-  kantumruyRegular: 'KantumruyPro-Regular',
-  kantumruyMedium: 'KantumruyPro-Medium',
-  kantumruySemiBold: 'KantumruyPro-SemiBold',
-  kantumruyBold: 'KantumruyPro-Bold',
+  // Roboto Family
+  RobotoRegular: 'Roboto-Regular',
+  RobotoBold: 'Roboto-Bold',
 };
 
 // Screen Names for Navigation
@@ -53,6 +51,7 @@ export const Screens = {
   Onboarding1: 'Onboarding1',
   Onboarding2: 'Onboarding2',
   Onboarding3: 'Onboarding3',
+  Onboarding4: 'Onboarding4',
 
   // Main App (Tab Navigator)
   MainApp: 'MainApp',

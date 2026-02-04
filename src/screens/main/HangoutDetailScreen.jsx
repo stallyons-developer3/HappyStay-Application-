@@ -6,10 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  StatusBar,
 } from 'react-native';
-import { Colors, Fonts } from '../../constants/Constants';
-import { Linking, Platform } from 'react-native';
+import { Colors, Fonts, Screens } from '../../constants/Constants';
 
 // Dummy Requests Data
 const requestsData = [
@@ -43,20 +41,7 @@ const requestsData = [
   },
 ];
 
-const HangoutDetailScreen = ({ navigation, route }) => {
-  // Hangout data (from route params or default)
-  const hangout = route?.params?.hangout || {
-    image: require('../../assets/images/mountain-1.png'),
-    title: 'Bonfire',
-    location: 'Pool Site',
-    ageRange: '18-30',
-    category: 'Party',
-    time: '8:00 PM - 5:00 AM',
-    description:
-      'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has.',
-    peopleJoined: 36,
-  };
-
+const HangoutDetailScreen = ({ navigation }) => {
   // Handle Accept
   const handleAccept = requestId => {
     console.log('Accept request:', requestId);
@@ -92,7 +77,7 @@ const HangoutDetailScreen = ({ navigation, route }) => {
           {/* Hangout Image */}
           <View style={styles.imageContainer}>
             <Image
-              source={hangout.image}
+              source={require('../../assets/images/mountain-1.png')}
               style={styles.hangoutImage}
               resizeMode="contain"
             />
@@ -103,31 +88,33 @@ const HangoutDetailScreen = ({ navigation, route }) => {
         <View style={styles.content}>
           {/* Title Row */}
           <View style={styles.titleRow}>
-            <Text style={styles.title}>{hangout.title}</Text>
+            <View style={styles.titleLeft}>
+              <Text style={styles.title}>Bonfire</Text>
 
-            {/* Location */}
-            <View style={styles.infoItem}>
-              <Image
-                source={require('../../assets/images/icons/map-pin.png')}
-                style={styles.infoIcon}
-                resizeMode="contain"
-              />
-              <Text style={styles.infoText}>{hangout.location}</Text>
-            </View>
+              {/* Location */}
+              <View style={styles.infoItem}>
+                <Image
+                  source={require('../../assets/images/icons/map-pin.png')}
+                  style={styles.infoIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.infoText}>Pool Site</Text>
+              </View>
 
-            {/* Age Range */}
-            <View style={styles.infoItem}>
-              <Image
-                source={require('../../assets/images/icons/users.png')}
-                style={styles.infoIcon}
-                resizeMode="contain"
-              />
-              <Text style={styles.infoText}>{hangout.ageRange}</Text>
+              {/* Age Range */}
+              <View style={styles.infoItem}>
+                <Image
+                  source={require('../../assets/images/icons/users.png')}
+                  style={styles.infoIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.infoText}>18-30</Text>
+              </View>
             </View>
 
             {/* Category Tag */}
             <View style={styles.categoryTag}>
-              <Text style={styles.categoryText}>{hangout.category}</Text>
+              <Text style={styles.categoryText}>Party</Text>
             </View>
           </View>
 
@@ -138,16 +125,18 @@ const HangoutDetailScreen = ({ navigation, route }) => {
               style={styles.timeIcon}
               resizeMode="contain"
             />
-            <Text style={styles.timeText}>{hangout.time}</Text>
+            <Text style={styles.timeText}>8:00 PM - 5:00 AM</Text>
           </View>
 
           {/* Description */}
-          <Text style={styles.description}>{hangout.description}</Text>
+          <Text style={styles.description}>
+            It is a long established fact that a reader will be distracted by
+            the readable content of a page when looking at its layout. The point
+            of using Lorem Ipsum is that it has.
+          </Text>
 
           {/* People Joined */}
-          <Text style={styles.peopleJoined}>
-            {hangout.peopleJoined} Peoples Joined
-          </Text>
+          <Text style={styles.peopleJoined}>36 People Joined</Text>
 
           {/* Requests Section */}
           <Text style={styles.requestsTitle}>Requests</Text>
@@ -165,9 +154,8 @@ const HangoutDetailScreen = ({ navigation, route }) => {
               {/* Info */}
               <View style={styles.requestInfo}>
                 <Text style={styles.requestName}>{request.name}</Text>
-                <Text style={styles.requestDate}>
-                  {request.date} - {request.daysAgo}
-                </Text>
+                <Text style={styles.requestDate}>{request.date}</Text>
+                <Text style={styles.requestDate}>{request.daysAgo}</Text>
               </View>
 
               {/* Buttons */}
@@ -191,9 +179,6 @@ const HangoutDetailScreen = ({ navigation, route }) => {
             </View>
           ))}
         </View>
-
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacing} />
       </ScrollView>
 
       {/* Floating Map Button */}
@@ -222,7 +207,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 80,
   },
 
   // Header
@@ -270,11 +255,17 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     marginBottom: 12,
   },
+  titleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    flex: 1,
+  },
   title: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.primary,
     marginRight: 12,
@@ -290,7 +281,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   infoText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textGray,
   },
@@ -301,7 +292,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   categoryText: {
-    fontFamily: Fonts.kantumruyMedium,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 12,
     color: Colors.white,
   },
@@ -319,14 +310,14 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   timeText: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 13,
     color: Colors.textGray,
   },
 
   // Description
   description: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textGray,
     lineHeight: 22,
@@ -335,7 +326,7 @@ const styles = StyleSheet.create({
 
   // People Joined
   peopleJoined: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.primary,
     marginBottom: 16,
@@ -343,7 +334,7 @@ const styles = StyleSheet.create({
 
   // Requests Section
   requestsTitle: {
-    fontFamily: Fonts.poppinsBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.primary,
     marginBottom: 16,
@@ -352,7 +343,7 @@ const styles = StyleSheet.create({
   // Request Item
   requestItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Changed from 'center' to 'flex-start'
     marginBottom: 16,
   },
   requestProfile: {
@@ -365,32 +356,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   requestName: {
-    fontFamily: Fonts.poppinsSemiBold,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.textBlack,
     textDecorationLine: 'underline',
     textDecorationColor: Colors.textBlack,
   },
   requestDate: {
-    fontFamily: Fonts.kantumruyRegular,
+    fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textGray,
   },
   requestButtons: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Added this
   },
   acceptButton: {
     backgroundColor: Colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    marginRight: 8,
+    marginRight: 4,
   },
   acceptButtonText: {
-    fontFamily: Fonts.kantumruyBold,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: Colors.white,
+    textTransform: 'lowercase',
   },
   declineButton: {
     backgroundColor: Colors.white,
@@ -401,20 +393,16 @@ const styles = StyleSheet.create({
     borderColor: '#FF1500',
   },
   declineButtonText: {
-    fontFamily: Fonts.kantumruyBold,
+    fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: '#FF1500',
-  },
-
-  // Bottom Spacing
-  bottomSpacing: {
-    height: 0,
+    textTransform: 'lowercase',
   },
 
   // Floating Map Button
   floatingMapButton: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 40,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
@@ -422,7 +410,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 30,
-    shadowColor: Colors.shadow,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -430,6 +418,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    zIndex: 999,
   },
   mapIcon: {
     width: 20,

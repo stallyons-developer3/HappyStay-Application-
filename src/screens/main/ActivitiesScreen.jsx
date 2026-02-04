@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
   bottomSpacing: {
-    height: 0,
+    height: 100,
   },
 });
 
