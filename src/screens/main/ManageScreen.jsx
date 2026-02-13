@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,77 +6,119 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  StatusBar,
+  RefreshControl,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
-import { Linking, Platform } from 'react-native';
+import { STORAGE_URL } from '../../api/endpoints';
+import api from '../../api/axiosInstance';
+import { HANGOUT } from '../../api/endpoints';
 
-// Components
 import HangoutCard from '../../components/HangoutCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
 
-// Dummy Data
-const myHangoutsData = [
-  {
-    id: '1',
-    profileImage: require('../../assets/images/profile.png'),
-    name: 'Jessica',
-    activityType: 'Hiking',
-    description:
-      'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.',
-    peopleCount: 4,
-    peopleImages: [
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/user1.png'),
-      require('../../assets/images/user2.png'),
-      require('../../assets/images/user3.png'),
-    ],
-  },
-  {
-    id: '2',
-    profileImage: require('../../assets/images/profile.png'),
-    name: 'Jessica',
-    activityType: 'Hiking',
-    description:
-      'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.',
-    peopleCount: 4,
-    peopleImages: [
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/user1.png'),
-      require('../../assets/images/user2.png'),
-      require('../../assets/images/user3.png'),
-    ],
-  },
-  {
-    id: '3',
-    profileImage: require('../../assets/images/profile.png'),
-    name: 'Jessica',
-    activityType: 'Hiking',
-    description:
-      'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.',
-    peopleCount: 4,
-    peopleImages: [
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/user1.png'),
-      require('../../assets/images/user2.png'),
-      require('../../assets/images/user3.png'),
-    ],
-  },
-];
-
 const ManageScreen = ({ navigation }) => {
+  const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth);
+
+  const [myHangouts, setMyHangouts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchMyHangouts();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchMyHangouts();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const fetchMyHangouts = async () => {
+    try {
+      const response = await api.get(HANGOUT.GET_ALL);
+      if (response.data?.hangouts) {
+        const filtered = response.data.hangouts.filter(
+          h => h.user?.id === user?.id,
+        );
+        setMyHangouts(filtered);
+      }
+    } catch (error) {
+      console.log('Fetch my hangouts error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchMyHangouts();
+    setRefreshing(false);
+  }, []);
+
+  const handleDelete = hangoutId => {
+    Alert.alert(
+      'Delete Hangout',
+      'Are you sure you want to delete this hangout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(HANGOUT.DELETE(hangoutId));
+              setMyHangouts(prev => prev.filter(h => h.id !== hangoutId));
+              Alert.alert('Success', 'Hangout deleted successfully!');
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                error.response?.data?.message || 'Failed to delete hangout',
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const profileImage = user?.profile_picture
+    ? {
+        uri: user.profile_picture.startsWith('http')
+          ? user.profile_picture
+          : `${STORAGE_URL}/storage/profile_pictures/${user.profile_picture}`,
+      }
+    : require('../../assets/images/profile.png');
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
       >
-        {/* Custom Header - Same Height as HomeScreen */}
         <View style={styles.header}>
-          {/* Top Row */}
           <View style={styles.topRow}>
-            {/* Left - Profile & Title */}
             <View style={styles.leftSection}>
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -84,7 +126,7 @@ const ManageScreen = ({ navigation }) => {
                 onPress={() => navigation.navigate(Screens.Profile)}
               >
                 <Image
-                  source={require('../../assets/images/profile.png')}
+                  source={profileImage}
                   style={styles.profileImage}
                   resizeMode="cover"
                 />
@@ -92,7 +134,6 @@ const ManageScreen = ({ navigation }) => {
               <Text style={styles.headerTitle}>Manage Hangouts</Text>
             </View>
 
-            {/* Right - Notification */}
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.notificationContainer}
@@ -111,7 +152,6 @@ const ManageScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Greeting Row with Create Button - Same marginTop as HomeScreen */}
           <View style={styles.greetingRow}>
             <Text style={styles.greeting}>Create Your{'\n'}Hangout</Text>
             <TouchableOpacity
@@ -124,36 +164,56 @@ const ManageScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Hangout Cards */}
         <View style={styles.cardsContainer}>
-          {myHangoutsData.map(hangout => (
-            <HangoutCard
-              key={hangout.id}
-              profileImage={hangout.profileImage}
-              name={hangout.name}
-              activityType={hangout.activityType}
-              description={hangout.description}
-              peopleCount={hangout.peopleCount}
-              peopleImages={hangout.peopleImages}
-              showMenu={true}
-              onPress={() => console.log('Hangout pressed:', hangout.name)}
-              onJoinPress={() => console.log('Join pressed:', hangout.name)}
-              onEditPress={() =>
-                navigation.navigate(Screens.CreateHangout, {
-                  isEdit: true,
-                  hangout: hangout,
-                })
-              }
-              onDeletePress={() => console.log('Delete pressed:', hangout.id)}
-            />
-          ))}
+          {myHangouts.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                You haven't created any hangouts yet
+              </Text>
+            </View>
+          )}
+
+          {myHangouts.map(hangout => {
+            const peopleData = (hangout.people_images || []).map(p => ({
+              image: p.profile_picture || null,
+              name: p.name || null,
+            }));
+
+            return (
+              <HangoutCard
+                key={`manage-${hangout.id}`}
+                profileImage={hangout.user?.profile_picture}
+                name={hangout.user?.name || 'You'}
+                activityType={hangout.typology || hangout.title}
+                description={hangout.description}
+                peopleCount={hangout.joined_count || 0}
+                peopleImages={peopleData}
+                showMenu={true}
+                onPress={() =>
+                  navigation.navigate(Screens.HangoutDetail, {
+                    hangoutId: hangout.id,
+                  })
+                }
+                onJoinPress={() =>
+                  navigation.navigate(Screens.HangoutDetail, {
+                    hangoutId: hangout.id,
+                  })
+                }
+                onEditPress={() =>
+                  navigation.navigate(Screens.CreateHangout, {
+                    isEdit: true,
+                    hangoutId: hangout.id,
+                  })
+                }
+                onDeletePress={() => handleDelete(hangout.id)}
+              />
+            );
+          })}
         </View>
 
-        {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* Floating Map Button */}
       <FloatingMapButton onPress={() => navigation.navigate(Screens.Map)} />
     </View>
   );
@@ -170,8 +230,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-
-  // Header - Same as HomeScreen Header
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.backgroundGray,
+  },
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: 20,
@@ -238,12 +302,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.white,
   },
-
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 50, // Changed from 60 to 30
+    marginTop: 50,
     marginBottom: 10,
   },
   greeting: {
@@ -264,13 +327,20 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     textTransform: 'lowercase',
   },
-
-  // Cards
   cardsContainer: {
     marginTop: 20,
   },
   bottomSpacing: {
     height: 100,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  emptyText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 16,
+    color: Colors.textGray,
   },
 });
 

@@ -10,6 +10,7 @@ import {
 import { Colors, Fonts } from '../constants/Constants';
 
 const { width } = Dimensions.get('window');
+const defaultImage = require('../assets/images/bonfire.png');
 
 const ActivityCard = ({
   image,
@@ -22,33 +23,30 @@ const ActivityCard = ({
   onPress,
   onMapPress,
 }) => {
+  const imageSource =
+    typeof image === 'string' ? { uri: image } : image || defaultImage;
+
   return (
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
       activeOpacity={0.9}
     >
-      {/* Image with Padding */}
       <View style={styles.imageContainer}>
-        <Image source={image} style={styles.image} resizeMode="cover" />
+        <Image source={imageSource} style={styles.image} resizeMode="cover" />
       </View>
 
-      {/* Content */}
       <View style={styles.content}>
-        {/* Title & Price Row */}
         <View style={styles.titleRow}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.price}>{price}</Text>
         </View>
 
-        {/* Description */}
         <Text style={styles.description} numberOfLines={3}>
           {description}
         </Text>
 
-        {/* Info Row */}
         <View style={styles.infoRow}>
-          {/* Time */}
           <View style={styles.infoItem}>
             <Image
               source={require('../assets/images/icons/clock.png')}
@@ -58,7 +56,6 @@ const ActivityCard = ({
             <Text style={styles.infoText}>{time}</Text>
           </View>
 
-          {/* Date */}
           <View style={styles.infoItem}>
             <Image
               source={require('../assets/images/icons/calendar-small.png')}
@@ -68,7 +65,6 @@ const ActivityCard = ({
             <Text style={styles.infoText}>{date}</Text>
           </View>
 
-          {/* Location */}
           <View style={styles.infoItem}>
             <Image
               source={require('../assets/images/icons/map-pin.png')}
@@ -78,7 +74,6 @@ const ActivityCard = ({
             <Text style={styles.infoText}>{location}</Text>
           </View>
 
-          {/* Open Map */}
           <TouchableOpacity
             style={styles.mapButton}
             onPress={onMapPress}
@@ -188,5 +183,5 @@ const styles = StyleSheet.create({
     textTransform: 'lowercase',
   },
 });
- 
+
 export default ActivityCard;

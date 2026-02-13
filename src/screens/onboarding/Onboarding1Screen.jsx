@@ -11,10 +11,13 @@ import {
   Platform,
   Modal,
   Animated,
+  Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useDispatch } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
+import { setOnboardingData } from '../../store/slices/onboardingSlice';
 
 const countries = [
   { id: '1', name: 'Indonesia', flag: '🇮🇩' },
@@ -41,16 +44,15 @@ const genders = [
 ];
 
 const Onboarding1Screen = ({ navigation }) => {
+  const dispatch = useDispatch();
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [userName, setUserName] = useState('');
-
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [showCountryModal, setShowCountryModal] = useState(false);
-
   const [selectedGender, setSelectedGender] = useState(null);
   const [showGenderModal, setShowGenderModal] = useState(false);
-
   const [date, setDate] = useState(new Date(1999, 9, 18));
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -67,11 +69,18 @@ const Onboarding1Screen = ({ navigation }) => {
     extrapolate: 'clamp',
   });
 
-  const formatDate = date => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
+  const formatDate = d => {
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
     return `${day} - ${month} - ${year}`;
+  };
+
+  const formatDateForAPI = d => {
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const onDateChange = (event, selectedDate) => {
@@ -89,6 +98,42 @@ const Onboarding1Screen = ({ navigation }) => {
   const selectGender = gender => {
     setSelectedGender(gender);
     setShowGenderModal(false);
+  };
+
+  const handleContinue = () => {
+    if (!firstName.trim()) {
+      Alert.alert('Error', 'Please enter your first name');
+      return;
+    }
+    if (!lastName.trim()) {
+      Alert.alert('Error', 'Please enter your last name');
+      return;
+    }
+    if (!userName.trim()) {
+      Alert.alert('Error', 'Please enter a username');
+      return;
+    }
+    if (!selectedGender) {
+      Alert.alert('Error', 'Please select your gender');
+      return;
+    }
+    if (!selectedCountry) {
+      Alert.alert('Error', 'Please select your nationality');
+      return;
+    }
+
+    dispatch(
+      setOnboardingData({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        username: userName.trim(),
+        gender: selectedGender.name,
+        nationality: selectedCountry.name,
+        age: formatDateForAPI(date),
+      }),
+    );
+
+    navigation.navigate(Screens.Onboarding3);
   };
 
   return (
@@ -137,6 +182,7 @@ const Onboarding1Screen = ({ navigation }) => {
             placeholderTextColor={Colors.textLight}
             value={userName}
             onChangeText={setUserName}
+            autoCapitalize="none"
           />
         </View>
 
@@ -210,14 +256,9 @@ const Onboarding1Screen = ({ navigation }) => {
           />
         )}
 
-        <Button
-          title="Continue"
-          onPress={() => navigation.navigate(Screens.Onboarding3)}
-          size="full"
-        />
+        <Button title="Continue" onPress={handleContinue} size="full" />
       </ScrollView>
 
-      {/* Country Modal */}
       <Modal
         visible={showCountryModal}
         transparent={true}
@@ -232,7 +273,6 @@ const Onboarding1Screen = ({ navigation }) => {
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-
             <View style={styles.listContainer}>
               <ScrollView
                 style={styles.countryList}
@@ -256,7 +296,6 @@ const Onboarding1Screen = ({ navigation }) => {
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-
               <View style={styles.scrollbarTrack}>
                 <Animated.View
                   style={[
@@ -270,7 +309,6 @@ const Onboarding1Screen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Gender Modal */}
       <Modal
         visible={showGenderModal}
         transparent={true}
@@ -285,7 +323,6 @@ const Onboarding1Screen = ({ navigation }) => {
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-
             {genders.map(item => (
               <TouchableOpacity
                 key={item.id}
@@ -397,18 +434,6 @@ const styles = StyleSheet.create({
   calendarIcon: {
     width: 24,
     height: 24,
-  },
-  continueButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  continueButtonText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 20,
-    color: Colors.white,
   },
   modalOverlay: {
     flex: 1,

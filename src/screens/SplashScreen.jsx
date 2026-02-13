@@ -1,17 +1,38 @@
 import React, { useEffect } from 'react';
-import { View, Image, StyleSheet, StatusBar, Dimensions } from 'react-native';
+import { View, Image, StyleSheet, Dimensions } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Screens } from '../constants/Constants';
+import { checkAuth } from '../store/slices/authSlice';
 
 const { width } = Dimensions.get('window');
 
 const SplashScreen = ({ navigation }) => {
+  const dispatch = useDispatch();
+  const { isAuthenticated, isCheckingAuth, user } = useSelector(
+    state => state.auth,
+  );
+
   useEffect(() => {
+    dispatch(checkAuth());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (isCheckingAuth) return;
+
     const timer = setTimeout(() => {
-      navigation.replace(Screens.Welcome);
-    }, 2500);
+      if (isAuthenticated && user) {
+        if (user.is_profile_complete) {
+          navigation.replace(Screens.MainApp);
+        } else {
+          navigation.replace(Screens.Onboarding1);
+        }
+      } else {
+        navigation.replace(Screens.Welcome);
+      }
+    }, 1500);
 
     return () => clearTimeout(timer);
-  }, [navigation]);
+  }, [isCheckingAuth, isAuthenticated, user, navigation]);
 
   return (
     <View style={styles.container}>

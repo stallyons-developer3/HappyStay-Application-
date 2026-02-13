@@ -6,15 +6,15 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  StatusBar,
+  Alert,
 } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import { STORAGE_URL } from '../../api/endpoints';
+import { logoutUser } from '../../store/slices/authSlice';
 import Button from '../../components/common/Button';
-
-// Components
 import TripCard from '../../components/TripCard';
 
-// Static Past Trips Data
 const pastTripsData = [
   {
     id: '1',
@@ -26,7 +26,6 @@ const pastTripsData = [
   },
 ];
 
-// Static Next Trips Data
 const nextTripsData = [
   {
     id: '1',
@@ -39,15 +38,42 @@ const nextTripsData = [
 ];
 
 const ProfileScreen = ({ navigation }) => {
-  // Handle Trips
+  const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth);
+
+  const getProfileImage = () => {
+    if (user?.profile_picture) {
+      const uri = user.profile_picture.startsWith('http')
+        ? user.profile_picture
+        : `${STORAGE_URL}/storage/profile_pictures/${user.profile_picture}`;
+      return { uri };
+    }
+    return require('../../assets/images/profile.png');
+  };
+
+  const displayName =
+    user?.full_name || user?.first_name || user?.name || 'User';
+  const displayEmail = user?.email || '';
+
   const handleTrips = () => {
     navigation.navigate(Screens.Trip);
   };
 
-  // Handle Logout
   const handleLogout = () => {
-    console.log('Logout');
-    navigation.replace(Screens.Login);
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await dispatch(logoutUser());
+          navigation.reset({
+            index: 0,
+            routes: [{ name: Screens.Welcome }],
+          });
+        },
+      },
+    ]);
   };
 
   return (
@@ -57,9 +83,7 @@ const ProfileScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
-          {/* Back Button */}
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
@@ -71,24 +95,18 @@ const ProfileScreen = ({ navigation }) => {
               resizeMode="contain"
             />
           </TouchableOpacity>
-
-          {/* Title */}
           <Text style={styles.headerTitle}>Personal Data</Text>
         </View>
 
-        {/* Profile Section */}
         <View style={styles.profileSection}>
-          {/* Profile Image with Edit Button */}
           <View style={styles.profileImageContainer}>
             <View style={styles.profileImageWrapper}>
               <Image
-                source={require('../../assets/images/profile.png')}
+                source={getProfileImage()}
                 style={styles.profileImage}
                 resizeMode="cover"
               />
             </View>
-
-            {/* Edit Button */}
             <TouchableOpacity
               style={styles.editButton}
               activeOpacity={0.8}
@@ -101,18 +119,12 @@ const ProfileScreen = ({ navigation }) => {
               />
             </TouchableOpacity>
           </View>
-
-          {/* Name */}
-          <Text style={styles.profileName}>Jenny</Text>
-
-          {/* Email */}
-          <Text style={styles.profileEmail}>Jenny@email.com</Text>
+          <Text style={styles.profileName}>{displayName}</Text>
+          <Text style={styles.profileEmail}>{displayEmail}</Text>
         </View>
 
-        {/* Past Trips Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Past Trips</Text>
-
           {pastTripsData.map(trip => (
             <TripCard
               key={trip.id}
@@ -125,10 +137,8 @@ const ProfileScreen = ({ navigation }) => {
           ))}
         </View>
 
-        {/* Next Trips Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Next Trips</Text>
-
           {nextTripsData.map(trip => (
             <TripCard
               key={trip.id}
@@ -141,15 +151,10 @@ const ProfileScreen = ({ navigation }) => {
           ))}
         </View>
 
-        {/* Spacer */}
         <View style={styles.spacer} />
 
-        {/* Buttons */}
         <View style={styles.buttonsContainer}>
-          {/* Trips Button */}
           <Button title="Trips" onPress={handleTrips} size="full" />
-
-          {/* Logout Button */}
           <Button title="Logout" onPress={handleLogout} size="full" />
         </View>
       </ScrollView>
@@ -169,8 +174,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
-
-  // Header
   header: {
     paddingTop: 50,
     marginBottom: 24,
@@ -192,9 +195,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     textAlign: 'center',
   },
-
-  // Profile Section
-  // Profile Section
   profileSection: {
     alignItems: 'center',
     marginBottom: 32,
@@ -245,8 +245,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textDark,
   },
-
-  // Section
   section: {
     marginBottom: 24,
   },
@@ -256,38 +254,12 @@ const styles = StyleSheet.create({
     color: Colors.textBlack,
     marginBottom: 16,
   },
-
-  // Spacer
   spacer: {
     flex: 1,
     minHeight: 40,
   },
-
-  // Buttons
   buttonsContainer: {
     gap: 12,
-  },
-  tripsButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: 'center',
-  },
-  tripsButtonText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 20,
-    color: Colors.white,
-  },
-  logoutButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 15,
-    borderRadius: 30,
-    alignItems: 'center',
-  },
-  logoutButtonText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 20,
-    color: Colors.white,
   },
 });
 

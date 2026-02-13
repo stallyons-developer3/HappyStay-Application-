@@ -3,13 +3,14 @@ import {
   View,
   Text,
   StyleSheet,
-  StatusBar,
   TouchableOpacity,
   Alert,
   Dimensions,
 } from 'react-native';
+import { useDispatch } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
+import { setOnboardingData } from '../../store/slices/onboardingSlice';
 
 const { width } = Dimensions.get('window');
 const chipWidth = (width - 48 - 16) / 2;
@@ -29,6 +30,7 @@ const tripTypes = [
 ];
 
 const Onboarding3Screen = ({ navigation }) => {
+  const dispatch = useDispatch();
   const [selectedTrips, setSelectedTrips] = useState([]);
 
   const toggleTrip = id => {
@@ -44,6 +46,20 @@ const Onboarding3Screen = ({ navigation }) => {
   };
 
   const isSelected = id => selectedTrips.includes(id);
+
+  const handleContinue = () => {
+    if (selectedTrips.length === 0) {
+      Alert.alert('Error', 'Please select at least 1 trip interest');
+      return;
+    }
+
+    const tripNames = selectedTrips.map(
+      id => tripTypes.find(t => t.id === id).name,
+    );
+
+    dispatch(setOnboardingData({ trip_interests: tripNames }));
+    navigation.navigate(Screens.Onboarding2);
+  };
 
   const renderChip = trip => (
     <TouchableOpacity
@@ -66,7 +82,9 @@ const Onboarding3Screen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>What best describes your trips?</Text>
-      <Text style={styles.subtitle}>Select 1 to 3 options. They will be visible on your profile</Text>
+      <Text style={styles.subtitle}>
+        Select 1 to 3 options. They will be visible on your profile
+      </Text>
 
       <View style={styles.chipsContainer}>
         <View style={styles.row}>
@@ -93,11 +111,7 @@ const Onboarding3Screen = ({ navigation }) => {
       </View>
 
       <View style={styles.buttonContainer}>
-        <Button
-          title="Continue"
-          onPress={() => navigation.navigate(Screens.Onboarding2)}
-          size="full"
-        />
+        <Button title="Continue" onPress={handleContinue} size="full" />
       </View>
     </View>
   );
@@ -155,17 +169,6 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     paddingBottom: 40,
-  },
-  confirmButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: 'center',
-  },
-  confirmButtonText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 20,
-    color: Colors.white,
   },
 });
 

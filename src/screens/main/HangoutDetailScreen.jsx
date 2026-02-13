@@ -1,56 +1,225 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   Image,
   ScrollView,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
+  Dimensions,
+  ActivityIndicator,
+  Alert,
+  Linking,
 } from 'react-native';
+import { Shadow } from 'react-native-shadow-2';
+import { useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import api from '../../api/axiosInstance';
+import { HANGOUT } from '../../api/endpoints';
 
-// Dummy Requests Data
-const requestsData = [
-  {
-    id: '1',
-    profileImage: require('../../assets/images/profile.png'),
-    name: 'Anna Jones',
-    date: 'Dec 30, 2026',
-    daysAgo: '0 days',
-  },
-  {
-    id: '2',
-    profileImage: require('../../assets/images/profile.png'),
-    name: 'Anna Jones',
-    date: 'Dec 30, 2026',
-    daysAgo: '0 days',
-  },
-  {
-    id: '3',
-    profileImage: require('../../assets/images/profile.png'),
-    name: 'Anna Jones',
-    date: 'Dec 30, 2026',
-    daysAgo: '0 days',
-  },
-  {
-    id: '4',
-    profileImage: require('../../assets/images/profile.png'),
-    name: 'Anna Jones',
-    date: 'Dec 30, 2026',
-    daysAgo: '0 days',
-  },
-];
+const { width } = Dimensions.get('window');
+const INPUT_WIDTH = width - 40 - 48 - 12;
 
-const HangoutDetailScreen = ({ navigation }) => {
-  // Handle Accept
-  const handleAccept = requestId => {
-    console.log('Accept request:', requestId);
+const formatTime = timeStr => {
+  if (!timeStr) return '';
+  const parts = timeStr.split(':');
+  let hours = parseInt(parts[0], 10);
+  const mins = parts[1] || '00';
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${hours}:${mins} ${ampm}`;
+};
+
+const getInitial = name => {
+  if (!name) return '?';
+  return name.charAt(0).toUpperCase();
+};
+
+const formatDateDisplay = dateStr => {
+  if (!dateStr) return '';
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  const d = new Date(dateStr);
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+};
+
+const getTimeAgo = dateStr => {
+  if (!dateStr) return '';
+  const now = new Date();
+  const created = new Date(dateStr);
+  const diffMs = now - created;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return '1 day ago';
+  return `${diffDays} days ago`;
+};
+
+const HangoutDetailScreen = ({ navigation, route }) => {
+  const { hangoutId } = route.params || {};
+  const { user } = useSelector(state => state.auth);
+
+  const [hangout, setHangout] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [commentText, setCommentText] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+
+  const isOwner = hangout?.user?.id === user?.id;
+
+  useEffect(() => {
+    fetchHangoutDetail();
+    fetchComments();
+  }, [hangoutId]);
+
+  useEffect(() => {
+    if (isOwner && hangoutId) {
+      fetchRequests();
+    }
+  }, [isOwner, hangoutId]);
+
+  const fetchHangoutDetail = async () => {
+    try {
+      const response = await api.get(HANGOUT.GET_DETAIL(hangoutId));
+      if (response.data?.hangout) {
+        setHangout(response.data.hangout);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load hangout details');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Handle Decline
-  const handleDecline = requestId => {
-    console.log('Decline request:', requestId);
+  const fetchComments = async () => {
+    try {
+      const response = await api.get(HANGOUT.GET_COMMENTS(hangoutId));
+      if (response.data?.comments) {
+        setComments(response.data.comments);
+      }
+    } catch (error) {
+      console.log('Comments error:', error);
+    }
   };
+
+  const fetchRequests = async () => {
+    try {
+      const response = await api.get(HANGOUT.GET_REQUESTS(hangoutId));
+      if (response.data?.requests) {
+        setRequests(response.data.requests);
+      }
+    } catch (error) {
+      console.log('Requests error:', error);
+    }
+  };
+
+  const handleSendComment = async () => {
+    if (!commentText.trim()) return;
+    setIsSending(true);
+    try {
+      const response = await api.post(HANGOUT.ADD_COMMENT(hangoutId), {
+        comment: commentText.trim(),
+      });
+      if (response.data?.comment) {
+        setComments(prev => [response.data.comment, ...prev]);
+        setCommentText('');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send comment');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleJoinRequest = async () => {
+    setIsJoining(true);
+    try {
+      const response = await api.post(HANGOUT.SEND_REQUEST(hangoutId));
+      Alert.alert('Success', response.data?.message || 'Request sent!');
+      setHangout(prev => ({ ...prev, user_request_status: 'pending' }));
+    } catch (error) {
+      const msg =
+        error.response?.data?.message || 'Failed to send join request';
+      Alert.alert('Info', msg);
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const handleRespondRequest = async (requestId, action) => {
+    const status = action === 'accept' ? 'accepted' : 'declined';
+    try {
+      const response = await api.post(HANGOUT.RESPOND_REQUEST(requestId), {
+        status,
+      });
+      Alert.alert('Success', response.data?.message || `Request ${status}`);
+      setRequests(prev =>
+        prev.map(r => (r.id === requestId ? { ...r, status } : r)),
+      );
+    } catch (error) {
+      Alert.alert('Error', error.response?.data?.message || 'Action failed');
+    }
+  };
+
+  const getJoinButtonText = () => {
+    if (isJoining) return 'Sending...';
+    if (isOwner) return 'Your Hangout';
+    if (!hangout) return 'Request to Join';
+    switch (hangout.user_request_status) {
+      case 'pending':
+        return 'Request Pending';
+      case 'accepted':
+        return 'Joined';
+      case 'declined':
+        return 'Declined';
+      default:
+        return 'Request to Join';
+    }
+  };
+
+  const isJoinDisabled =
+    isJoining ||
+    isOwner ||
+    hangout?.user_request_status === 'pending' ||
+    hangout?.user_request_status === 'accepted';
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!hangout) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.errorText}>Hangout not found</Text>
+      </View>
+    );
+  }
+
+  const ownerImage = hangout.user?.profile_picture;
+  const ageRange =
+    hangout.min_age && hangout.max_age
+      ? `${hangout.min_age}-${hangout.max_age}`
+      : null;
+
+  const pendingRequests = requests.filter(r => r.status === 'pending');
 
   return (
     <View style={styles.container}>
@@ -59,9 +228,7 @@ const HangoutDetailScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Green Header with Image */}
         <View style={styles.header}>
-          {/* Back Button */}
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
@@ -74,126 +241,243 @@ const HangoutDetailScreen = ({ navigation }) => {
             />
           </TouchableOpacity>
 
-          {/* Hangout Image */}
           <View style={styles.imageContainer}>
-            <Image
-              source={require('../../assets/images/mountain-1.png')}
-              style={styles.hangoutImage}
-              resizeMode="contain"
-            />
-          </View>
-        </View>
-
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Title Row */}
-          <View style={styles.titleRow}>
-            <View style={styles.titleLeft}>
-              <Text style={styles.title}>Bonfire</Text>
-
-              {/* Location */}
-              <View style={styles.infoItem}>
-                <Image
-                  source={require('../../assets/images/icons/map-pin.png')}
-                  style={styles.infoIcon}
-                  resizeMode="contain"
-                />
-                <Text style={styles.infoText}>Pool Site</Text>
-              </View>
-
-              {/* Age Range */}
-              <View style={styles.infoItem}>
-                <Image
-                  source={require('../../assets/images/icons/users.png')}
-                  style={styles.infoIcon}
-                  resizeMode="contain"
-                />
-                <Text style={styles.infoText}>18-30</Text>
-              </View>
-            </View>
-
-            {/* Category Tag */}
-            <View style={styles.categoryTag}>
-              <Text style={styles.categoryText}>Party</Text>
-            </View>
-          </View>
-
-          {/* Time Row */}
-          <View style={styles.timeRow}>
-            <Image
-              source={require('../../assets/images/icons/clock.png')}
-              style={styles.timeIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.timeText}>8:00 PM - 5:00 AM</Text>
-          </View>
-
-          {/* Description */}
-          <Text style={styles.description}>
-            It is a long established fact that a reader will be distracted by
-            the readable content of a page when looking at its layout. The point
-            of using Lorem Ipsum is that it has.
-          </Text>
-
-          {/* People Joined */}
-          <Text style={styles.peopleJoined}>36 People Joined</Text>
-
-          {/* Requests Section */}
-          <Text style={styles.requestsTitle}>Requests</Text>
-
-          {/* Request Items */}
-          {requestsData.map(request => (
-            <View key={request.id} style={styles.requestItem}>
-              {/* Profile */}
+            {ownerImage ? (
               <Image
-                source={request.profileImage}
-                style={styles.requestProfile}
+                source={{ uri: ownerImage }}
+                style={styles.hangoutImage}
                 resizeMode="cover"
               />
-
-              {/* Info */}
-              <View style={styles.requestInfo}>
-                <Text style={styles.requestName}>{request.name}</Text>
-                <Text style={styles.requestDate}>{request.date}</Text>
-                <Text style={styles.requestDate}>{request.daysAgo}</Text>
+            ) : (
+              <View style={styles.ownerInitialCircle}>
+                <Text style={styles.ownerInitialText}>
+                  {getInitial(hangout.user?.name)}
+                </Text>
               </View>
+            )}
+          </View>
+          <Text style={styles.ownerName}>{hangout.user?.name || 'User'}</Text>
+        </View>
 
-              {/* Buttons */}
-              <View style={styles.requestButtons}>
-                <TouchableOpacity
-                  style={styles.acceptButton}
-                  activeOpacity={0.8}
-                  onPress={() => handleAccept(request.id)}
-                >
-                  <Text style={styles.acceptButtonText}>Accept</Text>
-                </TouchableOpacity>
+        <View style={styles.content}>
+          <View style={styles.titleRow}>
+            <View style={styles.titleLeft}>
+              <Text style={styles.title}>{hangout.title}</Text>
 
-                <TouchableOpacity
-                  style={styles.declineButton}
-                  activeOpacity={0.8}
-                  onPress={() => handleDecline(request.id)}
-                >
-                  <Text style={styles.declineButtonText}>Decline</Text>
-                </TouchableOpacity>
-              </View>
+              {hangout.location && (
+                <View style={styles.infoItem}>
+                  <Image
+                    source={require('../../assets/images/icons/map-pin.png')}
+                    style={styles.infoIcon}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.infoText}>{hangout.location}</Text>
+                </View>
+              )}
+
+              {ageRange && (
+                <View style={styles.infoItem}>
+                  <Image
+                    source={require('../../assets/images/icons/users.png')}
+                    style={styles.infoIcon}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.infoText}>{ageRange}</Text>
+                </View>
+              )}
             </View>
-          ))}
+
+            {hangout.typology && (
+              <View style={styles.categoryTag}>
+                <Text style={styles.categoryText}>{hangout.typology}</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.timeRow}>
+            {hangout.time && (
+              <>
+                <Image
+                  source={require('../../assets/images/icons/clock.png')}
+                  style={styles.timeIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.timeText}>{formatTime(hangout.time)}</Text>
+              </>
+            )}
+
+            {hangout.map_url && (
+              <TouchableOpacity
+                style={styles.mapLinkButton}
+                activeOpacity={0.7}
+                onPress={() => Linking.openURL(hangout.map_url)}
+              >
+                <Image
+                  source={require('../../assets/images/icons/map-card.png')}
+                  style={styles.mapIconSmall}
+                  resizeMode="contain"
+                />
+                <Text style={styles.mapLinkText}>Open Map</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {hangout.description ? (
+            <Text style={styles.description}>{hangout.description}</Text>
+          ) : null}
+
+          <Text style={styles.peopleJoined}>
+            {hangout.joined_count || 0} People Joined
+          </Text>
+
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[
+                styles.joinButton,
+                isJoinDisabled && styles.disabledButton,
+              ]}
+              activeOpacity={0.8}
+              onPress={handleJoinRequest}
+              disabled={isJoinDisabled}
+            >
+              <Text style={styles.joinButtonText}>{getJoinButtonText()}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.chatButton}
+              activeOpacity={0.8}
+              onPress={() =>
+                navigation.navigate(Screens.ChatDetail, {
+                  hangoutId: hangout.id,
+                  title: hangout.title,
+                })
+              }
+            >
+              <Text style={styles.chatButtonText}>Join Chat</Text>
+            </TouchableOpacity>
+          </View>
+
+          {isOwner && pendingRequests.length > 0 && (
+            <>
+              <Text style={styles.requestsTitle}>Requests</Text>
+              {pendingRequests.map(req => {
+                const hasReqAvatar = req.user?.profile_picture;
+                return (
+                  <View key={req.id} style={styles.requestItem}>
+                    {hasReqAvatar ? (
+                      <Image
+                        source={{ uri: req.user.profile_picture }}
+                        style={styles.requestProfile}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.requestInitialCircle}>
+                        <Text style={styles.requestInitialText}>
+                          {getInitial(req.user?.name)}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={styles.requestInfo}>
+                      <Text style={styles.requestName}>
+                        {req.user?.name || 'User'}
+                      </Text>
+                      <Text style={styles.requestDate}>
+                        {formatDateDisplay(req.created_at)}
+                      </Text>
+                      <Text style={styles.requestDate}>
+                        {getTimeAgo(req.created_at)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.requestButtons}>
+                      <TouchableOpacity
+                        style={styles.acceptButton}
+                        activeOpacity={0.8}
+                        onPress={() => handleRespondRequest(req.id, 'accept')}
+                      >
+                        <Text style={styles.acceptButtonText}>Accept</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.declineButton}
+                        activeOpacity={0.8}
+                        onPress={() => handleRespondRequest(req.id, 'decline')}
+                      >
+                        <Text style={styles.declineButtonText}>Decline</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+            </>
+          )}
+
+          <Text style={styles.commentsTitle}>Comments</Text>
+
+          {comments.length === 0 && (
+            <Text style={styles.noComments}>No comments yet</Text>
+          )}
+
+          {comments.map(comment => {
+            const hasAvatar = comment.user?.profile_picture;
+            return (
+              <View key={comment.id} style={styles.commentItem}>
+                {hasAvatar ? (
+                  <Image
+                    source={{ uri: comment.user.profile_picture }}
+                    style={styles.commentAvatar}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.commentInitialCircle}>
+                    <Text style={styles.commentInitialText}>
+                      {getInitial(comment.user?.name)}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.commentBubble}>
+                  <Text style={styles.commentName}>
+                    {comment.user?.name || 'User'}
+                  </Text>
+                  <Text style={styles.commentText}>{comment.comment}</Text>
+                </View>
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
 
-      {/* Floating Map Button */}
-      <TouchableOpacity
-        style={styles.floatingMapButton}
-        activeOpacity={0.9}
-        onPress={() => navigation.navigate(Screens.Map)}
-      >
-        <Image
-          source={require('../../assets/images/icons/map.png')}
-          style={styles.mapIcon}
-          resizeMode="contain"
-        />
-        <Text style={styles.mapText}>Map</Text>
-      </TouchableOpacity>
+      <View style={styles.commentInputContainer}>
+        <Shadow
+          distance={8}
+          startColor="rgba(0, 0, 0, 0.06)"
+          endColor="rgba(0, 0, 0, 0)"
+          offset={[0, 0]}
+        >
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Write a comment"
+              placeholderTextColor={Colors.textLight}
+              value={commentText}
+              onChangeText={setCommentText}
+            />
+          </View>
+        </Shadow>
+        <TouchableOpacity
+          style={[styles.sendButton, isSending && { opacity: 0.6 }]}
+          onPress={handleSendComment}
+          activeOpacity={0.8}
+          disabled={isSending}
+        >
+          <Image
+            source={require('../../assets/images/icons/send.png')}
+            style={styles.sendIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -207,10 +491,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 80,
+    paddingBottom: 100,
   },
-
-  // Header
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
+  errorText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 16,
+    color: Colors.textGray,
+  },
   header: {
     backgroundColor: Colors.primary,
     paddingTop: 50,
@@ -234,24 +527,41 @@ const styles = StyleSheet.create({
     tintColor: Colors.white,
   },
   imageContainer: {
-    width: 200,
-    height: 160,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
+    overflow: 'hidden',
   },
   hangoutImage: {
     width: '100%',
     height: '100%',
   },
-
-  // Content
+  ownerInitialCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ownerInitialText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 48,
+    color: Colors.white,
+  },
+  ownerName: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 18,
+    color: Colors.white,
+    marginTop: 10,
+  },
   content: {
     paddingHorizontal: 20,
     paddingTop: 24,
   },
-
-  // Title Row
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -296,8 +606,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.white,
   },
-
-  // Time Row
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -313,9 +621,25 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoRegular,
     fontSize: 13,
     color: Colors.textGray,
+    marginRight: 16,
   },
-
-  // Description
+  mapLinkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mapIconSmall: {
+    width: 14,
+    height: 14,
+    tintColor: Colors.primary,
+    marginRight: 4,
+  },
+  mapLinkText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 12,
+    color: Colors.primary,
+    textDecorationLine: 'underline',
+    textTransform: 'lowercase',
+  },
   description: {
     fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
@@ -323,27 +647,55 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 20,
   },
-
-  // People Joined
   peopleJoined: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.primary,
     marginBottom: 16,
   },
-
-  // Requests Section
+  actionButtons: {
+    flexDirection: 'row',
+    marginBottom: 24,
+  },
+  joinButton: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  joinButtonText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 12,
+    color: Colors.white,
+    textTransform: 'lowercase',
+  },
+  chatButton: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  chatButtonText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 12,
+    color: Colors.white,
+    textTransform: 'lowercase',
+  },
   requestsTitle: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 18,
     color: Colors.primary,
     marginBottom: 16,
   },
-
-  // Request Item
   requestItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start', // Changed from 'center' to 'flex-start'
+    alignItems: 'flex-start',
     marginBottom: 16,
   },
   requestProfile: {
@@ -351,6 +703,20 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     marginRight: 12,
+  },
+  requestInitialCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  requestInitialText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 18,
+    color: Colors.white,
   },
   requestInfo: {
     flex: 1,
@@ -369,7 +735,7 @@ const styles = StyleSheet.create({
   },
   requestButtons: {
     flexDirection: 'row',
-    alignItems: 'flex-start', // Added this
+    alignItems: 'flex-start',
   },
   acceptButton: {
     backgroundColor: Colors.primary,
@@ -398,38 +764,99 @@ const styles = StyleSheet.create({
     color: '#FF1500',
     textTransform: 'lowercase',
   },
-
-  // Floating Map Button
-  floatingMapButton: {
+  commentsTitle: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 20,
+    color: Colors.primary,
+    marginBottom: 16,
+  },
+  noComments: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
+    marginBottom: 16,
+  },
+  commentItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  commentAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  commentInitialCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  commentInitialText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 16,
+    color: Colors.white,
+  },
+  commentBubble: {
+    backgroundColor: Colors.background,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderTopLeftRadius: 4,
+    maxWidth: width - 100,
+  },
+  commentName: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.textBlack,
+    marginBottom: 2,
+  },
+  commentText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: '#23232380',
+  },
+  commentInputContainer: {
     position: 'absolute',
-    bottom: 40,
-    alignSelf: 'center',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: Colors.white,
   },
-  mapIcon: {
+  inputWrapper: {
+    width: INPUT_WIDTH,
+    backgroundColor: Colors.white,
+    borderRadius: 37,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginRight: 12,
+  },
+  commentInput: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
+    padding: 0,
+  },
+  sendButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendIcon: {
     width: 20,
     height: 20,
     tintColor: Colors.white,
-    marginRight: 8,
-  },
-  mapText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 16,
-    color: Colors.white,
   },
 });
 

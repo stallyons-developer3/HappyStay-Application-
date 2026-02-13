@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,19 @@ import {
   Platform,
   Modal,
   Animated,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Colors, Fonts, Screens } from '../../constants/Constants';
+import { useDispatch, useSelector } from 'react-redux';
+import ImagePicker from 'react-native-image-crop-picker';
+import { Colors, Fonts } from '../../constants/Constants';
+import { STORAGE_URL } from '../../api/endpoints';
 import Button from '../../components/common/Button';
+import api from '../../api/axiosInstance';
+import { PROFILE } from '../../api/endpoints';
+import { setUser } from '../../store/slices/authSlice';
 
-// Countries Data with Flags
 const countries = [
   { id: '1', name: 'Indonesia', flag: '🇮🇩' },
   { id: '2', name: 'Pakistan', flag: '🇵🇰' },
@@ -35,7 +42,6 @@ const countries = [
   { id: '15', name: 'Turkey', flag: '🇹🇷' },
 ];
 
-// Gender Options
 const genderOptions = [
   { id: '1', name: 'Male' },
   { id: '2', name: 'Female' },
@@ -43,25 +49,24 @@ const genderOptions = [
 ];
 
 const EditProfileScreen = ({ navigation }) => {
-  // Form States
+  const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth);
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [userName, setUserName] = useState('');
-
-  // Nationality State
+  const [description, setDescription] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [showCountryModal, setShowCountryModal] = useState(false);
-
-  // Gender State
   const [selectedGender, setSelectedGender] = useState(null);
   const [showGenderModal, setShowGenderModal] = useState(false);
-
-  // Date State
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateSelected, setDateSelected] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [existingImage, setExistingImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Scrollbar Animation States
   const [scrollIndicator] = useState(new Animated.Value(0));
   const [contentHeight, setContentHeight] = useState(1);
   const [scrollViewHeight, setScrollViewHeight] = useState(1);
@@ -75,15 +80,58 @@ const EditProfileScreen = ({ navigation }) => {
     extrapolate: 'clamp',
   });
 
-  // Format Date
-  const formatDate = date => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.first_name || '');
+      setLastName(user.last_name || '');
+      setUserName(user.username || '');
+      setDescription(user.description || '');
+
+      if (user.gender) {
+        const g = genderOptions.find(
+          opt => opt.name.toLowerCase() === user.gender.toLowerCase(),
+        );
+        if (g) setSelectedGender(g);
+      }
+
+      if (user.nationality) {
+        const c = countries.find(
+          ct => ct.name.toLowerCase() === user.nationality.toLowerCase(),
+        );
+        if (c) setSelectedCountry(c);
+      }
+
+      if (user.age) {
+        const d = new Date(user.age);
+        if (!isNaN(d.getTime())) {
+          setDate(d);
+          setDateSelected(true);
+        }
+      }
+
+      if (user.profile_picture) {
+        const uri = user.profile_picture.startsWith('http')
+          ? user.profile_picture
+          : `${STORAGE_URL}/storage/profile_pictures/${user.profile_picture}`;
+        setExistingImage(uri);
+      }
+    }
+  }, [user]);
+
+  const formatDisplayDate = d => {
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
     return `${day} - ${month} - ${year}`;
   };
 
-  // Handle Date Change
+  const formatDateForAPI = d => {
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) {
@@ -92,22 +140,107 @@ const EditProfileScreen = ({ navigation }) => {
     }
   };
 
-  // Select Country
   const selectCountry = country => {
     setSelectedCountry(country);
     setShowCountryModal(false);
   };
 
-  // Select Gender
   const selectGender = gender => {
     setSelectedGender(gender);
     setShowGenderModal(false);
   };
 
-  // Handle Save
-  const handleSave = () => {
-    console.log('Save Profile');
-    navigation.goBack();
+  const pickImage = () => {
+    ImagePicker.openPicker({
+      width: 800,
+      height: 800,
+      cropping: true,
+      cropperCircleOverlay: true,
+      compressImageQuality: 0.8,
+    })
+      .then(image => {
+        setProfileImage(image);
+      })
+      .catch(err => {
+        if (err.code !== 'E_PICKER_CANCELLED') {
+          Alert.alert('Error', 'Failed to pick image');
+        }
+      });
+  };
+
+  const getImageSource = () => {
+    if (profileImage) return { uri: profileImage.path };
+    if (existingImage) return { uri: existingImage };
+    return require('../../assets/images/profile.png');
+  };
+
+  const handleSave = async () => {
+    if (!firstName.trim()) {
+      Alert.alert('Error', 'First name is required');
+      return;
+    }
+    if (!lastName.trim()) {
+      Alert.alert('Error', 'Last name is required');
+      return;
+    }
+    if (!userName.trim()) {
+      Alert.alert('Error', 'Username is required');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
+
+      formData.append('first_name', firstName.trim());
+      formData.append('last_name', lastName.trim());
+      formData.append('username', userName.trim());
+
+      if (description.trim()) {
+        formData.append('description', description.trim());
+      }
+
+      if (selectedGender) {
+        formData.append('gender', selectedGender.name);
+      }
+
+      if (selectedCountry) {
+        formData.append('nationality', selectedCountry.name);
+      }
+
+      if (dateSelected) {
+        formData.append('age', formatDateForAPI(date));
+      }
+
+      if (profileImage) {
+        const filename = profileImage.path.split('/').pop();
+        formData.append('profile_picture', {
+          uri: profileImage.path,
+          type: profileImage.mime || 'image/jpeg',
+          name: filename || 'profile.jpg',
+        });
+      }
+
+      const response = await api.post(PROFILE.UPDATE_PROFILE, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (response.data?.user) {
+        dispatch(setUser(response.data.user));
+      }
+
+      Alert.alert('Success', 'Profile updated successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (error) {
+      const errors = error.response?.data?.errors;
+      const message = errors
+        ? errors.join('\n')
+        : error.response?.data?.message || 'Update failed. Please try again.';
+      Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -120,7 +253,6 @@ const EditProfileScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -135,15 +267,13 @@ const EditProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Title */}
         <Text style={styles.title}>Edit Personal Data</Text>
 
-        {/* Profile Image */}
         <View style={styles.profileContainer}>
           <View style={styles.profileRing}>
             <View style={styles.profileWhiteRing}>
               <Image
-                source={require('../../assets/images/profile.png')}
+                source={getImageSource()}
                 style={styles.profileImage}
                 resizeMode="cover"
               />
@@ -152,7 +282,7 @@ const EditProfileScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.cameraButton}
             activeOpacity={0.8}
-            onPress={() => console.log('Change Photo')}
+            onPress={pickImage}
           >
             <Image
               source={require('../../assets/images/camera.png')}
@@ -162,7 +292,6 @@ const EditProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* First Name */}
         <Text style={styles.inputLabel}>First Name</Text>
         <View style={styles.inputContainer}>
           <TextInput
@@ -174,7 +303,6 @@ const EditProfileScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Last Name */}
         <Text style={styles.inputLabel}>Last Name</Text>
         <View style={styles.inputContainer}>
           <TextInput
@@ -186,7 +314,6 @@ const EditProfileScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* User Name */}
         <Text style={styles.inputLabel}>User Name</Text>
         <View style={styles.inputContainer}>
           <TextInput
@@ -195,10 +322,10 @@ const EditProfileScreen = ({ navigation }) => {
             placeholderTextColor={Colors.textLight}
             value={userName}
             onChangeText={setUserName}
+            autoCapitalize="none"
           />
         </View>
 
-        {/* Gender Dropdown */}
         <Text style={styles.inputLabel}>Gender</Text>
         <TouchableOpacity
           style={styles.inputContainer}
@@ -217,7 +344,6 @@ const EditProfileScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        {/* Nationality Dropdown */}
         <Text style={styles.inputLabel}>Nationality</Text>
         <TouchableOpacity
           style={styles.inputContainer}
@@ -244,7 +370,6 @@ const EditProfileScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        {/* Date Picker */}
         <Text style={styles.inputLabel}>Age</Text>
         <TouchableOpacity
           style={styles.inputContainer}
@@ -254,7 +379,7 @@ const EditProfileScreen = ({ navigation }) => {
           <Text
             style={dateSelected ? styles.inputText : styles.placeholderText}
           >
-            {dateSelected ? formatDate(date) : 'Select'}
+            {dateSelected ? formatDisplayDate(date) : 'Select'}
           </Text>
           <Image
             source={require('../../assets/images/calender.png')}
@@ -263,16 +388,37 @@ const EditProfileScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        {/* Save Button */}
+        <Text style={styles.inputLabel}>About Me</Text>
+        <View style={[styles.inputContainer, styles.textAreaContainer]}>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Tell others about yourself..."
+            placeholderTextColor={Colors.textLight}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+
+        {isLoading && (
+          <ActivityIndicator
+            size="large"
+            color={Colors.primary}
+            style={{ marginVertical: 10 }}
+          />
+        )}
+
         <Button
-          title="Update"
+          title={isLoading ? 'Updating...' : 'Update'}
           onPress={handleSave}
           size="full"
-          style={{ marginTop: 10 }}
+          style={{ marginTop: 10, opacity: isLoading ? 0.7 : 1 }}
+          disabled={isLoading}
         />
       </ScrollView>
 
-      {/* Date Picker */}
       {showDatePicker && (
         <DateTimePicker
           value={date}
@@ -283,7 +429,6 @@ const EditProfileScreen = ({ navigation }) => {
         />
       )}
 
-      {/* Country Selection Modal */}
       <Modal
         visible={showCountryModal}
         transparent={true}
@@ -298,7 +443,6 @@ const EditProfileScreen = ({ navigation }) => {
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-
             <View style={styles.listContainer}>
               <ScrollView
                 style={styles.countryList}
@@ -322,7 +466,6 @@ const EditProfileScreen = ({ navigation }) => {
                   </TouchableOpacity>
                 ))}
               </ScrollView>
-
               <View style={styles.scrollbarTrack}>
                 <Animated.View
                   style={[
@@ -336,7 +479,6 @@ const EditProfileScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Gender Selection Modal */}
       <Modal
         visible={showGenderModal}
         transparent={true}
@@ -351,7 +493,6 @@ const EditProfileScreen = ({ navigation }) => {
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-
             {genderOptions.map(item => (
               <TouchableOpacity
                 key={item.id}
@@ -380,8 +521,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
-
-  // Header
   header: {
     paddingTop: 50,
     marginBottom: 10,
@@ -396,8 +535,6 @@ const styles = StyleSheet.create({
     height: 24,
     tintColor: Colors.textBlack,
   },
-
-  // Title
   title: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 20,
@@ -405,8 +542,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
-
-  // Profile
   profileContainer: {
     alignItems: 'center',
     marginBottom: 30,
@@ -422,10 +557,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     padding: 4,
     shadowColor: Colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
@@ -449,16 +581,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
   },
-
-  // Input Label
   inputLabel: {
     fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
     marginBottom: 8,
   },
-
-  // Input Container
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -468,12 +596,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
+  textAreaContainer: {
+    borderRadius: 20,
+    alignItems: 'flex-start',
+    paddingVertical: 14,
+  },
   input: {
     flex: 1,
     fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textGray,
     padding: 0,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   inputText: {
     flex: 1,
@@ -487,8 +624,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textLight,
   },
-
-  // Dropdown
   dropdownContent: {
     flex: 1,
     flexDirection: 'row',
@@ -514,8 +649,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -552,8 +685,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: Colors.textGray,
   },
-
-  // List Container
   listContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -589,8 +720,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.textDark,
   },
-
-  // Scrollbar
   scrollbarTrack: {
     width: 4,
     backgroundColor: '#E0E0E0',

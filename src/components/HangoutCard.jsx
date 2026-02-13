@@ -19,20 +19,38 @@ const HangoutCard = ({
 }) => {
   const [menuVisible, setMenuVisible] = useState(false);
 
+  const hasImage =
+    profileImage &&
+    (typeof profileImage === 'string' ||
+      (typeof profileImage === 'object' && profileImage.uri));
+
+  const profileSource =
+    typeof profileImage === 'string' ? { uri: profileImage } : profileImage;
+
+  const getInitial = n => {
+    if (!n) return '?';
+    return n.charAt(0).toUpperCase();
+  };
+
   return (
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
       activeOpacity={0.9}
     >
-      {/* Header Row - Profile & Menu */}
       <View style={styles.headerRow}>
         <View style={styles.profileSection}>
-          <Image
-            source={profileImage}
-            style={styles.profileImage}
-            resizeMode="cover"
-          />
+          {hasImage ? (
+            <Image
+              source={profileSource}
+              style={styles.profileImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.initialCircle}>
+              <Text style={styles.initialText}>{getInitial(name)}</Text>
+            </View>
+          )}
           <Text style={styles.name}>{name}</Text>
         </View>
 
@@ -50,10 +68,8 @@ const HangoutCard = ({
               />
             </TouchableOpacity>
 
-            {/* Dropdown Menu */}
             {menuVisible && (
               <View style={styles.dropdown}>
-                {/* Edit Item */}
                 <TouchableOpacity
                   style={styles.editItem}
                   onPress={() => {
@@ -69,7 +85,6 @@ const HangoutCard = ({
                   <Text style={styles.editText}>edit</Text>
                 </TouchableOpacity>
 
-                {/* Delete Item */}
                 <TouchableOpacity
                   style={styles.deleteItem}
                   onPress={() => {
@@ -90,18 +105,14 @@ const HangoutCard = ({
         )}
       </View>
 
-      {/* Activity Type */}
       <Text style={styles.activityType}>{activityType}</Text>
 
-      {/* Description */}
       <Text style={styles.description} numberOfLines={3}>
         {description}
       </Text>
 
-      {/* People Count */}
       <Text style={styles.peopleCount}>{peopleCount} peoples</Text>
 
-      {/* Avatar Stack */}
       <View style={styles.avatarSection}>
         <AvatarStack
           images={peopleImages}
@@ -111,12 +122,7 @@ const HangoutCard = ({
         />
       </View>
 
-      {/* Join Button */}
-      <Button
-        title="Request to Join"
-        size="full"
-        onPress={onJoinPress}
-      />
+      <Button title="Request to Join" size="full" onPress={onJoinPress} />
     </TouchableOpacity>
   );
 };
@@ -129,10 +135,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 20,
     shadowColor: Colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
@@ -153,6 +156,20 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     marginRight: 12,
   },
+  initialCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  initialText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 18,
+    color: Colors.white,
+  },
   name: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 16,
@@ -168,8 +185,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
   },
-
-  // Dropdown
   dropdown: {
     position: 'absolute',
     top: 36,
@@ -178,10 +193,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 8,
     shadowColor: Colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
@@ -189,8 +201,6 @@ const styles = StyleSheet.create({
     minWidth: 130,
     gap: 8,
   },
-
-  // Edit Item
   editItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -204,8 +214,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#5B93FF',
   },
-
-  // Delete Item
   deleteItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -220,14 +228,11 @@ const styles = StyleSheet.create({
     color: '#E71D36',
     textTransform: 'lowercase',
   },
-
-  // Icon
   dropdownIcon: {
     width: 16,
     height: 16,
     marginRight: 10,
   },
-
   activityType: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 14,

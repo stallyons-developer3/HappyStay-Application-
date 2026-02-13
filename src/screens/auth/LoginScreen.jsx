@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,16 +10,55 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
+import { loginUser, clearError } from '../../store/slices/authSlice';
 
 const { width } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
-  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const dispatch = useDispatch();
+  const { isLoading, error, isAuthenticated, user } = useSelector(
+    state => state.auth,
+  );
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Login Failed', error, [
+        { text: 'OK', onPress: () => dispatch(clearError()) },
+      ]);
+    }
+  }, [error, dispatch]);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.is_profile_complete) {
+        navigation.replace(Screens.MainApp);
+      } else {
+        navigation.replace(Screens.Onboarding1);
+      }
+    }
+  }, [isAuthenticated, user, navigation]);
+
+  const handleLogin = () => {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter your email');
+      return;
+    }
+    if (!password.trim()) {
+      Alert.alert('Error', 'Please enter your password');
+      return;
+    }
+    dispatch(loginUser({ email: email.trim(), password }));
+  };
 
   return (
     <KeyboardAvoidingView
@@ -31,7 +70,6 @@ const LoginScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Back Arrow */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -43,12 +81,10 @@ const LoginScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        {/* Header */}
         <Text style={styles.title}>Hello !</Text>
         <Text style={styles.subtitle}>Sign in to Continue</Text>
 
-        {/* Name Input */}
-        <Text style={styles.inputLabel}>Name</Text>
+        <Text style={styles.inputLabel}>Email</Text>
         <View style={styles.inputContainer}>
           <Image
             source={require('../../assets/images/user.png')}
@@ -57,14 +93,16 @@ const LoginScreen = ({ navigation }) => {
           />
           <TextInput
             style={styles.input}
-            placeholder="Rafni"
+            placeholder="Enter your email"
             placeholderTextColor={Colors.textLight}
-            value={name}
-            onChangeText={setName}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            editable={!isLoading}
           />
         </View>
 
-        {/* Password Input */}
         <Text style={styles.inputLabel}>Password</Text>
         <View style={styles.inputContainer}>
           <Image
@@ -79,6 +117,7 @@ const LoginScreen = ({ navigation }) => {
             secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
+            editable={!isLoading}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
             <Image
@@ -93,7 +132,6 @@ const LoginScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Forgot Password */}
         <TouchableOpacity
           style={styles.forgotContainer}
           onPress={() => navigation.navigate(Screens.ForgotPassword)}
@@ -101,22 +139,28 @@ const LoginScreen = ({ navigation }) => {
           <Text style={styles.forgotText}>Forgot Password ?</Text>
         </TouchableOpacity>
 
-        {/* Sign In Button */}
         <Button
-          title="Sign In"
-          onPress={() => navigation.navigate('MainApp')}
+          title={isLoading ? 'Signing In...' : 'Sign In'}
+          onPress={handleLogin}
           size="full"
-          style={{ marginBottom: 25 }}
+          style={{ marginBottom: 25, opacity: isLoading ? 0.7 : 1 }}
+          disabled={isLoading}
         />
 
-        {/* OR Divider */}
+        {isLoading && (
+          <ActivityIndicator
+            size="small"
+            color={Colors.primary}
+            style={{ marginBottom: 15 }}
+          />
+        )}
+
         <View style={styles.orContainer}>
           <View style={styles.orLine} />
           <Text style={styles.orText}>OR</Text>
           <View style={styles.orLine} />
         </View>
 
-        {/* Google Button */}
         <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
           <Image
             source={require('../../assets/images/google.png')}
@@ -126,7 +170,6 @@ const LoginScreen = ({ navigation }) => {
           <Text style={styles.socialButtonText}>Sign in with Google</Text>
         </TouchableOpacity>
 
-        {/* Apple Button */}
         <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
           <Image
             source={require('../../assets/images/apple.png')}
@@ -136,7 +179,6 @@ const LoginScreen = ({ navigation }) => {
           <Text style={styles.socialButtonText}>Sign in with Apple</Text>
         </TouchableOpacity>
 
-        {/* Sign Up Link */}
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>Don't have an account? </Text>
           <TouchableOpacity
@@ -223,18 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.primary,
     textTransform: 'lowercase',
-  },
-  signInButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginBottom: 25,
-  },
-  signInButtonText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 20,
-    color: Colors.white,
   },
   orContainer: {
     flexDirection: 'row',

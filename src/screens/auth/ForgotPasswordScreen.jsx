@@ -10,19 +10,52 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
+import api from '../../api/axiosInstance';
+import { AUTH } from '../../api/endpoints';
 
 const { width } = Dimensions.get('window');
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Handle Send Reset Link
-  const handleSendLink = () => {
-    console.log('Reset link sent to:', email);
-    // Navigate to OTP or success screen
+  const handleSendOTP = async () => {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter your email');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await api.post(AUTH.FORGOT_PASSWORD, {
+        email: email.trim(),
+      });
+      Alert.alert(
+        'OTP Sent',
+        response.data?.message || 'Check your email for OTP',
+        [
+          {
+            text: 'OK',
+            onPress: () =>
+              navigation.navigate(Screens.ResetPassword, {
+                email: email.trim(),
+              }),
+          },
+        ],
+      );
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        'Failed to send OTP. Please try again.';
+      Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -35,7 +68,6 @@ const ForgotPasswordScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Back Arrow */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -47,14 +79,12 @@ const ForgotPasswordScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        {/* Header */}
         <Text style={styles.title}>Forgot Password</Text>
         <Text style={styles.subtitle}>
-          Enter your email address and we'll send{'\n'}you a link to reset your
+          Enter your email address and we'll send{'\n'}you an OTP to reset your
           password
         </Text>
 
-        {/* Email Input */}
         <Text style={styles.inputLabel}>Email</Text>
         <View style={styles.inputContainer}>
           <Image
@@ -70,17 +100,26 @@ const ForgotPasswordScreen = ({ navigation }) => {
             autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
+            editable={!isLoading}
           />
         </View>
 
-        {/* Send Button */}
         <Button
-          title="Send Reset Link"
-          onPress={() => navigation.navigate(Screens.Login)}
+          title={isLoading ? 'Sending...' : 'Send OTP'}
+          onPress={handleSendOTP}
           size="full"
+          style={{ opacity: isLoading ? 0.7 : 1 }}
+          disabled={isLoading}
         />
 
-        {/* Back to Login */}
+        {isLoading && (
+          <ActivityIndicator
+            size="small"
+            color={Colors.primary}
+            style={{ marginTop: 15 }}
+          />
+        )}
+
         <View style={styles.backToLoginContainer}>
           <Text style={styles.backToLoginText}>Remember your password? </Text>
           <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -152,18 +191,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textGray,
     padding: 0,
-  },
-  sendButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 14,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginBottom: 25,
-  },
-  sendButtonText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 20,
-    color: Colors.white,
   },
   backToLoginContainer: {
     flexDirection: 'row',

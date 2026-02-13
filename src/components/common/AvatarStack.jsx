@@ -1,6 +1,11 @@
 import React from 'react';
-import { View, Image, StyleSheet } from 'react-native';
-import Colors from '../../constants/Constants';
+import { View, Image, Text, StyleSheet } from 'react-native';
+import { Colors, Fonts } from '../../constants/Constants';
+
+const getInitial = name => {
+  if (!name) return '?';
+  return name.charAt(0).toUpperCase();
+};
 
 const AvatarStack = ({
   images = [],
@@ -8,39 +13,68 @@ const AvatarStack = ({
   size = 36,
   overlap = 10,
 }) => {
-  // Get images to display (limited by maxDisplay)
   const displayImages = images.slice(0, maxDisplay);
 
   return (
     <View style={styles.container}>
-      {displayImages.map((image, index) => (
-        <View
-          key={index}
-          style={[
-            styles.avatarWrapper,
-            {
-              width: size,
-              height: size,
-              borderRadius: size / 2,
-              marginLeft: index === 0 ? 0 : -overlap,
-              zIndex: displayImages.length - index,
-            },
-          ]}
-        >
-          <Image
-            source={image}
+      {displayImages.map((item, index) => {
+        const isObject = typeof item === 'object' && item !== null && !item.uri;
+        const imageUrl = isObject
+          ? item.image
+          : typeof item === 'string'
+          ? item
+          : null;
+        const name = isObject ? item.name : null;
+        const hasImage = imageUrl && imageUrl !== null;
+
+        return (
+          <View
+            key={index}
             style={[
-              styles.avatar,
+              styles.avatarWrapper,
               {
-                width: size - 4,
-                height: size - 4,
-                borderRadius: (size - 4) / 2,
+                width: size,
+                height: size,
+                borderRadius: size / 2,
+                marginLeft: index === 0 ? 0 : -overlap,
+                zIndex: displayImages.length - index,
               },
             ]}
-            resizeMode="cover"
-          />
-        </View>
-      ))}
+          >
+            {hasImage ? (
+              <Image
+                source={
+                  typeof imageUrl === 'string' ? { uri: imageUrl } : imageUrl
+                }
+                style={[
+                  styles.avatar,
+                  {
+                    width: size - 4,
+                    height: size - 4,
+                    borderRadius: (size - 4) / 2,
+                  },
+                ]}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                style={[
+                  styles.initialCircle,
+                  {
+                    width: size - 4,
+                    height: size - 4,
+                    borderRadius: (size - 4) / 2,
+                  },
+                ]}
+              >
+                <Text style={[styles.initialText, { fontSize: size * 0.35 }]}>
+                  {getInitial(name)}
+                </Text>
+              </View>
+            )}
+          </View>
+        );
+      })}
     </View>
   );
 };
@@ -59,6 +93,15 @@ const styles = StyleSheet.create({
   },
   avatar: {
     backgroundColor: Colors.background,
+  },
+  initialCircle: {
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initialText: {
+    fontFamily: Fonts.RobotoBold,
+    color: Colors.white,
   },
 });
 

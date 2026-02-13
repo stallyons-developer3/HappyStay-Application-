@@ -10,78 +10,80 @@ import {
 import { Colors, Fonts } from '../constants/Constants';
 import Button from './common/Button';
 
-// Filter Options
 const categoryOptions = [
-  { id: '1', name: 'All' },
-  { id: '2', name: 'Nature & Active' },
-  { id: '3', name: 'Sightseeing' },
-  { id: '4', name: 'Party' },
-  { id: '5', name: 'Events' },
-  { id: '6', name: 'Food & Drink' },
+  { id: 'all', name: 'All' },
+  { id: 'Nature & Active', name: 'Nature & Active' },
+  { id: 'Sightseeing', name: 'Sightseeing' },
+  { id: 'Party', name: 'Party' },
+  { id: 'Events', name: 'Events' },
+  { id: 'Food & Drink', name: 'Food & Drink' },
+  { id: 'Transport', name: 'Transport' },
 ];
 
 const priceOptions = [
-  { id: '1', name: 'All', value: 'all' },
-  { id: '2', name: 'Free', value: 'free' },
-  { id: '3', name: '$1 - $20', value: '1-20' },
-  { id: '4', name: '$21 - $50', value: '21-50' },
-  { id: '5', name: '$51 - $100', value: '51-100' },
-  { id: '6', name: '$100+', value: '100+' },
+  { id: 'all', name: 'All', min: null, max: null },
+  { id: 'free', name: 'Free', min: 0, max: 0 },
+  { id: '1-20', name: '$1 - $20', min: 1, max: 20 },
+  { id: '21-50', name: '$21 - $50', min: 21, max: 50 },
+  { id: '51-100', name: '$51 - $100', min: 51, max: 100 },
+  { id: '100+', name: '$100+', min: 100, max: null },
 ];
 
-const sortOptions = [
-  { id: '1', name: 'Recommended', value: 'recommended' },
-  { id: '2', name: 'Newest', value: 'newest' },
-  { id: '3', name: 'Price: Low to High', value: 'price_asc' },
-  { id: '4', name: 'Price: High to Low', value: 'price_desc' },
-  { id: '5', name: 'Most Popular', value: 'popular' },
+const activitySortOptions = [
+  { id: 'recommended', name: 'Recommended', value: '' },
+  { id: 'newest', name: 'Newest', value: 'newest' },
+  { id: 'price_asc', name: 'Price: Low to High', value: 'price_asc' },
+  { id: 'price_desc', name: 'Price: High to Low', value: 'price_desc' },
+  { id: 'popular', name: 'Most Popular', value: 'popular' },
 ];
 
-const FilterModal = ({ visible, onClose, onApply }) => {
-  // Arrays for multiple selection
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedPrices, setSelectedPrices] = useState([]);
-  const [selectedSort, setSelectedSort] = useState('1');
+const hangoutSortOptions = [
+  { id: 'recommended', name: 'Recommended', value: '' },
+  { id: 'newest', name: 'Newest', value: 'newest' },
+  { id: 'popular', name: 'Most Popular', value: 'popular' },
+];
 
-  // Toggle Category - Multiple Selection
-  const toggleCategory = id => {
-    if (selectedCategories.includes(id)) {
-      // Already selected - remove it
-      setSelectedCategories(selectedCategories.filter(item => item !== id));
-    } else {
-      // Not selected - add it
-      setSelectedCategories([...selectedCategories, id]);
-    }
-  };
+const FilterModal = ({ visible, onClose, onApply, type = 'activities' }) => {
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedPrice, setSelectedPrice] = useState('all');
+  const [selectedSort, setSelectedSort] = useState('recommended');
 
-  // Toggle Price - Multiple Selection
-  const togglePrice = id => {
-    if (selectedPrices.includes(id)) {
-      // Already selected - remove it
-      setSelectedPrices(selectedPrices.filter(item => item !== id));
-    } else {
-      // Not selected - add it
-      setSelectedPrices([...selectedPrices, id]);
-    }
-  };
+  const sortOptions =
+    type === 'hangouts' ? hangoutSortOptions : activitySortOptions;
+  const showPrice = type === 'activities';
 
-  // Handle Reset
   const handleReset = () => {
-    setSelectedCategories([]);
-    setSelectedPrices([]);
-    setSelectedSort('1');
+    setSelectedCategory('all');
+    setSelectedPrice('all');
+    setSelectedSort('recommended');
   };
 
-  // Handle Apply
   const handleApply = () => {
-    const filters = {
-      categories: selectedCategories.map(id =>
-        categoryOptions.find(c => c.id === id),
-      ),
-      prices: selectedPrices.map(id => priceOptions.find(p => p.id === id)),
-      sort: sortOptions.find(s => s.id === selectedSort),
-    };
-    onApply(filters);
+    const params = {};
+
+    if (selectedCategory !== 'all') {
+      params.typology = selectedCategory;
+    }
+
+    if (showPrice && selectedPrice !== 'all') {
+      const priceOpt = priceOptions.find(p => p.id === selectedPrice);
+      if (priceOpt) {
+        if (priceOpt.id === 'free') {
+          params.price_min = 0;
+          params.price_max = 0;
+        } else {
+          if (priceOpt.min !== null) params.price_min = priceOpt.min;
+          if (priceOpt.max !== null) params.price_max = priceOpt.max;
+        }
+      }
+    }
+
+    const sortOpt = sortOptions.find(s => s.id === selectedSort);
+    if (sortOpt && sortOpt.value) {
+      params.sort = sortOpt.value;
+    }
+
+    onApply(params);
     onClose();
   };
 
@@ -94,16 +96,13 @@ const FilterModal = ({ visible, onClose, onApply }) => {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          {/* Header */}
           <View style={styles.modalHeader}>
             <View style={styles.closeButton}>
               <TouchableOpacity onPress={onClose}>
                 <Text style={styles.closeText}>✕</Text>
               </TouchableOpacity>
             </View>
-
             <Text style={styles.modalTitle}>Filter</Text>
-
             <View style={styles.resetButton}>
               <TouchableOpacity onPress={handleReset}>
                 <Text style={styles.resetText}>Reset</Text>
@@ -115,7 +114,6 @@ const FilterModal = ({ visible, onClose, onApply }) => {
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
           >
-            {/* Category Section - Multiple Selection */}
             <Text style={styles.sectionTitle}>Category</Text>
             <View style={styles.optionsContainer}>
               {categoryOptions.map(option => (
@@ -123,16 +121,15 @@ const FilterModal = ({ visible, onClose, onApply }) => {
                   key={option.id}
                   style={[
                     styles.optionChip,
-                    selectedCategories.includes(option.id) &&
-                      styles.optionChipSelected,
+                    selectedCategory === option.id && styles.optionChipSelected,
                   ]}
                   activeOpacity={0.7}
-                  onPress={() => toggleCategory(option.id)}
+                  onPress={() => setSelectedCategory(option.id)}
                 >
                   <Text
                     style={[
                       styles.optionText,
-                      selectedCategories.includes(option.id) &&
+                      selectedCategory === option.id &&
                         styles.optionTextSelected,
                     ]}
                   >
@@ -142,35 +139,37 @@ const FilterModal = ({ visible, onClose, onApply }) => {
               ))}
             </View>
 
-            {/* Price Range Section - Multiple Selection */}
-            <Text style={styles.sectionTitle}>Price Range</Text>
-            <View style={styles.optionsContainer}>
-              {priceOptions.map(option => (
-                <TouchableOpacity
-                  key={option.id}
-                  style={[
-                    styles.optionChip,
-                    selectedPrices.includes(option.id) &&
-                      styles.optionChipSelected,
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => togglePrice(option.id)}
-                >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      selectedPrices.includes(option.id) &&
-                        styles.optionTextSelected,
-                    ]}
-                  >
-                    {option.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {showPrice && (
+              <>
+                <Text style={styles.sectionTitle}>Price Range</Text>
+                <View style={styles.optionsContainer}>
+                  {priceOptions.map(option => (
+                    <TouchableOpacity
+                      key={option.id}
+                      style={[
+                        styles.optionChip,
+                        selectedPrice === option.id &&
+                          styles.optionChipSelected,
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => setSelectedPrice(option.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          selectedPrice === option.id &&
+                            styles.optionTextSelected,
+                        ]}
+                      >
+                        {option.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
 
-            {/* Sort By Section - Single Selection (Radio) */}
-            <Text style={styles.sectionTitle}>Sort By</Text>
+            {/* <Text style={styles.sectionTitle}>Sort By</Text>
             <View style={styles.sortContainer}>
               {sortOptions.map(option => (
                 <TouchableOpacity
@@ -199,10 +198,9 @@ const FilterModal = ({ visible, onClose, onApply }) => {
                   </View>
                 </TouchableOpacity>
               ))}
-            </View>
+            </View> */}
           </ScrollView>
 
-          {/* Apply Button */}
           <View style={styles.buttonContainer}>
             <Button title="Apply Filters" onPress={handleApply} size="full" />
           </View>
@@ -234,7 +232,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.borderLight,
   },
   closeButton: {
-    width: 80, // Fixed width
+    width: 80,
     alignItems: 'flex-start',
   },
   closeText: {
@@ -247,7 +245,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   resetButton: {
-    width: 80, // Same fixed width as close
+    width: 80,
     alignItems: 'flex-end',
   },
   resetText: {
@@ -260,10 +258,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     textTransform: 'lowercase',
-  },
-  closeText: {
-    fontSize: 24,
-    color: Colors.textBlack,
   },
   scrollView: {
     paddingHorizontal: 24,
@@ -344,17 +338,6 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
-  },
-  applyButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 50,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 20,
-    color: Colors.white,
   },
 });
 

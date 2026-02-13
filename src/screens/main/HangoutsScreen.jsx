@@ -1,103 +1,110 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
-import { Colors, Screens } from '../../constants/Constants';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  RefreshControl,
+  ActivityIndicator,
+  Text,
+} from 'react-native';
+import { useSelector } from 'react-redux';
+import { Colors, Fonts, Screens } from '../../constants/Constants';
+import { STORAGE_URL } from '../../api/endpoints';
+import api from '../../api/axiosInstance';
+import { HANGOUT } from '../../api/endpoints';
 
-// Components
 import Header from '../../components/Header';
 import SearchBar from '../../components/SearchBar';
 import HangoutCard from '../../components/HangoutCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
-import { Linking, Platform } from 'react-native';
 import FilterModal from '../../components/FilterModal';
 
-// Dummy Data
-const hangoutsData = [
-  {
-    id: '1',
-    profileImage: require('../../assets/images/profile.png'),
-    name: 'Jessica',
-    activityType: 'Hiking',
-    description:
-      'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.',
-    peopleCount: 4,
-    peopleImages: [
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/user1.png'),
-      require('../../assets/images/user2.png'),
-      require('../../assets/images/user3.png'),
-    ],
-  },
-  {
-    id: '2',
-    profileImage: require('../../assets/images/profile.png'),
-    name: 'Jessica',
-    activityType: 'Hiking',
-    description:
-      'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.',
-    peopleCount: 4,
-    peopleImages: [
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/user1.png'),
-      require('../../assets/images/user2.png'),
-      require('../../assets/images/user3.png'),
-    ],
-  },
-  {
-    id: '3',
-    profileImage: require('../../assets/images/profile.png'),
-    name: 'Michael',
-    activityType: 'Beach Party',
-    description:
-      'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout.',
-    peopleCount: 6,
-    peopleImages: [
-      require('../../assets/images/profile.png'),
-      require('../../assets/images/user1.png'),
-      require('../../assets/images/user2.png'),
-      require('../../assets/images/user3.png'),
-    ],
-  },
-];
-
 const HangoutsScreen = ({ navigation }) => {
+  const { user } = useSelector(state => state.auth);
+
+  const [hangouts, setHangouts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [activeFilters, setActiveFilters] = useState({});
 
-  // Handle tab press
-  const handleTabPress = tabName => {
-    if (tabName === 'Hangouts') return;
+  useEffect(() => {
+    fetchHangouts({});
+  }, []);
 
-    switch (tabName) {
-      case 'Home':
-        navigation.navigate(Screens.Home);
-        break;
-      case 'Activities':
-        navigation.navigate(Screens.Activities);
-        break;
-      case 'Chat':
-        navigation.navigate(Screens.Chat);
-        break;
-      case 'Manage':
-        navigation.navigate(Screens.Manage);
-        break;
+  const fetchHangouts = async (params = {}) => {
+    try {
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          queryParams.append(key, String(val));
+        }
+      });
+      const qs = queryParams.toString();
+      const url = qs ? `${HANGOUT.GET_ALL}?${qs}` : HANGOUT.GET_ALL;
+
+      const response = await api.get(url);
+      if (response.data?.hangouts) {
+        setHangouts(response.data.hangouts);
+      }
+    } catch (error) {
+      console.log('Fetch hangouts error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Handle Filter Apply
-  const handleFilterApply = filters => {
-    console.log('Applied Filters:', filters);
-    // Apply filters to your data here
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    const params = { ...activeFilters };
+    if (searchText.trim()) params.search = searchText.trim();
+    await fetchHangouts(params);
+    setRefreshing(false);
+  }, [activeFilters, searchText]);
+
+  const handleSearch = () => {
+    const params = { ...activeFilters };
+    if (searchText.trim()) {
+      params.search = searchText.trim();
+    }
+    setIsLoading(true);
+    fetchHangouts(params);
   };
+
+  const handleFilterApply = filterParams => {
+    const params = { ...filterParams };
+    if (searchText.trim()) {
+      params.search = searchText.trim();
+    }
+    setActiveFilters(filterParams);
+    setIsLoading(true);
+    fetchHangouts(params);
+  };
+
+  const profileImage = user?.profile_picture
+    ? {
+        uri: user.profile_picture.startsWith('http')
+          ? user.profile_picture
+          : `${STORAGE_URL}/storage/${user.profile_picture}`,
+      }
+    : undefined;
 
   return (
     <View style={styles.container}>
-      {/* Scrollable Content */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
       >
-        {/* Header */}
         <Header
           title="Hangouts"
           greeting="Enjoy Your Day"
@@ -105,47 +112,72 @@ const HangoutsScreen = ({ navigation }) => {
           showProfile={true}
           showNotification={true}
           notificationCount={5}
+          profileImage={profileImage}
           onProfilePress={() => navigation.navigate(Screens.Profile)}
           onNotificationPress={() => navigation.navigate(Screens.Notification)}
         />
 
-        {/* Search Bar */}
         <SearchBar
-          placeholder="Find your activity"
+          placeholder="Find your hangout"
           value={searchText}
           onChangeText={setSearchText}
-          onSearch={() => console.log('Search:', searchText)}
+          onSearch={handleSearch}
           onActionPress={() => setShowFilterModal(true)}
         />
 
-        {/* Hangout Cards */}
         <View style={styles.cardsContainer}>
-          {hangoutsData.map(hangout => (
-            <HangoutCard
-              key={hangout.id}
-              profileImage={hangout.profileImage}
-              name={hangout.name}
-              activityType={hangout.activityType}
-              description={hangout.description}
-              peopleCount={hangout.peopleCount}
-              peopleImages={hangout.peopleImages}
-              onPress={() => navigation.navigate(Screens.HangoutDetail)}
-              onJoinPress={() => console.log('Join pressed:', hangout.name)}
+          {isLoading && !refreshing ? (
+            <ActivityIndicator
+              size="large"
+              color={Colors.primary}
+              style={{ marginTop: 50 }}
             />
-          ))}
+          ) : hangouts.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No hangouts found</Text>
+            </View>
+          ) : (
+            hangouts.map(hangout => {
+              const peopleData = (hangout.people_images || []).map(p => ({
+                image: p.profile_picture || null,
+                name: p.name || null,
+              }));
+
+              return (
+                <HangoutCard
+                  key={`hangout-${hangout.id}`}
+                  profileImage={hangout.user?.profile_picture}
+                  name={hangout.user?.name || 'User'}
+                  activityType={hangout.typology || hangout.title}
+                  description={hangout.description}
+                  peopleCount={hangout.joined_count || 0}
+                  peopleImages={peopleData}
+                  onPress={() =>
+                    navigation.navigate(Screens.HangoutDetail, {
+                      hangoutId: hangout.id,
+                    })
+                  }
+                  onJoinPress={() =>
+                    navigation.navigate(Screens.HangoutDetail, {
+                      hangoutId: hangout.id,
+                    })
+                  }
+                />
+              );
+            })
+          )}
         </View>
 
-        {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* Floating Map Button */}
       <FloatingMapButton onPress={() => navigation.navigate(Screens.Map)} />
-      {/* Filter Modal */}
+
       <FilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
         onApply={handleFilterApply}
+        type="hangouts"
       />
     </View>
   );
@@ -163,10 +195,19 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   cardsContainer: {
-    marginTop: 30,
+    marginTop: 16,
   },
   bottomSpacing: {
     height: 100,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  emptyText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 16,
+    color: Colors.textGray,
   },
 });
 

@@ -4,14 +4,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Screens, Colors } from '../constants/Constants';
 
-// Navigators
 import BottomTabNavigator from './BottomTabNavigator';
 
-// Screens
 import SplashScreen from '../screens/SplashScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import Onboarding1Screen from '../screens/onboarding/Onboarding1Screen';
 import Onboarding2Screen from '../screens/onboarding/Onboarding2Screen';
 import Onboarding3Screen from '../screens/onboarding/Onboarding3Screen';
@@ -24,13 +24,11 @@ import ProfileScreen from '../screens/main/ProfileScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
 import TripScreen from '../screens/main/TripScreen';
 import PropertyDetailScreen from '../screens/main/PropertyDetailScreen';
-import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import NotificationScreen from '../screens/main/NotificationScreen';
 import MapScreen from '../screens/main/MapScreen';
 
 const Stack = createNativeStackNavigator();
 
-// Wrapper component for screens that need SafeAreaView
 const withSafeArea = (WrappedComponent, edges = ['top']) => {
   return props => (
     <SafeAreaView
@@ -53,7 +51,6 @@ const AppNavigator = () => {
           contentStyle: { backgroundColor: Colors.backgroundGray },
         }}
       >
-        {/* Auth Screens - top & bottom safe area */}
         <Stack.Screen
           name={Screens.Splash}
           component={withSafeArea(SplashScreen, ['top', 'bottom'])}
@@ -74,8 +71,11 @@ const AppNavigator = () => {
           name={Screens.ForgotPassword}
           component={withSafeArea(ForgotPasswordScreen, ['top', 'bottom'])}
         />
+        <Stack.Screen
+          name={Screens.ResetPassword}
+          component={withSafeArea(ResetPasswordScreen, ['top', 'bottom'])}
+        />
 
-        {/* Onboarding Screens - top & bottom safe area */}
         <Stack.Screen
           name={Screens.Onboarding1}
           component={withSafeArea(Onboarding1Screen, ['top', 'bottom'])}
@@ -93,10 +93,8 @@ const AppNavigator = () => {
           component={withSafeArea(Onboarding4Screen, ['top', 'bottom'])}
         />
 
-        {/* Main App - Bottom Tabs (only top safe area, bottom handled by tab bar) */}
         <Stack.Screen name={Screens.MainApp} component={BottomTabNavigator} />
 
-        {/* Detail Screens - top & bottom safe area */}
         <Stack.Screen
           name={Screens.ActivityDetail}
           component={withSafeArea(ActivityDetailScreen, ['top', 'bottom'])}
@@ -125,13 +123,10 @@ const AppNavigator = () => {
           name={Screens.PropertyDetail}
           component={withSafeArea(PropertyDetailScreen, ['top', 'bottom'])}
         />
-
-        {/* Create Screens */}
         <Stack.Screen
           name={Screens.CreateHangout}
           component={withSafeArea(CreateHangoutScreen, ['top', 'bottom'])}
         />
-
         <Stack.Screen
           name={Screens.Notification}
           component={withSafeArea(NotificationScreen, ['top', 'bottom'])}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,49 +12,27 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
-import { registerUser, clearError } from '../../store/slices/authSlice';
+import api from '../../api/axiosInstance';
+import { AUTH } from '../../api/endpoints';
 
-const RegisterScreen = ({ navigation }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+const ResetPasswordScreen = ({ navigation, route }) => {
+  const { email } = route.params;
+  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const dispatch = useDispatch();
-  const { isLoading, error, isAuthenticated, user } = useSelector(
-    state => state.auth,
-  );
-
-  useEffect(() => {
-    if (error) {
-      Alert.alert('Registration Failed', error, [
-        { text: 'OK', onPress: () => dispatch(clearError()) },
-      ]);
-    }
-  }, [error, dispatch]);
-
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      navigation.replace(Screens.Onboarding1);
-    }
-  }, [isAuthenticated, user, navigation]);
-
-  const handleRegister = () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter your name');
-      return;
-    }
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
+  const handleResetPassword = async () => {
+    if (!otp.trim()) {
+      Alert.alert('Error', 'Please enter the OTP');
       return;
     }
     if (!password) {
-      Alert.alert('Error', 'Please enter a password');
+      Alert.alert('Error', 'Please enter a new password');
       return;
     }
     if (password.length < 8) {
@@ -66,14 +44,32 @@ const RegisterScreen = ({ navigation }) => {
       return;
     }
 
-    dispatch(
-      registerUser({
-        name: name.trim(),
-        email: email.trim(),
+    setIsLoading(true);
+    try {
+      const response = await api.post(AUTH.RESET_PASSWORD, {
+        email,
+        otp: otp.trim(),
         password,
         password_confirmation: confirmPassword,
-      }),
-    );
+      });
+      Alert.alert(
+        'Success',
+        response.data?.message || 'Password reset successfully',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate(Screens.Login),
+          },
+        ],
+      );
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        'Failed to reset password. Please try again.';
+      Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -97,46 +93,31 @@ const RegisterScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Hello !</Text>
-        <Text style={styles.subtitle}>Sign up to Continue</Text>
+        <Text style={styles.title}>Reset Password</Text>
+        <Text style={styles.subtitle}>
+          Enter the OTP sent to {email} and{'\n'}set your new password
+        </Text>
 
-        <Text style={styles.inputLabel}>Name</Text>
+        <Text style={styles.inputLabel}>OTP Code</Text>
         <View style={styles.inputContainer}>
           <Image
-            source={require('../../assets/images/user.png')}
+            source={require('../../assets/images/password_icon.png')}
             style={styles.inputIcon}
             resizeMode="contain"
           />
           <TextInput
             style={styles.input}
-            placeholder="Enter"
+            placeholder="Enter 6-digit OTP"
             placeholderTextColor={Colors.textLight}
-            value={name}
-            onChangeText={setName}
+            keyboardType="number-pad"
+            maxLength={6}
+            value={otp}
+            onChangeText={setOtp}
             editable={!isLoading}
           />
         </View>
 
-        <Text style={styles.inputLabel}>Email</Text>
-        <View style={styles.inputContainer}>
-          <Image
-            source={require('../../assets/images/email.png')}
-            style={styles.inputIcon}
-            resizeMode="contain"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Enter"
-            placeholderTextColor={Colors.textLight}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-            editable={!isLoading}
-          />
-        </View>
-
-        <Text style={styles.inputLabel}>Password</Text>
+        <Text style={styles.inputLabel}>New Password</Text>
         <View style={styles.inputContainer}>
           <Image
             source={require('../../assets/images/password_icon.png')}
@@ -197,8 +178,8 @@ const RegisterScreen = ({ navigation }) => {
         </View>
 
         <Button
-          title={isLoading ? 'Signing Up...' : 'Sign up'}
-          onPress={handleRegister}
+          title={isLoading ? 'Resetting...' : 'Reset Password'}
+          onPress={handleResetPassword}
           size="full"
           style={{ opacity: isLoading ? 0.7 : 1 }}
           disabled={isLoading}
@@ -208,40 +189,9 @@ const RegisterScreen = ({ navigation }) => {
           <ActivityIndicator
             size="small"
             color={Colors.primary}
-            style={{ marginTop: 10 }}
+            style={{ marginTop: 15 }}
           />
         )}
-
-        <View style={styles.orContainer}>
-          <View style={styles.orLine} />
-          <Text style={styles.orText}>OR</Text>
-          <View style={styles.orLine} />
-        </View>
-
-        <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-          <Image
-            source={require('../../assets/images/google.png')}
-            style={styles.socialIcon}
-            resizeMode="contain"
-          />
-          <Text style={styles.socialButtonText}>Sign up with Google</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-          <Image
-            source={require('../../assets/images/apple.png')}
-            style={styles.socialIcon}
-            resizeMode="contain"
-          />
-          <Text style={styles.socialButtonText}>Sign up with Apple</Text>
-        </TouchableOpacity>
-
-        <View style={styles.signInContainer}>
-          <Text style={styles.signInText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate(Screens.Login)}>
-            <Text style={styles.signInLink}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -255,7 +205,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 30,
+    paddingBottom: 40,
   },
   backButton: {
     marginTop: 50,
@@ -278,7 +228,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
-    marginBottom: 25,
+    lineHeight: 22,
+    marginBottom: 30,
   },
   inputLabel: {
     fontFamily: Fonts.RobotoRegular,
@@ -312,59 +263,6 @@ const styles = StyleSheet.create({
     height: 22,
     tintColor: Colors.textLight,
   },
-  orContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 25,
-    marginBottom: 25,
-  },
-  orLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.primary,
-  },
-  orText: {
-    fontFamily: Fonts.RobotoRegular,
-    fontSize: 14,
-    color: Colors.textLight,
-    marginHorizontal: 15,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 50,
-    paddingVertical: 14,
-    marginBottom: 15,
-    backgroundColor: Colors.background,
-  },
-  socialIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 12,
-  },
-  socialButtonText: {
-    fontFamily: Fonts.poppinsRegular,
-    fontSize: 14,
-    color: Colors.textGray,
-    textTransform: 'lowercase',
-  },
-  signInContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  signInText: {
-    fontFamily: Fonts.RobotoRegular,
-    fontSize: 14,
-    color: Colors.textLight,
-  },
-  signInLink: {
-    fontFamily: Fonts.poppinsRegular,
-    fontSize: 14,
-    color: Colors.primary,
-    textTransform: 'lowercase',
-  },
 });
 
-export default RegisterScreen;
+export default ResetPasswordScreen;

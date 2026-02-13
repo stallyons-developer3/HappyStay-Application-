@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,14 @@ import {
   FlatList,
   Switch,
   Platform,
-  StatusBar,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { WebView } from 'react-native-webview';
 import { Colors, Fonts } from '../../constants/Constants';
+import api from '../../api/axiosInstance';
+import { HANGOUT } from '../../api/endpoints';
 
 const typologyOptions = [
   { id: '1', name: 'Nature & Active' },
@@ -39,13 +42,16 @@ const interestOptions = [
 
 const CreateHangoutScreen = ({ navigation, route }) => {
   const isEdit = route?.params?.isEdit || false;
-  const hangoutData = route?.params?.hangout || null;
+  const hangoutId = route?.params?.hangoutId || null;
 
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
   const [title, setTitle] = useState('');
   const [typology, setTypology] = useState(null);
-  const [ageLimit, setAgeLimit] = useState('');
+  const [minAge, setMinAge] = useState('');
+  const [maxAge, setMaxAge] = useState('');
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
 
@@ -66,6 +72,79 @@ const CreateHangoutScreen = ({ navigation, route }) => {
 
   const webViewRef = useRef(null);
 
+  useEffect(() => {
+    if (isEdit && hangoutId) {
+      fetchHangoutForEdit();
+    }
+  }, [isEdit, hangoutId]);
+
+  const fetchHangoutForEdit = async () => {
+    setIsFetching(true);
+    try {
+      const response = await api.get(HANGOUT.GET_DETAIL(hangoutId));
+      if (response.data?.hangout) {
+        const h = response.data.hangout;
+        setTitle(h.title || '');
+        setDescription(h.description || '');
+        setLocation(h.location || '');
+        setIsPrivate(!!h.is_private);
+        setMinAge(h.min_age ? String(h.min_age) : '');
+        setMaxAge(h.max_age ? String(h.max_age) : '');
+
+        if (h.typology) {
+          const found = typologyOptions.find(
+            t => t.name.toLowerCase() === h.typology.toLowerCase(),
+          );
+          if (found) setTypology(found);
+          else setTypology({ id: '0', name: h.typology });
+        }
+
+        if (h.interests) {
+          const found = interestOptions.find(
+            i => i.name.toLowerCase() === h.interests.toLowerCase(),
+          );
+          if (found) setInterest(found);
+          else setInterest({ id: '0', name: h.interests });
+        }
+
+        if (h.date) {
+          const d = new Date(h.date);
+          if (!isNaN(d.getTime())) setDate(d);
+        }
+
+        if (h.time) {
+          const parsed = parseTimeString(h.time);
+          if (parsed) setTime(parsed);
+        }
+
+        if (h.latitude && h.longitude) {
+          setMarkerPosition({
+            latitude: parseFloat(h.latitude),
+            longitude: parseFloat(h.longitude),
+          });
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to load hangout details');
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  const parseTimeString = timeStr => {
+    if (!timeStr) return null;
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s?(AM|PM|am|pm)?$/);
+    if (!match) return null;
+    let hours = parseInt(match[1], 10);
+    const mins = parseInt(match[2], 10);
+    const ampm = match[3]?.toUpperCase();
+    if (ampm === 'PM' && hours < 12) hours += 12;
+    if (ampm === 'AM' && hours === 12) hours = 0;
+    const d = new Date();
+    d.setHours(hours, mins, 0, 0);
+    return d;
+  };
+
   const mapHTML = `
     <!DOCTYPE html>
     <html>
@@ -82,13 +161,10 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       <div id="map"></div>
       <script>
         var map = L.map('map').setView([${markerPosition.latitude}, ${markerPosition.longitude}], 13);
-        
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap'
         }).addTo(map);
-        
         var marker = L.marker([${markerPosition.latitude}, ${markerPosition.longitude}]).addTo(map);
-        
         map.on('click', function(e) {
           marker.setLatLng(e.latlng);
           window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -113,58 +189,117 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     }
   };
 
-  const formatDate = date => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
+  const formatDateDisplay = d => {
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
     return `${day}/${month}/${year}`;
   };
 
-  const formatTime = time => {
-    const hours = time.getHours().toString().padStart(2, '0');
-    const minutes = time.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
+  const formatDateForAPI = d => {
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatTimeDisplay = t => {
+    let hours = t.getHours();
+    const minutes = t.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    return `${hours}:${minutes} ${ampm}`;
   };
 
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
-    if (selectedDate) {
-      setDate(selectedDate);
-    }
+    if (selectedDate) setDate(selectedDate);
   };
 
   const onTimeChange = (event, selectedTime) => {
     setShowTimePicker(false);
-    if (selectedTime) {
-      setTime(selectedTime);
+    if (selectedTime) setTime(selectedTime);
+  };
+
+  const validateStep1 = () => {
+    if (!title.trim()) {
+      Alert.alert('Error', 'Title is required');
+      return false;
     }
+    if (!typology) {
+      Alert.alert('Error', 'Please select a typology');
+      return false;
+    }
+    if (!minAge.trim() || !maxAge.trim()) {
+      Alert.alert('Error', 'Min age and max age are required');
+      return false;
+    }
+    if (parseInt(maxAge) < parseInt(minAge)) {
+      Alert.alert('Error', 'Max age must be greater than min age');
+      return false;
+    }
+    return true;
   };
 
   const handleNext = () => {
-    setCurrentStep(2);
+    if (validateStep1()) {
+      setCurrentStep(2);
+    }
   };
 
-  const handleCreate = () => {
-    const hangoutFormData = {
-      title,
-      typology,
-      ageLimit,
-      date: formatDate(date),
-      time: formatTime(time),
-      interest,
-      location,
-      coordinates: markerPosition,
-      description,
-      isPrivate,
-    };
-
-    if (isEdit) {
-      console.log('Hangout Updated:', hangoutFormData);
-    } else {
-      console.log('Hangout Created:', hangoutFormData);
+  const handleCreate = async () => {
+    if (!interest) {
+      Alert.alert('Error', 'Please select an interest');
+      return;
+    }
+    if (!location.trim()) {
+      Alert.alert('Error', 'Location is required');
+      return;
+    }
+    if (!description.trim()) {
+      Alert.alert('Error', 'Description is required');
+      return;
     }
 
-    navigation.goBack();
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        title: title.trim(),
+        typology: typology.name,
+        min_age: parseInt(minAge),
+        max_age: parseInt(maxAge),
+        date: formatDateForAPI(date),
+        time: formatTimeDisplay(time),
+        interests: interest.name,
+        location: location.trim(),
+        latitude: markerPosition.latitude,
+        longitude: markerPosition.longitude,
+        description: description.trim(),
+        is_private: isPrivate,
+      };
+
+      let response;
+      if (isEdit) {
+        response = await api.post(HANGOUT.UPDATE(hangoutId), payload);
+      } else {
+        response = await api.post(HANGOUT.CREATE, payload);
+      }
+
+      Alert.alert(
+        'Success',
+        response.data?.message ||
+          (isEdit ? 'Hangout updated!' : 'Hangout created!'),
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
+      );
+    } catch (error) {
+      const errors = error.response?.data?.errors;
+      const message = errors
+        ? errors.join('\n')
+        : error.response?.data?.message || 'Something went wrong';
+      Alert.alert('Error', message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderDropdownItem = (item, onSelect, closeModal) => (
@@ -178,6 +313,14 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       <Text style={styles.dropdownItemText}>{item.name}</Text>
     </TouchableOpacity>
   );
+
+  if (isFetching) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   const renderStep1 = () => (
     <View style={styles.step1Container}>
@@ -231,16 +374,33 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         />
       </TouchableOpacity>
 
-      <Text style={styles.inputLabel}>Age Limit</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={ageLimit}
-          onChangeText={setAgeLimit}
-          placeholder="Enter"
-          placeholderTextColor={Colors.textLight}
-          keyboardType="numeric"
-        />
+      <View style={styles.ageRow}>
+        <View style={styles.ageItem}>
+          <Text style={styles.inputLabel}>Min Age</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={minAge}
+              onChangeText={setMinAge}
+              placeholder="18"
+              placeholderTextColor={Colors.textLight}
+              keyboardType="numeric"
+            />
+          </View>
+        </View>
+        <View style={styles.ageItem}>
+          <Text style={styles.inputLabel}>Max Age</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={maxAge}
+              onChangeText={setMaxAge}
+              placeholder="60"
+              placeholderTextColor={Colors.textLight}
+              keyboardType="numeric"
+            />
+          </View>
+        </View>
       </View>
 
       <View style={styles.dateTimeRow}>
@@ -251,7 +411,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
             activeOpacity={0.7}
             onPress={() => setShowDatePicker(true)}
           >
-            <Text style={styles.dateTimeText}>{formatDate(date)}</Text>
+            <Text style={styles.dateTimeText}>{formatDateDisplay(date)}</Text>
           </TouchableOpacity>
         </View>
 
@@ -262,7 +422,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
             activeOpacity={0.7}
             onPress={() => setShowTimePicker(true)}
           >
-            <Text style={styles.dateTimeText}>{formatTime(time)}</Text>
+            <Text style={styles.dateTimeText}>{formatTimeDisplay(time)}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -365,13 +525,28 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         />
       </View>
 
+      {isSubmitting && (
+        <ActivityIndicator
+          size="large"
+          color={Colors.primary}
+          style={{ marginBottom: 10 }}
+        />
+      )}
+
       <TouchableOpacity
-        style={styles.primaryButton}
+        style={[styles.primaryButton, isSubmitting && { opacity: 0.6 }]}
         activeOpacity={0.8}
         onPress={handleCreate}
+        disabled={isSubmitting}
       >
         <Text style={styles.primaryButtonText}>
-          {isEdit ? 'Update' : 'Create'}
+          {isSubmitting
+            ? isEdit
+              ? 'Updating...'
+              : 'Creating...'
+            : isEdit
+            ? 'Update'
+            : 'Create'}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -464,6 +639,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
   step1Container: {
     flex: 1,
     paddingHorizontal: 24,
@@ -476,7 +657,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
-
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -499,7 +679,6 @@ const styles = StyleSheet.create({
     color: Colors.textBlack,
     marginLeft: 8,
   },
-
   subtitle: {
     fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
@@ -507,7 +686,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 24,
   },
-
   inputLabel: {
     fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
@@ -549,7 +727,13 @@ const styles = StyleSheet.create({
     height: 16,
     tintColor: Colors.textDark,
   },
-
+  ageRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  ageItem: {
+    flex: 0.47,
+  },
   dateTimeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -575,11 +759,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textDark,
   },
-
   spacer: {
     flex: 1,
   },
-
   primaryButton: {
     backgroundColor: Colors.primary,
     paddingVertical: 16,
@@ -592,7 +774,6 @@ const styles = StyleSheet.create({
     color: Colors.white,
     textTransform: 'lowercase',
   },
-
   mapContainer: {
     height: 180,
     borderRadius: 16,
@@ -604,7 +785,6 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-
   textAreaContainer: {
     borderWidth: 1.5,
     borderColor: '#00000050',
@@ -621,7 +801,6 @@ const styles = StyleSheet.create({
     padding: 0,
     minHeight: 90,
   },
-
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -635,7 +814,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

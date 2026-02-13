@@ -1,32 +1,118 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
-import { Colors, Fonts, Screens } from '../../constants/Constants';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import ImagePicker from 'react-native-image-crop-picker';
+import { Colors, Fonts } from '../../constants/Constants';
 import Button from '../../components/common/Button';
+import api from '../../api/axiosInstance';
+import { PROFILE } from '../../api/endpoints';
+import { setUser } from '../../store/slices/authSlice';
+import { resetOnboarding } from '../../store/slices/onboardingSlice';
 
 const Onboarding2Screen = ({ navigation }) => {
+  const dispatch = useDispatch();
+  const onboardingData = useSelector(state => state.onboarding);
+  const [profileImage, setProfileImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const pickImage = () => {
+    ImagePicker.openPicker({
+      width: 800,
+      height: 800,
+      cropping: true,
+      cropperCircleOverlay: true,
+      compressImageQuality: 0.8,
+    })
+      .then(image => {
+        setProfileImage(image);
+      })
+      .catch(err => {
+        if (err.code !== 'E_PICKER_CANCELLED') {
+          Alert.alert('Error', 'Failed to pick image');
+        }
+      });
+  };
+
+  const handleContinue = async () => {
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
+
+      formData.append('first_name', onboardingData.first_name);
+      formData.append('last_name', onboardingData.last_name);
+      formData.append('username', onboardingData.username);
+      formData.append('gender', onboardingData.gender);
+      formData.append('nationality', onboardingData.nationality);
+      formData.append('age', onboardingData.age);
+
+      onboardingData.trip_interests.forEach(item => {
+        formData.append('trip_interests[]', item);
+      });
+
+      if (profileImage) {
+        const filename = profileImage.path.split('/').pop();
+        formData.append('profile_picture', {
+          uri: profileImage.path,
+          type: profileImage.mime || 'image/jpeg',
+          name: filename || 'profile.jpg',
+        });
+      }
+
+      const response = await api.post(PROFILE.SETUP_PROFILE, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data?.user) {
+        dispatch(setUser(response.data.user));
+      }
+      dispatch(resetOnboarding());
+
+      navigation.replace('Onboarding4');
+    } catch (error) {
+      const errors = error.response?.data?.errors;
+      const message = errors
+        ? errors.join('\n')
+        : error.response?.data?.message ||
+          'Profile setup failed. Please try again.';
+      Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <Text style={styles.title}>Profile Picture</Text>
-
-      {/* Tagline */}
       <Text style={styles.tagline}>
         Let's put a face to your name!{'\n'}
         Upload a photo so others can recognize you.
       </Text>
 
-      {/* Profile Container */}
       <View style={styles.profileContainer}>
         <View style={styles.profileRing}>
           <View style={styles.profileImageWrapper}>
             <Image
-              source={require('../../assets/images/profile.png')}
+              source={
+                profileImage
+                  ? { uri: profileImage.path }
+                  : require('../../assets/images/profile.png')
+              }
               style={styles.profileImage}
               resizeMode="cover"
             />
           </View>
         </View>
-        <TouchableOpacity style={styles.cameraButton}>
+        <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
           <Image
             source={require('../../assets/images/camera.png')}
             style={styles.cameraIcon}
@@ -35,12 +121,20 @@ const Onboarding2Screen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Bottom Button */}
       <View style={styles.buttonContainer}>
+        {isLoading && (
+          <ActivityIndicator
+            size="large"
+            color={Colors.primary}
+            style={{ marginBottom: 20 }}
+          />
+        )}
         <Button
-          title="Continue"
-          onPress={() => navigation.navigate(Screens.Onboarding4)}
+          title={isLoading ? 'Setting up...' : 'Continue'}
+          onPress={handleContinue}
           size="full"
+          style={{ opacity: isLoading ? 0.7 : 1 }}
+          disabled={isLoading}
         />
       </View>
     </View>
@@ -110,17 +204,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
     paddingBottom: 40,
-  },
-  continueButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 30,
-    alignItems: 'center',
-  },
-  continueButtonText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 20,
-    color: Colors.white,
   },
 });
 
