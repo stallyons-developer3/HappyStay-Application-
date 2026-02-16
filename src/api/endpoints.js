@@ -1,4 +1,5 @@
-export const BASE_URL = 'https://sty1.devmail-sty.online/HappyStay-2/public/api';
+export const BASE_URL =
+  'https://sty1.devmail-sty.online/HappyStay-2/public/api';
 export const STORAGE_URL = 'https://sty1.devmail-sty.online/HappyStay-2/public';
 
 export const AUTH = {
@@ -7,6 +8,7 @@ export const AUTH = {
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
   LOGOUT: '/logout',
+  GOOGLE_LOGIN: '/google-login',
 };
 
 export const PROFILE = {

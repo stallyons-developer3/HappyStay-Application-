@@ -8,6 +8,10 @@ import {
   removeUserData,
   getToken,
 } from '../../utils/storage';
+import {
+  signInWithGoogle,
+  signOutFromGoogle,
+} from '../../services/googleAuthService';
 
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
@@ -46,6 +50,40 @@ export const registerUser = createAsyncThunk(
   },
 );
 
+export const googleLogin = createAsyncThunk(
+  'auth/googleLogin',
+  async (_, { rejectWithValue }) => {
+    try {
+      const googleUser = await signInWithGoogle();
+
+      if (!googleUser) {
+        return rejectWithValue('CANCELLED');
+      }
+
+      const response = await api.post(AUTH.GOOGLE_LOGIN, {
+        google_id: googleUser.google_id,
+        email: googleUser.email,
+        name: googleUser.name,
+        photo: googleUser.photo,
+      });
+
+      const { token, user } = response.data;
+      await saveToken(token);
+      await saveUserData(user);
+      return { token, user };
+    } catch (error) {
+      if (error === 'CANCELLED' || error?.message === 'CANCELLED') {
+        return rejectWithValue('CANCELLED');
+      }
+      const message =
+        error.response?.data?.message ||
+        error?.message ||
+        'Google Sign-In failed. Please try again.';
+      return rejectWithValue(message);
+    }
+  },
+);
+
 export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async (_, { rejectWithValue }) => {
@@ -53,10 +91,12 @@ export const logoutUser = createAsyncThunk(
       await api.post(AUTH.LOGOUT);
       await removeToken();
       await removeUserData();
+      await signOutFromGoogle();
       return true;
     } catch (error) {
       await removeToken();
       await removeUserData();
+      await signOutFromGoogle();
       return rejectWithValue('Logout failed but local data cleared');
     }
   },
@@ -85,6 +125,7 @@ const initialState = {
   user: null,
   token: null,
   isLoading: false,
+  isGoogleLoading: false,
   isCheckingAuth: true,
   error: null,
   isAuthenticated: false,
@@ -93,6 +134,7 @@ const initialState = {
 const authSlice = createSlice({
   name: 'auth',
   initialState,
+
   reducers: {
     clearError: state => {
       state.error = null;
@@ -101,9 +143,9 @@ const authSlice = createSlice({
       state.user = action.payload;
     },
   },
+
   extraReducers: builder => {
     builder
-      // Login
       .addCase(loginUser.pending, state => {
         state.isLoading = true;
         state.error = null;
@@ -123,7 +165,6 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
 
-      // Register
       .addCase(registerUser.pending, state => {
         state.isLoading = true;
         state.error = null;
@@ -140,7 +181,24 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
 
-      // Logout
+      .addCase(googleLogin.pending, state => {
+        state.isGoogleLoading = true;
+        state.error = null;
+      })
+      .addCase(googleLogin.fulfilled, (state, action) => {
+        state.isGoogleLoading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.error = null;
+      })
+      .addCase(googleLogin.rejected, (state, action) => {
+        state.isGoogleLoading = false;
+        if (action.payload !== 'CANCELLED') {
+          state.error = action.payload;
+        }
+      })
+
       .addCase(logoutUser.pending, state => {
         state.isLoading = true;
       })
@@ -158,7 +216,6 @@ const authSlice = createSlice({
         state.token = null;
       })
 
-      // Check Auth
       .addCase(checkAuth.pending, state => {
         state.isCheckingAuth = true;
       })

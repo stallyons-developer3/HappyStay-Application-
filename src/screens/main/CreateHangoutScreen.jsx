@@ -145,6 +145,32 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     return d;
   };
 
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'HappyStay-App' },
+      });
+      const data = await response.json();
+      if (data?.display_name) {
+        const parts = data.display_name.split(',');
+        const shortName = parts.slice(0, 3).join(',').trim();
+        setLocation(shortName);
+      }
+    } catch (error) {
+      console.log('Reverse geocode error:', error);
+    }
+  };
+
+  const isToday = d => {
+    const now = new Date();
+    return (
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
+  };
+
   const mapHTML = `
     <!DOCTYPE html>
     <html>
@@ -184,6 +210,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         latitude: data.latitude,
         longitude: data.longitude,
       });
+      reverseGeocode(data.latitude, data.longitude);
     } catch (error) {
       console.log('Map message error:', error);
     }
@@ -213,12 +240,45 @@ const CreateHangoutScreen = ({ navigation, route }) => {
 
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
-    if (selectedDate) setDate(selectedDate);
+    if (selectedDate) {
+      setDate(selectedDate);
+      if (
+        isToday(selectedDate) &&
+        time.getHours() * 60 + time.getMinutes() <
+          new Date().getHours() * 60 + new Date().getMinutes()
+      ) {
+        const now = new Date();
+        now.setSeconds(0, 0);
+        setTime(now);
+      }
+    }
   };
 
   const onTimeChange = (event, selectedTime) => {
     setShowTimePicker(false);
-    if (selectedTime) setTime(selectedTime);
+    if (selectedTime) {
+      if (isToday(date)) {
+        const now = new Date();
+        const selectedMinutes =
+          selectedTime.getHours() * 60 + selectedTime.getMinutes();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        if (selectedMinutes < nowMinutes) {
+          Alert.alert(
+            'Invalid Time',
+            'You cannot select a past time for today.',
+          );
+          return;
+        }
+      }
+      setTime(selectedTime);
+    }
+  };
+
+  const getMinimumTime = () => {
+    if (isToday(date)) {
+      return new Date();
+    }
+    return undefined;
   };
 
   const validateStep1 = () => {
@@ -238,6 +298,15 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'Max age must be greater than min age');
       return false;
     }
+    if (isToday(date)) {
+      const now = new Date();
+      const selectedMinutes = time.getHours() * 60 + time.getMinutes();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      if (selectedMinutes < nowMinutes) {
+        Alert.alert('Error', 'You cannot select a past time for today.');
+        return false;
+      }
+    }
     return true;
   };
 
@@ -253,7 +322,10 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       return;
     }
     if (!location.trim()) {
-      Alert.alert('Error', 'Location is required');
+      Alert.alert(
+        'Error',
+        'Location is required. Please tap on the map to select a location.',
+      );
       return;
     }
     if (!description.trim()) {
@@ -480,13 +552,13 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       </TouchableOpacity>
 
       <Text style={styles.inputLabel}>Location</Text>
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, styles.disabledInput]}>
         <TextInput
           style={styles.input}
           value={location}
-          onChangeText={setLocation}
-          placeholder="Enter"
+          placeholder="Tap on map to select location"
           placeholderTextColor={Colors.textLight}
+          editable={false}
         />
       </View>
 
@@ -572,6 +644,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
           mode="time"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={onTimeChange}
+          minimumDate={getMinimumTime()}
         />
       )}
 
@@ -702,6 +775,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginBottom: 20,
     minHeight: 50,
+  },
+  disabledInput: {
+    backgroundColor: '#F5F5F5',
+    opacity: 0.8,
   },
   input: {
     flex: 1,

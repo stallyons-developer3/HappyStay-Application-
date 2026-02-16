@@ -15,14 +15,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useDispatch, useSelector } from 'react-redux';
-import ImagePicker from 'react-native-image-crop-picker';
+import { useSelector, useDispatch } from 'react-redux';
 import { Colors, Fonts } from '../../constants/Constants';
-import { STORAGE_URL } from '../../api/endpoints';
 import Button from '../../components/common/Button';
 import api from '../../api/axiosInstance';
-import { PROFILE } from '../../api/endpoints';
+import { PROFILE, STORAGE_URL } from '../../api/endpoints';
 import { setUser } from '../../store/slices/authSlice';
+import { saveUserData } from '../../utils/storage';
+import ImagePicker from 'react-native-image-crop-picker';
 
 const countries = [
   { id: '1', name: 'Indonesia', flag: '🇮🇩' },
@@ -40,6 +40,11 @@ const countries = [
   { id: '13', name: 'Saudi Arabia', flag: '🇸🇦' },
   { id: '14', name: 'UAE', flag: '🇦🇪' },
   { id: '15', name: 'Turkey', flag: '🇹🇷' },
+  { id: '16', name: 'Italy', flag: '🇮🇹' },
+  { id: '17', name: 'Spain', flag: '🇪🇸' },
+  { id: '18', name: 'Netherlands', flag: '🇳🇱' },
+  { id: '19', name: 'South Korea', flag: '🇰🇷' },
+  { id: '20', name: 'Mexico', flag: '🇲🇽' },
 ];
 
 const genderOptions = [
@@ -55,7 +60,6 @@ const EditProfileScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [userName, setUserName] = useState('');
-  const [description, setDescription] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [selectedGender, setSelectedGender] = useState(null);
@@ -64,8 +68,8 @@ const EditProfileScreen = ({ navigation }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [dateSelected, setDateSelected] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
-  const [existingImage, setExistingImage] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [newImageFile, setNewImageFile] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const [scrollIndicator] = useState(new Animated.Value(0));
   const [contentHeight, setContentHeight] = useState(1);
@@ -85,50 +89,46 @@ const EditProfileScreen = ({ navigation }) => {
       setFirstName(user.first_name || '');
       setLastName(user.last_name || '');
       setUserName(user.username || '');
-      setDescription(user.description || '');
 
       if (user.gender) {
-        const g = genderOptions.find(
-          opt => opt.name.toLowerCase() === user.gender.toLowerCase(),
+        const gender = genderOptions.find(
+          g => g.name.toLowerCase() === user.gender.toLowerCase(),
         );
-        if (g) setSelectedGender(g);
+        if (gender) setSelectedGender(gender);
       }
 
       if (user.nationality) {
-        const c = countries.find(
-          ct => ct.name.toLowerCase() === user.nationality.toLowerCase(),
+        const country = countries.find(
+          c => c.name.toLowerCase() === user.nationality.toLowerCase(),
         );
-        if (c) setSelectedCountry(c);
+        if (country) setSelectedCountry(country);
       }
 
       if (user.age) {
-        const d = new Date(user.age);
-        if (!isNaN(d.getTime())) {
-          setDate(d);
+        const parsedDate = new Date(user.age);
+        if (!isNaN(parsedDate.getTime())) {
+          setDate(parsedDate);
           setDateSelected(true);
         }
       }
 
       if (user.profile_picture) {
-        const uri = user.profile_picture.startsWith('http')
-          ? user.profile_picture
-          : `${STORAGE_URL}/storage/profile_pictures/${user.profile_picture}`;
-        setExistingImage(uri);
+        setProfileImage(user.profile_picture);
       }
     }
   }, [user]);
 
-  const formatDisplayDate = d => {
+  const formatDate = d => {
     const day = d.getDate().toString().padStart(2, '0');
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const year = d.getFullYear();
     return `${day} - ${month} - ${year}`;
   };
 
-  const formatDateForAPI = d => {
-    const year = d.getFullYear();
-    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const formatDateForApi = d => {
     const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
     return `${year}-${month}-${day}`;
   };
 
@@ -150,7 +150,7 @@ const EditProfileScreen = ({ navigation }) => {
     setShowGenderModal(false);
   };
 
-  const pickImage = () => {
+  const handlePickImage = () => {
     ImagePicker.openPicker({
       width: 800,
       height: 800,
@@ -159,65 +159,43 @@ const EditProfileScreen = ({ navigation }) => {
       compressImageQuality: 0.8,
     })
       .then(image => {
-        setProfileImage(image);
+        setProfileImage(image.path);
+        setNewImageFile({
+          uri: image.path,
+          type: image.mime || 'image/jpeg',
+          fileName: image.path.split('/').pop(),
+        });
       })
       .catch(err => {
-        if (err.code !== 'E_PICKER_CANCELLED') {
+        if (err?.code !== 'E_PICKER_CANCELLED') {
           Alert.alert('Error', 'Failed to pick image');
         }
       });
   };
 
-  const getImageSource = () => {
-    if (profileImage) return { uri: profileImage.path };
-    if (existingImage) return { uri: existingImage };
-    return require('../../assets/images/profile.png');
-  };
-
   const handleSave = async () => {
-    if (!firstName.trim()) {
-      Alert.alert('Error', 'First name is required');
-      return;
-    }
-    if (!lastName.trim()) {
-      Alert.alert('Error', 'Last name is required');
-      return;
-    }
-    if (!userName.trim()) {
-      Alert.alert('Error', 'Username is required');
+    if (!firstName.trim() || !lastName.trim() || !userName.trim()) {
+      Alert.alert('Error', 'Please fill in all required fields.');
       return;
     }
 
-    setIsLoading(true);
+    setIsUpdating(true);
+
     try {
       const formData = new FormData();
-
       formData.append('first_name', firstName.trim());
       formData.append('last_name', lastName.trim());
       formData.append('username', userName.trim());
 
-      if (description.trim()) {
-        formData.append('description', description.trim());
-      }
+      if (selectedGender) formData.append('gender', selectedGender.name);
+      if (selectedCountry) formData.append('nationality', selectedCountry.name);
+      if (dateSelected) formData.append('age', formatDateForApi(date));
 
-      if (selectedGender) {
-        formData.append('gender', selectedGender.name);
-      }
-
-      if (selectedCountry) {
-        formData.append('nationality', selectedCountry.name);
-      }
-
-      if (dateSelected) {
-        formData.append('age', formatDateForAPI(date));
-      }
-
-      if (profileImage) {
-        const filename = profileImage.path.split('/').pop();
+      if (newImageFile) {
         formData.append('profile_picture', {
-          uri: profileImage.path,
-          type: profileImage.mime || 'image/jpeg',
-          name: filename || 'profile.jpg',
+          uri: newImageFile.uri,
+          type: newImageFile.type || 'image/jpeg',
+          name: newImageFile.fileName || 'profile.jpg',
         });
       }
 
@@ -225,22 +203,29 @@ const EditProfileScreen = ({ navigation }) => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      if (response.data?.user) {
-        dispatch(setUser(response.data.user));
+      if (response.data?.success) {
+        const updatedUser = response.data.user;
+        dispatch(setUser(updatedUser));
+        await saveUserData(updatedUser);
+        Alert.alert('Success', 'Profile updated successfully!', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
       }
-
-      Alert.alert('Success', 'Profile updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
     } catch (error) {
-      const errors = error.response?.data?.errors;
-      const message = errors
-        ? errors.join('\n')
-        : error.response?.data?.message || 'Update failed. Please try again.';
-      Alert.alert('Error', message);
+      const errorMsg =
+        error.response?.data?.errors?.[0] ||
+        error.response?.data?.message ||
+        'Failed to update profile.';
+      Alert.alert('Error', errorMsg);
     } finally {
-      setIsLoading(false);
+      setIsUpdating(false);
     }
+  };
+
+  const getProfileImageSource = () => {
+    if (newImageFile) return { uri: profileImage };
+    if (profileImage) return { uri: profileImage };
+    return require('../../assets/images/profile.png');
   };
 
   return (
@@ -273,7 +258,7 @@ const EditProfileScreen = ({ navigation }) => {
           <View style={styles.profileRing}>
             <View style={styles.profileWhiteRing}>
               <Image
-                source={getImageSource()}
+                source={getProfileImageSource()}
                 style={styles.profileImage}
                 resizeMode="cover"
               />
@@ -282,7 +267,7 @@ const EditProfileScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.cameraButton}
             activeOpacity={0.8}
-            onPress={pickImage}
+            onPress={handlePickImage}
           >
             <Image
               source={require('../../assets/images/camera.png')}
@@ -322,7 +307,6 @@ const EditProfileScreen = ({ navigation }) => {
             placeholderTextColor={Colors.textLight}
             value={userName}
             onChangeText={setUserName}
-            autoCapitalize="none"
           />
         </View>
 
@@ -379,7 +363,7 @@ const EditProfileScreen = ({ navigation }) => {
           <Text
             style={dateSelected ? styles.inputText : styles.placeholderText}
           >
-            {dateSelected ? formatDisplayDate(date) : 'Select'}
+            {dateSelected ? formatDate(date) : 'Select'}
           </Text>
           <Image
             source={require('../../assets/images/calender.png')}
@@ -388,35 +372,21 @@ const EditProfileScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        <Text style={styles.inputLabel}>About Me</Text>
-        <View style={[styles.inputContainer, styles.textAreaContainer]}>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Tell others about yourself..."
-            placeholderTextColor={Colors.textLight}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
-        {isLoading && (
-          <ActivityIndicator
-            size="large"
-            color={Colors.primary}
-            style={{ marginVertical: 10 }}
-          />
-        )}
-
         <Button
-          title={isLoading ? 'Updating...' : 'Update'}
+          title={isUpdating ? 'Updating...' : 'Update'}
           onPress={handleSave}
           size="full"
-          style={{ marginTop: 10, opacity: isLoading ? 0.7 : 1 }}
-          disabled={isLoading}
+          style={{ marginTop: 10, opacity: isUpdating ? 0.7 : 1 }}
+          disabled={isUpdating}
         />
+
+        {isUpdating && (
+          <ActivityIndicator
+            size="small"
+            color={Colors.primary}
+            style={{ marginTop: 15 }}
+          />
+        )}
       </ScrollView>
 
       {showDatePicker && (
@@ -596,21 +566,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
-  textAreaContainer: {
-    borderRadius: 20,
-    alignItems: 'flex-start',
-    paddingVertical: 14,
-  },
   input: {
     flex: 1,
     fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textGray,
     padding: 0,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
   },
   inputText: {
     flex: 1,

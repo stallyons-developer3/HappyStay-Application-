@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,37 +9,22 @@ import {
   Modal,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
-
 import TripCard from '../../components/TripCard';
 import Button from '../../components/common/Button';
-
-const tripsData = [
-  {
-    id: '1',
-    image: require('../../assets/images/villa.png'),
-    title: 'Dream Villa',
-    location: 'Sorem ipsum dolor sit.',
-  },
-  {
-    id: '2',
-    image: require('../../assets/images/villa.png'),
-    title: 'Dream Villa',
-    location: 'Sorem ipsum dolor sit.',
-  },
-  {
-    id: '3',
-    image: require('../../assets/images/villa.png'),
-    title: 'Dream Villa',
-    location: 'Sorem ipsum dolor sit.',
-  },
-];
+import api from '../../api/axiosInstance';
+import { PROPERTY } from '../../api/endpoints';
 
 const Onboarding4Screen = ({ navigation }) => {
+  const [properties, setProperties] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [selectedTrip, setSelectedTrip] = useState(null);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [isBooking, setIsBooking] = useState(false);
 
   const [checkInDate, setCheckInDate] = useState(new Date());
   const [checkOutDate, setCheckOutDate] = useState(new Date());
@@ -48,11 +33,35 @@ const Onboarding4Screen = ({ navigation }) => {
   const [showCheckInPicker, setShowCheckInPicker] = useState(false);
   const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
 
-  const formatDate = date => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+
+  const fetchProperties = async () => {
+    try {
+      const response = await api.get(PROPERTY.GET_ALL);
+      if (response.data?.success) {
+        setProperties(response.data.properties || []);
+      }
+    } catch (error) {
+      console.log('Fetch properties error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatDate = d => {
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
     return `${day} - ${month} - ${year}`;
+  };
+
+  const formatDateForApi = d => {
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
+    return `${year}-${month}-${day}`;
   };
 
   const onCheckInChange = (event, selectedDate) => {
@@ -60,6 +69,9 @@ const Onboarding4Screen = ({ navigation }) => {
     if (selectedDate) {
       setCheckInDate(selectedDate);
       setCheckInSelected(true);
+      if (selectedDate >= checkOutDate) {
+        setCheckOutSelected(false);
+      }
     }
   };
 
@@ -71,26 +83,77 @@ const Onboarding4Screen = ({ navigation }) => {
     }
   };
 
-  const handleRequestBooking = trip => {
-    setSelectedTrip(trip);
+  const handleRequestBooking = property => {
+    if (property.user_request_status) {
+      Alert.alert(
+        'Already Requested',
+        `Status: ${property.user_request_status}`,
+      );
+      return;
+    }
+    setSelectedProperty(property);
     setCheckInSelected(false);
     setCheckOutSelected(false);
+    setCheckInDate(new Date());
+    setCheckOutDate(new Date());
     setShowBookingModal(true);
   };
 
-  const handleBookNow = () => {
-    setShowBookingModal(false);
-    Alert.alert(
-      'Success',
-      'Your booking has been confirmed!',
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.navigate('MainApp'),
-        },
-      ],
-      { cancelable: false },
-    );
+  const handleBookNow = async () => {
+    if (!checkInSelected || !checkOutSelected) {
+      Alert.alert('Error', 'Please select both check-in and check-out dates.');
+      return;
+    }
+    if (checkOutDate <= checkInDate) {
+      Alert.alert('Error', 'Check-out date must be after check-in date.');
+      return;
+    }
+
+    setIsBooking(true);
+    try {
+      const response = await api.post(PROPERTY.BOOK(selectedProperty.id), {
+        check_in: formatDateForApi(checkInDate),
+        check_out: formatDateForApi(checkOutDate),
+      });
+
+      if (response.data?.success) {
+        setShowBookingModal(false);
+        setProperties(prev =>
+          prev.map(p =>
+            p.id === selectedProperty.id
+              ? { ...p, user_request_status: 'pending' }
+              : p,
+          ),
+        );
+        Alert.alert(
+          'Success',
+          response.data.message || 'Booking request sent!',
+          [{ text: 'OK', onPress: () => navigation.navigate('MainApp') }],
+        );
+      }
+    } catch (error) {
+      const errorMsg =
+        error.response?.data?.message ||
+        error.response?.data?.errors?.[0] ||
+        'Failed to send booking request.';
+      Alert.alert('Error', errorMsg);
+    } finally {
+      setIsBooking(false);
+    }
+  };
+
+  const getBookingButtonText = status => {
+    if (!status) return 'Request Booking';
+    switch (status) {
+      case 'pending':
+        return 'Pending...';
+      case 'accepted':
+        return 'Accepted ✓';
+      case 'declined':
+        return 'Declined ✕';
+      default:
+        return 'Request Booking';
+    }
   };
 
   const handleSkip = () => {
@@ -104,7 +167,6 @@ const Onboarding4Screen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Title Section */}
         <View style={styles.titleSection}>
           <Text style={styles.mainTitle}>Where are you going next?</Text>
           <Text style={styles.subtitle}>
@@ -113,28 +175,43 @@ const Onboarding4Screen = ({ navigation }) => {
           </Text>
         </View>
 
-        {/* Trip Cards */}
-        <View style={styles.cardsContainer}>
-          {tripsData.map(trip => (
-            <TripCard
-              key={trip.id}
-              image={trip.image}
-              title={trip.title}
-              location={trip.location}
-              showBookingButton={true}
-              onBookingPress={() => handleRequestBooking(trip)}
-              onPress={() => {}}
-            />
-          ))}
-        </View>
+        {isLoading ? (
+          <ActivityIndicator
+            size="large"
+            color={Colors.primary}
+            style={{ marginTop: 50 }}
+          />
+        ) : properties.length === 0 ? (
+          <Text style={styles.emptyText}>No properties available</Text>
+        ) : (
+          <View style={styles.cardsContainer}>
+            {properties.map(property => (
+              <TripCard
+                key={property.id}
+                image={
+                  property.thumbnail
+                    ? { uri: property.thumbnail }
+                    : require('../../assets/images/villa.png')
+                }
+                title={property.name}
+                location={property.location}
+                showBookingButton={true}
+                bookingButtonText={getBookingButtonText(
+                  property.user_request_status,
+                )}
+                bookingDisabled={!!property.user_request_status}
+                onBookingPress={() => handleRequestBooking(property)}
+                onPress={() => {}}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
 
-      {/* Skip Button */}
       <View style={styles.bottomContainer}>
         <Button title="Skip" onPress={handleSkip} size="full" />
       </View>
 
-      {/* Booking Modal */}
       <Modal
         visible={showBookingModal}
         transparent={true}
@@ -143,7 +220,6 @@ const Onboarding4Screen = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Booking</Text>
               <TouchableOpacity
@@ -154,7 +230,10 @@ const Onboarding4Screen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Check-in */}
+            {selectedProperty && (
+              <Text style={styles.propertyName}>{selectedProperty.name}</Text>
+            )}
+
             <Text style={styles.dateLabel}>Check-in</Text>
             <TouchableOpacity
               style={styles.dateInput}
@@ -175,7 +254,6 @@ const Onboarding4Screen = ({ navigation }) => {
               />
             </TouchableOpacity>
 
-            {/* Check-out */}
             <Text style={styles.dateLabel}>Check-out</Text>
             <TouchableOpacity
               style={styles.dateInput}
@@ -196,13 +274,17 @@ const Onboarding4Screen = ({ navigation }) => {
               />
             </TouchableOpacity>
 
-            {/* Book Now Button */}
             <TouchableOpacity
-              style={styles.bookNowButton}
+              style={[styles.bookNowButton, isBooking && { opacity: 0.6 }]}
               activeOpacity={0.8}
               onPress={handleBookNow}
+              disabled={isBooking}
             >
-              <Text style={styles.bookNowText}>Book Now</Text>
+              {isBooking ? (
+                <ActivityIndicator size="small" color={Colors.white} />
+              ) : (
+                <Text style={styles.bookNowText}>Book Now</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -244,8 +326,6 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     paddingHorizontal: 24,
   },
-
-  // Title Section
   titleSection: {
     marginBottom: 20,
   },
@@ -261,20 +341,21 @@ const styles = StyleSheet.create({
     color: Colors.textGray,
     lineHeight: 20,
   },
-
-  // Cards
   cardsContainer: {
     overflow: 'visible',
   },
-
-  // Bottom Container
+  emptyText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
+    textAlign: 'center',
+    marginTop: 50,
+  },
   bottomContainer: {
     paddingBottom: 40,
     paddingHorizontal: 24,
     backgroundColor: Colors.white,
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -293,7 +374,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
     position: 'relative',
   },
   modalTitle: {
@@ -311,8 +392,13 @@ const styles = StyleSheet.create({
     color: Colors.textBlack,
     fontWeight: '700',
   },
-
-  // Date Input
+  propertyName: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 16,
+    color: Colors.textBlack,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
   dateLabel: {
     fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
@@ -345,8 +431,6 @@ const styles = StyleSheet.create({
     height: 24,
     tintColor: Colors.textDark,
   },
-
-  // Book Now Button
   bookNowButton: {
     backgroundColor: Colors.primary,
     paddingVertical: 10,

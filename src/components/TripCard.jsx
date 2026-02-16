@@ -9,6 +9,8 @@ const TripCard = ({
   checkIn,
   checkOut,
   showBookingButton = false,
+  bookingButtonText = 'Request Booking',
+  bookingDisabled = false,
   onBookingPress,
   onPress,
 }) => {
@@ -24,7 +26,9 @@ const TripCard = ({
       {/* Content */}
       <View style={styles.content}>
         {/* Title */}
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
 
         {/* Location */}
         <View style={styles.locationRow}>
@@ -33,7 +37,9 @@ const TripCard = ({
             style={styles.locationIcon}
             resizeMode="contain"
           />
-          <Text style={styles.locationText}>{location}</Text>
+          <Text style={styles.locationText} numberOfLines={1}>
+            {location}
+          </Text>
         </View>
 
         {/* Check-in & Check-out (Profile Screen variant) */}
@@ -43,11 +49,22 @@ const TripCard = ({
         {/* Request Booking Button (Trip Screen variant) */}
         {showBookingButton && (
           <TouchableOpacity
-            style={styles.bookingButton}
+            style={[
+              styles.bookingButton,
+              bookingDisabled && styles.bookingButtonDisabled,
+            ]}
             activeOpacity={0.8}
             onPress={onBookingPress}
+            disabled={bookingDisabled}
           >
-            <Text style={styles.bookingButtonText}>Request Booking</Text>
+            <Text
+              style={[
+                styles.bookingButtonText,
+                bookingDisabled && styles.bookingButtonTextDisabled,
+              ]}
+            >
+              {bookingButtonText}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -63,15 +80,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 12,
-    // Shadow for iOS
     shadowColor: Colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
-    // Shadow for Android
     elevation: 5,
   },
   tripImage: {
@@ -104,6 +116,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textGray,
+    flex: 1,
   },
   dateText: {
     fontFamily: Fonts.RobotoRegular,
@@ -119,11 +132,18 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginTop: 8,
   },
+  bookingButtonDisabled: {
+    backgroundColor: Colors.textGray,
+    opacity: 0.7,
+  },
   bookingButtonText: {
     fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: Colors.white,
     textTransform: 'lowercase',
+  },
+  bookingButtonTextDisabled: {
+    color: Colors.white,
   },
 });
 

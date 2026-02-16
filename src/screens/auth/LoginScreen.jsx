@@ -16,7 +16,12 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
-import { loginUser, clearError } from '../../store/slices/authSlice';
+import {
+  loginUser,
+  googleLogin,
+  clearError,
+} from '../../store/slices/authSlice';
+import { configureGoogleSignIn } from '../../services/googleAuthService';
 
 const { width } = Dimensions.get('window');
 
@@ -26,9 +31,12 @@ const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   const dispatch = useDispatch();
-  const { isLoading, error, isAuthenticated, user } = useSelector(
-    state => state.auth,
-  );
+  const { isLoading, isGoogleLoading, error, isAuthenticated, user } =
+    useSelector(state => state.auth);
+
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
 
   useEffect(() => {
     if (error) {
@@ -58,6 +66,10 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
     dispatch(loginUser({ email: email.trim(), password }));
+  };
+
+  const handleGoogleLogin = () => {
+    dispatch(googleLogin());
   };
 
   return (
@@ -99,7 +111,7 @@ const LoginScreen = ({ navigation }) => {
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
-            editable={!isLoading}
+            editable={!isLoading && !isGoogleLoading}
           />
         </View>
 
@@ -117,7 +129,7 @@ const LoginScreen = ({ navigation }) => {
             secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
-            editable={!isLoading}
+            editable={!isLoading && !isGoogleLoading}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
             <Image
@@ -144,7 +156,7 @@ const LoginScreen = ({ navigation }) => {
           onPress={handleLogin}
           size="full"
           style={{ marginBottom: 25, opacity: isLoading ? 0.7 : 1 }}
-          disabled={isLoading}
+          disabled={isLoading || isGoogleLoading}
         />
 
         {isLoading && (
@@ -161,13 +173,31 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.orLine} />
         </View>
 
-        <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-          <Image
-            source={require('../../assets/images/google.png')}
-            style={styles.socialIcon}
-            resizeMode="contain"
-          />
-          <Text style={styles.socialButtonText}>Sign in with Google</Text>
+        <TouchableOpacity
+          style={[styles.socialButton, isGoogleLoading && { opacity: 0.7 }]}
+          activeOpacity={0.8}
+          onPress={handleGoogleLogin}
+          disabled={isLoading || isGoogleLoading}
+        >
+          {isGoogleLoading ? (
+            <>
+              <ActivityIndicator
+                size="small"
+                color={Colors.primary}
+                style={{ marginRight: 12 }}
+              />
+              <Text style={styles.socialButtonText}>Signing in...</Text>
+            </>
+          ) : (
+            <>
+              <Image
+                source={require('../../assets/images/google.png')}
+                style={styles.socialIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.socialButtonText}>Sign in with Google</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
