@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,88 +7,367 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   Dimensions,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { useSelector } from 'react-redux';
 import { Shadow } from 'react-native-shadow-2';
 import { Colors, Fonts } from '../../constants/Constants';
-
-// Components
+import api from '../../api/axiosInstance';
+import { SUPPORT, ACTIVITY, HANGOUT } from '../../api/endpoints';
+import {
+  subscribeToChannel,
+  unsubscribeFromChannel,
+} from '../../services/pusherService';
 import ChatBubble from '../../components/ChatBubble';
 
 const { width } = Dimensions.get('window');
-
-// Calculate input width: screen - paddingHorizontal(40) - sendButton(48) - gap(12)
 const INPUT_WIDTH = width - 40 - 48 - 12;
 
-// Static Chat Data
-const chatMessages = [
-  {
-    id: '1',
-    message:
-      'scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged.',
-    time: '12.10 pm',
-    isSent: true,
-  },
-  {
-    id: '2',
-    message: 'It was popularised in the 1960s',
-    time: '12.10 pm',
-    isSent: true,
-  },
-  {
-    id: '3',
-    message: "Industry's standard dummy text ever since the 1500s",
-    time: '12.10 pm',
-    isSent: true,
-  },
-  {
-    id: '4',
-    message: 'Behance>',
-    time: '04.10 pm',
-    isSent: true,
-    isLink: true,
-    linkText: 'https://www.behance.net/annathilipan',
-    linkUrl: 'https://www.behance.net/annathilipan',
-  },
-  {
-    id: '5',
-    message: 'Achieve todays goal',
-    time: '04.10 pm',
-    isSent: true,
-  },
-  {
-    id: '6',
-    message: "Bus ticket booked on Thursday,don't forget",
-    time: '06.00 pm',
-    isSent: true,
-  },
-  {
-    id: '7',
-    message: 'Mark calendar',
-    time: '11.12 pm',
-    isSent: true,
-  },
-];
+const ChatDetailScreen = ({ navigation, route }) => {
+  const {
+    isSupport,
+    activityId,
+    hangoutId,
+    title: paramTitle,
+  } = route.params || {};
+  const { user } = useSelector(state => state.auth);
 
-const ChatDetailScreen = ({ navigation }) => {
+  const isActivityChat = !!activityId;
+  const isHangoutChat = !!hangoutId;
+  const isGroupChat = isActivityChat || isHangoutChat;
+  const groupId = activityId || hangoutId;
+
+  const headerTitle = isSupport
+    ? 'Support'
+    : paramTitle || (isActivityChat ? 'Activity Chat' : 'Hangout Chat');
+
+  const headerSubtitle = isSupport
+    ? 'Online'
+    : isActivityChat
+    ? 'Activity Chat'
+    : 'Hangout Chat';
+
+  const channelName = isSupport
+    ? `support-chat.${user?.id}`
+    : isActivityChat
+    ? `activity-chat.${groupId}`
+    : `hangout-chat.${groupId}`;
+
+  const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
   const scrollViewRef = useRef(null);
+  const messageIdsRef = useRef(new Set());
 
-  // Handle Send
-  const handleSend = () => {
-    if (message.trim()) {
-      console.log('Send message:', message);
-      setMessage('');
+  useEffect(() => {
+    fetchMessages();
+  }, []);
+
+  useEffect(() => {
+    subscribeToChannel(channelName, 'new-message', data => {
+      handlePusherMessage(data);
+    });
+    return () => {
+      unsubscribeFromChannel(channelName);
+    };
+  }, [channelName]);
+
+  const fetchMessages = async () => {
+    try {
+      let response;
+      if (isSupport) {
+        response = await api.get(SUPPORT.GET_MESSAGES);
+        if (response.data?.messages) {
+          const msgs = response.data.messages;
+          setMessages(msgs);
+          const ids = new Set();
+          msgs.forEach(m => ids.add(m.id));
+          messageIdsRef.current = ids;
+        }
+      } else {
+        const endpoint = isActivityChat
+          ? ACTIVITY.GET_CHAT(groupId)
+          : HANGOUT.GET_CHAT(groupId);
+        response = await api.get(endpoint);
+        if (response.data?.messages) {
+          const raw = response.data.messages;
+          const msgs = Array.isArray(raw) ? [...raw].reverse() : [];
+          setMessages(msgs);
+          const ids = new Set();
+          msgs.forEach(m => ids.add(m.id));
+          messageIdsRef.current = ids;
+        }
+      }
+    } catch (error) {
+      if (error.response?.status === 403) {
+        setAccessDenied(true);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handlePusherMessage = data => {
+    const msg = data.message || data;
+    const msgId = msg.id;
+    if (!msgId) return;
+    if (messageIdsRef.current.has(msgId)) return;
+
+    if (isSupport) {
+      if (msg.sender_id === user?.id) return;
+      const newMessage = {
+        id: msgId,
+        message: msg.message,
+        is_mine: false,
+        is_bot: msg.is_bot || false,
+        sender: msg.sender || {
+          id: null,
+          name: 'Support',
+          profile_picture: null,
+        },
+        created_at: msg.created_at,
+        time: msg.time || '',
+      };
+      messageIdsRef.current.add(msgId);
+      setMessages(prev => [...prev, newMessage]);
+    } else {
+      if (String(msg.user?.id) === String(user?.id)) return;
+      messageIdsRef.current.add(msgId);
+      setMessages(prev => [...prev, msg]);
+    }
+
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
+
+  const getCurrentTime = () => {
+    const now = new Date();
+    let hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    return `${hours}:${minutes} ${ampm}`;
+  };
+
+  const getUserName = () => {
+    if (user?.first_name) {
+      return `${user.first_name} ${user.last_name || ''}`.trim();
+    }
+    return user?.name || 'You';
+  };
+
+  const handleSend = async () => {
+    if (!message.trim() || isSending) return;
+
+    const text = message.trim();
+    const tempId = `temp-${Date.now()}`;
+    setMessage('');
+    setIsSending(true);
+
+    if (isSupport) {
+      const optimisticMsg = {
+        id: tempId,
+        message: text,
+        is_mine: true,
+        is_bot: false,
+        sender: { id: user?.id, name: 'You', profile_picture: null },
+        created_at: new Date().toISOString(),
+        time: getCurrentTime(),
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+    } else {
+      const optimisticMsg = {
+        id: tempId,
+        message: text,
+        user: {
+          id: user?.id,
+          name: getUserName(),
+          profile_picture: user?.profile_picture || null,
+        },
+        created_at: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+    }
+
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
+    try {
+      let response;
+      if (isSupport) {
+        response = await api.post(SUPPORT.SEND_MESSAGE, { message: text });
+        if (response.data?.chat_message) {
+          const sentMsg = response.data.chat_message;
+          messageIdsRef.current.add(sentMsg.id);
+          setMessages(prev => {
+            const withoutTemp = prev.filter(m => m.id !== tempId);
+            return [...withoutTemp, { ...sentMsg, is_mine: true }];
+          });
+        }
+        if (response.data?.bot_reply) {
+          const botMsg = response.data.bot_reply;
+          messageIdsRef.current.add(botMsg.id);
+          setMessages(prev => {
+            if (prev.some(m => m.id === botMsg.id)) return prev;
+            return [...prev, botMsg];
+          });
+        }
+      } else {
+        const endpoint = isActivityChat
+          ? ACTIVITY.SEND_CHAT(groupId)
+          : HANGOUT.SEND_CHAT(groupId);
+        response = await api.post(endpoint, { message: text });
+        if (response.data?.chat_message) {
+          const sentMsg = response.data.chat_message;
+          messageIdsRef.current.add(sentMsg.id);
+          setMessages(prev => {
+            const withoutTemp = prev.filter(m => m.id !== tempId);
+            return [...withoutTemp, sentMsg];
+          });
+        }
+      }
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+    } catch (error) {
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setMessage(text);
+      if (error.response?.status === 403) {
+        Alert.alert(
+          'Access Denied',
+          'You need to be accepted to send messages.',
+        );
+      }
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const formatTime = dateStr => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    return `${hours}:${minutes} ${ampm}`;
+  };
+
+  const getInitial = name => {
+    if (!name) return '?';
+    return name.charAt(0).toUpperCase();
+  };
+
+  const renderGroupMessage = (msg, showName) => {
+    const isMine = String(msg.user?.id) === String(user?.id);
+
+    return (
+      <View
+        key={`msg-${msg.id}`}
+        style={[
+          styles.msgRow,
+          isMine && styles.msgRowRight,
+          !showName && styles.msgRowContinued,
+        ]}
+      >
+        {!isMine && (
+          <View style={styles.avatarContainer}>
+            {showName ? (
+              msg.user?.profile_picture ? (
+                <Image
+                  source={{ uri: msg.user.profile_picture }}
+                  style={styles.avatar}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarInitial}>
+                    {getInitial(msg.user?.name)}
+                  </Text>
+                </View>
+              )
+            ) : (
+              <View style={styles.avatarSpacer} />
+            )}
+          </View>
+        )}
+        <View
+          style={[
+            styles.bubble,
+            isMine ? styles.bubbleMine : styles.bubbleOther,
+          ]}
+        >
+          {!isMine && showName && (
+            <Text style={styles.senderName}>{msg.user?.name || 'User'}</Text>
+          )}
+          <Text style={[styles.msgText, isMine && styles.msgTextMine]}>
+            {msg.message}
+          </Text>
+          <Text style={[styles.msgTime, isMine && styles.msgTimeMine]}>
+            {formatTime(msg.created_at)}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
+  const renderGroupMessages = () => {
+    return messages.map((msg, index) => {
+      const prevMsg = index > 0 ? messages[index - 1] : null;
+      const isSameUser =
+        prevMsg && String(prevMsg.user?.id) === String(msg.user?.id);
+      return renderGroupMessage(msg, !isSameUser);
+    });
+  };
+
+  if (accessDenied) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={require('../../assets/images/icons/arrow-left.png')}
+              style={styles.backIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {headerTitle}
+            </Text>
+            <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
+          </View>
+        </View>
+        <View style={styles.accessDeniedContainer}>
+          <Text style={styles.accessDeniedText}>
+            You need to be accepted to access this chat.
+          </Text>
+          <TouchableOpacity
+            style={styles.goBackButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.goBackText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        {/* Back Button */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
@@ -101,78 +380,103 @@ const ChatDetailScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        {/* Profile Image */}
-        <Image
-          source={require('../../assets/images/beach-party.png')}
-          style={styles.profileImage}
-          resizeMode="cover"
-        />
+        {isSupport && (
+          <Image
+            source={require('../../assets/images/ai-avatar.png')}
+            style={styles.profileImage}
+            resizeMode="cover"
+          />
+        )}
 
-        {/* Title */}
-        <Text style={styles.headerTitle}>Beach Party</Text>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {headerTitle}
+          </Text>
+          <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
+        </View>
       </View>
 
-      {/* Chat Messages */}
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        onContentSizeChange={() =>
-          scrollViewRef.current?.scrollToEnd({ animated: true })
-        }
-      >
-        {chatMessages.map(chat => (
-          <ChatBubble
-            key={chat.id}
-            message={chat.message}
-            time={chat.time}
-            isSent={chat.isSent}
-            isLink={chat.isLink}
-            linkText={chat.linkText}
-            linkUrl={chat.linkUrl}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Message Input - Fixed at Bottom */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
-        <View style={styles.inputContainer}>
-          <Shadow
-            distance={8}
-            startColor="rgba(0, 0, 0, 0.06)"
-            endColor="rgba(0, 0, 0, 0)"
-            offset={[0, 0]}
-          >
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Message"
-                placeholderTextColor={Colors.textLight}
-                value={message}
-                onChangeText={setMessage}
-                multiline
-              />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          onContentSizeChange={() =>
+            scrollViewRef.current?.scrollToEnd({ animated: true })
+          }
+        >
+          {messages.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {isSupport
+                  ? 'Start a conversation with support'
+                  : 'No messages yet. Start the conversation!'}
+              </Text>
             </View>
-          </Shadow>
+          )}
 
-          {/* Send Button */}
-          <TouchableOpacity
-            style={styles.sendButton}
-            onPress={handleSend}
-            activeOpacity={0.8}
-          >
+          {isSupport
+            ? messages.map(msg => (
+                <ChatBubble
+                  key={`msg-${msg.id}`}
+                  message={msg.message}
+                  time={msg.time || ''}
+                  isSent={msg.is_mine}
+                />
+              ))
+            : renderGroupMessages()}
+
+          {isSupport && isSending && (
+            <View style={styles.typingContainer}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={styles.typingText}>Support is typing...</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      <View style={styles.inputContainer}>
+        <Shadow
+          distance={8}
+          startColor="rgba(0, 0, 0, 0.06)"
+          endColor="rgba(0, 0, 0, 0)"
+          offset={[0, 0]}
+        >
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Message"
+              placeholderTextColor={Colors.textLight}
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              editable={!isSending}
+            />
+          </View>
+        </Shadow>
+
+        <TouchableOpacity
+          style={[styles.sendButton, isSending && { opacity: 0.5 }]}
+          onPress={handleSend}
+          activeOpacity={0.8}
+          disabled={isSending}
+        >
+          {isSending ? (
+            <ActivityIndicator size="small" color={Colors.white} />
+          ) : (
             <Image
               source={require('../../assets/images/icons/send.png')}
               style={styles.sendIcon}
               resizeMode="contain"
             />
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -182,8 +486,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -210,14 +512,26 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     marginLeft: 4,
   },
+  headerInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
   headerTitle: {
-    fontFamily: Fonts.RobotoRegular,
+    fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.textBlack,
-    marginLeft: 12,
   },
-
-  // Scroll View
+  headerSubtitle: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollView: {
     flex: 1,
   },
@@ -225,8 +539,27 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingBottom: 20,
   },
-
-  // Input Container
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  emptyText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
+  },
+  typingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  typingText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.textGray,
+    marginLeft: 8,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -261,6 +594,106 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     tintColor: Colors.white,
+  },
+  accessDeniedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  accessDeniedText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 16,
+    color: Colors.textGray,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  goBackButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  goBackText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 14,
+    color: Colors.white,
+  },
+  msgRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  msgRowRight: {
+    justifyContent: 'flex-end',
+  },
+  msgRowContinued: {
+    marginBottom: 3,
+  },
+  avatarContainer: {
+    marginRight: 8,
+    marginBottom: 2,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  avatarPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarSpacer: {
+    width: 32,
+    height: 1,
+  },
+  avatarInitial: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.white,
+  },
+  bubble: {
+    maxWidth: '75%',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
+  },
+  bubbleMine: {
+    backgroundColor: Colors.primary,
+    borderBottomRightRadius: 4,
+  },
+  bubbleOther: {
+    backgroundColor: Colors.backgroundGray,
+    borderBottomLeftRadius: 4,
+  },
+  senderName: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 11,
+    color: Colors.primary,
+    marginBottom: 2,
+  },
+  msgText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textBlack,
+  },
+  msgTextMine: {
+    color: Colors.white,
+  },
+  msgTime: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 10,
+    color: Colors.textGray,
+    marginTop: 4,
+    alignSelf: 'flex-end',
+  },
+  msgTimeMine: {
+    color: 'rgba(255,255,255,0.7)',
   },
 });
 

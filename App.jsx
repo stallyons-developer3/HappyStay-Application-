@@ -5,6 +5,7 @@ import { Provider } from 'react-redux';
 import store from './src/store/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import { Colors } from './src/constants/Constants';
+import { getPusher } from './src/services/pusherService';
 
 const App = () => {
   useEffect(() => {
@@ -12,6 +13,7 @@ const App = () => {
       StatusBar.setBackgroundColor(Colors.primary);
       StatusBar.setBarStyle('dark-content');
     }
+    getPusher();
   }, []);
 
   return (

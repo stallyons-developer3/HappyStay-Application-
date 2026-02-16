@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,57 +6,84 @@ import {
   Image,
   ScrollView,
   StyleSheet,
-  StatusBar,
+  ActivityIndicator,
 } from 'react-native';
+import { useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
+import api from '../../api/axiosInstance';
+import { SUPPORT, CHAT } from '../../api/endpoints';
 
-// Components
 import ChatRow from '../../components/ChatRow';
-
-// Static Chat Data
-const chatsData = [
-  {
-    id: 'ai',
-    image: require('../../assets/images/ai-avatar.png'),
-    title: 'AI Concierge',
-    message: 'Dear Thilipan Hope enjoyed the travel...',
-    isAI: true,
-  },
-  {
-    id: '1',
-    image: require('../../assets/images/bonfire.png'),
-    title: 'Bonfire',
-    message: 'Hi, Your trip booked on Redbus i...',
-    isAI: false,
-  },
-  {
-    id: '2',
-    image: require('../../assets/images/profile.png'),
-    title: 'Gym',
-    message: 'On the way',
-    isAI: false,
-  },
-  {
-    id: '3',
-    image: require('../../assets/images/beach-party.png'),
-    title: 'Beach Party',
-    message: 'Have a happy day dear friend',
-    isAI: false,
-  },
-];
 
 const ChatScreen = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
+  const [groupChats, setGroupChats] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { user } = useSelector(state => state.auth);
 
-  // Handle Chat Press
-  // Update handleChatPress function:
-  const handleChatPress = chat => {
-    navigation.navigate(Screens.ChatDetail);
+  useEffect(() => {
+    fetchGroupChats();
+    fetchUnreadCount();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchUnreadCount();
+      fetchGroupChats();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const fetchGroupChats = async () => {
+    try {
+      const response = await api.get(CHAT.MY_GROUPS);
+      if (response.data?.chat_groups) {
+        setGroupChats(response.data.chat_groups);
+      } else if (response.data?.groups) {
+        setGroupChats(response.data.groups);
+      }
+    } catch (error) {
+      console.log('Fetch groups error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await api.get(SUPPORT.UNREAD_COUNT);
+      if (response.data?.unread_count !== undefined) {
+        setUnreadCount(response.data.unread_count);
+      }
+    } catch (error) {
+      console.log('Unread count error:', error);
+    }
+  };
+
+  const handleSupportPress = () => {
+    navigation.navigate(Screens.ChatDetail, {
+      isSupport: true,
+    });
+  };
+
+  const handleChatPress = chat => {
+    const isActivity = chat.type === 'activity';
+    navigation.navigate(Screens.ChatDetail, {
+      activityId: isActivity ? chat.id : undefined,
+      hangoutId: !isActivity ? chat.id : undefined,
+      title: chat.title || chat.name || 'Chat',
+    });
+  };
+
+  const filteredChats = groupChats.filter(chat => {
+    if (!searchText.trim()) return true;
+    const name = (chat.title || chat.name || '').toLowerCase();
+    return name.includes(searchText.trim().toLowerCase());
+  });
 
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Image
@@ -74,24 +101,60 @@ const ChatScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Chat List */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {chatsData.map(chat => (
-          <ChatRow
-            key={chat.id}
-            image={chat.image}
-            title={chat.title}
-            message={chat.message}
-            isAI={chat.isAI}
-            onPress={() => handleChatPress(chat)}
-          />
-        ))}
+        <ChatRow
+          image={require('../../assets/images/ai-avatar.png')}
+          title="Support"
+          message={
+            unreadCount > 0
+              ? `${unreadCount} new message${unreadCount > 1 ? 's' : ''}`
+              : 'Tap to chat with support'
+          }
+          isAI={true}
+          onPress={handleSupportPress}
+        />
 
-        {/* Bottom Spacing */}
+        {isLoading ? (
+          <ActivityIndicator
+            size="small"
+            color={Colors.primary}
+            style={{ marginTop: 30 }}
+          />
+        ) : (
+          filteredChats.map(chat => {
+            const chatImage = chat.thumbnail
+              ? { uri: chat.thumbnail }
+              : require('../../assets/images/profile.png');
+
+            const lastMsg = chat.last_message
+              ? `${chat.last_message.user_name || ''}: ${
+                  chat.last_message.message || ''
+                }`
+              : 'No messages yet';
+
+            return (
+              <ChatRow
+                key={`chat-${chat.type}-${chat.id}`}
+                image={chatImage}
+                title={chat.title || chat.name || 'Chat'}
+                message={lastMsg}
+                isAI={false}
+                onPress={() => handleChatPress(chat)}
+              />
+            );
+          })
+        )}
+
+        {!isLoading && filteredChats.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No chats yet</Text>
+          </View>
+        )}
+
         <View style={styles.bottomSpacing} />
       </ScrollView>
     </View>
@@ -103,8 +166,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
-
-  // Search Bar
   searchContainer: {
     paddingHorizontal: 24,
     paddingTop: 50,
@@ -131,8 +192,6 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
     padding: 0,
   },
-
-  // Scroll View
   scrollView: {
     flex: 1,
   },
@@ -140,10 +199,17 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 20,
   },
-
-  // Bottom Spacing
   bottomSpacing: {
     height: 100,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  emptyText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
   },
 });
 
