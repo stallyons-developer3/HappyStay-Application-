@@ -24,8 +24,10 @@ import FloatingMapButton from '../../components/FloatingMapButton';
 // API
 import api from '../../api/axiosInstance';
 import { PROPERTY } from '../../api/endpoints';
+import { useBadgeCounts } from '../../context/BadgeContext';
 
 const TripScreen = ({ navigation }) => {
+  const { notificationCount } = useBadgeCounts();
   const [searchText, setSearchText] = useState('');
   const [properties, setProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -253,7 +255,7 @@ const TripScreen = ({ navigation }) => {
           showBackIcon={true}
           onBackPress={() => navigation.goBack()}
           greeting="Select Your Trip"
-          notificationCount={0}
+          notificationCount={notificationCount}
           onProfilePress={() => navigation.navigate(Screens.Profile)}
           onNotificationPress={() => navigation.navigate(Screens.Notification)}
         />

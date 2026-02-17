@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Screens, Colors } from '../constants/Constants';
+import { BadgeProvider } from '../context/BadgeContext';
 
 import BottomTabNavigator from './BottomTabNavigator';
 
@@ -42,101 +43,103 @@ const withSafeArea = (WrappedComponent, edges = ['top']) => {
 
 const AppNavigator = () => {
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName={Screens.Splash}
-        screenOptions={{
-          headerShown: false,
-          animation: 'slide_from_right',
-          contentStyle: { backgroundColor: Colors.backgroundGray },
-        }}
-      >
-        <Stack.Screen
-          name={Screens.Splash}
-          component={withSafeArea(SplashScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.Welcome}
-          component={withSafeArea(WelcomeScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.Login}
-          component={withSafeArea(LoginScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.Register}
-          component={withSafeArea(RegisterScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.ForgotPassword}
-          component={withSafeArea(ForgotPasswordScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.ResetPassword}
-          component={withSafeArea(ResetPasswordScreen, ['top', 'bottom'])}
-        />
+    <BadgeProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName={Screens.Splash}
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            contentStyle: { backgroundColor: Colors.backgroundGray },
+          }}
+        >
+          <Stack.Screen
+            name={Screens.Splash}
+            component={withSafeArea(SplashScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.Welcome}
+            component={withSafeArea(WelcomeScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.Login}
+            component={withSafeArea(LoginScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.Register}
+            component={withSafeArea(RegisterScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.ForgotPassword}
+            component={withSafeArea(ForgotPasswordScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.ResetPassword}
+            component={withSafeArea(ResetPasswordScreen, ['top', 'bottom'])}
+          />
 
-        <Stack.Screen
-          name={Screens.Onboarding1}
-          component={withSafeArea(Onboarding1Screen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.Onboarding2}
-          component={withSafeArea(Onboarding2Screen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.Onboarding3}
-          component={withSafeArea(Onboarding3Screen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={'Onboarding4'}
-          component={withSafeArea(Onboarding4Screen, ['top', 'bottom'])}
-        />
+          <Stack.Screen
+            name={Screens.Onboarding1}
+            component={withSafeArea(Onboarding1Screen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.Onboarding2}
+            component={withSafeArea(Onboarding2Screen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.Onboarding3}
+            component={withSafeArea(Onboarding3Screen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={'Onboarding4'}
+            component={withSafeArea(Onboarding4Screen, ['top', 'bottom'])}
+          />
 
-        <Stack.Screen name={Screens.MainApp} component={BottomTabNavigator} />
+          <Stack.Screen name={Screens.MainApp} component={BottomTabNavigator} />
 
-        <Stack.Screen
-          name={Screens.ActivityDetail}
-          component={withSafeArea(ActivityDetailScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.HangoutDetail}
-          component={withSafeArea(HangoutDetailScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.ChatDetail}
-          component={withSafeArea(ChatDetailScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.Profile}
-          component={withSafeArea(ProfileScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.EditProfile}
-          component={withSafeArea(EditProfileScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.Trip}
-          component={withSafeArea(TripScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.PropertyDetail}
-          component={withSafeArea(PropertyDetailScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.CreateHangout}
-          component={withSafeArea(CreateHangoutScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.Notification}
-          component={withSafeArea(NotificationScreen, ['top', 'bottom'])}
-        />
-        <Stack.Screen
-          name={Screens.Map}
-          component={withSafeArea(MapScreen, ['top', 'bottom'])}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+          <Stack.Screen
+            name={Screens.ActivityDetail}
+            component={withSafeArea(ActivityDetailScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.HangoutDetail}
+            component={withSafeArea(HangoutDetailScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.ChatDetail}
+            component={withSafeArea(ChatDetailScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.Profile}
+            component={withSafeArea(ProfileScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.EditProfile}
+            component={withSafeArea(EditProfileScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.Trip}
+            component={withSafeArea(TripScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.PropertyDetail}
+            component={withSafeArea(PropertyDetailScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.CreateHangout}
+            component={withSafeArea(CreateHangoutScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.Notification}
+            component={withSafeArea(NotificationScreen, ['top', 'bottom'])}
+          />
+          <Stack.Screen
+            name={Screens.Map}
+            component={withSafeArea(MapScreen, ['top', 'bottom'])}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </BadgeProvider>
   );
 };
 

@@ -18,10 +18,12 @@ import { HANGOUT } from '../../api/endpoints';
 
 import HangoutCard from '../../components/HangoutCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
+import { useBadgeCounts } from '../../context/BadgeContext';
 
 const ManageScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
+  const { notificationCount } = useBadgeCounts();
 
   const [myHangouts, setMyHangouts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -146,9 +148,13 @@ const ManageScreen = ({ navigation }) => {
                   resizeMode="contain"
                 />
               </View>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>5</Text>
-              </View>
+              {notificationCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {notificationCount > 99 ? '99+' : notificationCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
 

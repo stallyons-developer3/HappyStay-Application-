@@ -19,6 +19,7 @@ import SearchBar from '../../components/SearchBar';
 import ActivityCard from '../../components/ActivityCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
 import FilterModal from '../../components/FilterModal';
+import { useBadgeCounts } from '../../context/BadgeContext';
 
 const formatDate = dateStr => {
   if (!dateStr) return '';
@@ -52,6 +53,7 @@ const formatTime = timeStr => {
 
 const ActivitiesScreen = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
+  const { notificationCount } = useBadgeCounts();
 
   const [activities, setActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -142,7 +144,7 @@ const ActivitiesScreen = ({ navigation }) => {
           showGreeting={true}
           showProfile={true}
           showNotification={true}
-          notificationCount={5}
+          notificationCount={notificationCount}
           profileImage={profileImage}
           onProfilePress={() => navigation.navigate(Screens.Profile)}
           onNotificationPress={() => navigation.navigate(Screens.Notification)}

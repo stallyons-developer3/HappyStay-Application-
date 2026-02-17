@@ -18,9 +18,11 @@ import SearchBar from '../../components/SearchBar';
 import HangoutCard from '../../components/HangoutCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
 import FilterModal from '../../components/FilterModal';
+import { useBadgeCounts } from '../../context/BadgeContext';
 
 const HangoutsScreen = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
+  const { notificationCount } = useBadgeCounts();
 
   const [hangouts, setHangouts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -111,7 +113,7 @@ const HangoutsScreen = ({ navigation }) => {
           showGreeting={true}
           showProfile={true}
           showNotification={true}
-          notificationCount={5}
+          notificationCount={notificationCount}
           profileImage={profileImage}
           onProfilePress={() => navigation.navigate(Screens.Profile)}
           onNotificationPress={() => navigation.navigate(Screens.Notification)}

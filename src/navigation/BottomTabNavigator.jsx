@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Image, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Fonts, Screens } from '../constants/Constants';
+import { Colors, Fonts } from '../constants/Constants';
+import { useBadgeCounts } from '../context/BadgeContext';
 
 // Screens
 import HomeScreen from '../screens/main/HomeScreen';
@@ -13,8 +14,18 @@ import ManageScreen from '../screens/main/ManageScreen';
 
 const Tab = createBottomTabNavigator();
 
+const Badge = ({ count }) => {
+  if (!count || count <= 0) return null;
+  return (
+    <View style={styles.badge}>
+      <Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text>
+    </View>
+  );
+};
+
 const BottomTabNavigator = () => {
   const insets = useSafeAreaInsets();
+  const { chatCount } = useBadgeCounts();
 
   return (
     <Tab.Navigator
@@ -117,10 +128,7 @@ const BottomTabNavigator = () => {
                 ]}
                 resizeMode="contain"
               />
-              {/* Badge */}
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>5</Text>
-              </View>
+              <Badge count={chatCount} />
             </View>
           ),
         }}
@@ -165,6 +173,7 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 4,
   },
   badgeText: {
     fontFamily: Fonts.poppinsBold,

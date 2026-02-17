@@ -1,74 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   Image,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import { Colors, Fonts } from '../../constants/Constants';
-
-// Dummy Notifications Data
-const notificationsData = [
-  {
-    id: '1',
-    type: 'booking',
-    title: 'Booking Confirmed',
-    description:
-      'Your booking for Dream Villa has been confirmed for Dec 25-28.',
-    time: '2 min ago',
-  },
-  {
-    id: '2',
-    type: 'hangout',
-    title: 'New Hangout Request',
-    description: 'Jessica wants to join your Hiking hangout.',
-    time: '15 min ago',
-  },
-  {
-    id: '3',
-    type: 'activity',
-    title: 'Activity Reminder',
-    description: "Bonfire event starts in 2 hours. Don't miss it!",
-    time: '1 hour ago',
-  },
-  {
-    id: '4',
-    type: 'promo',
-    title: 'Special Offer',
-    description: 'Get 20% off on your next booking. Use code: HAPPY20',
-    time: '3 hours ago',
-  },
-  {
-    id: '5',
-    type: 'chat',
-    title: 'New Message',
-    description: 'You have a new message from Beach Party group.',
-    time: '5 hours ago',
-  },
-  {
-    id: '6',
-    type: 'booking',
-    title: 'Booking Reminder',
-    description: 'Your check-in at Dream Villa is tomorrow.',
-    time: 'Yesterday',
-  },
-  {
-    id: '7',
-    type: 'hangout',
-    title: 'Hangout Updated',
-    description: 'The hiking hangout time has been changed to 8:00 AM.',
-    time: 'Yesterday',
-  },
-  {
-    id: '8',
-    type: 'activity',
-    title: 'New Activity Added',
-    description: 'A new Beach Party activity has been added near you.',
-    time: '2 days ago',
-  },
-];
+import { useSelector } from 'react-redux';
+import { Colors, Fonts, Screens } from '../../constants/Constants';
+import api from '../../api/axiosInstance';
+import { NOTIFICATION } from '../../api/endpoints';
+import {
+  subscribeToChannel,
+  unsubscribeFromChannel,
+} from '../../services/pusherService';
+import { useBadgeCounts } from '../../context/BadgeContext';
 
 // Get icon based on notification type
 const getNotificationIcon = type => {
@@ -89,7 +38,8 @@ const getNotificationIcon = type => {
 };
 
 // Get background color based on notification type
-const getIconBgColor = type => {
+const getIconBgColor = (type, isRead) => {
+  if (isRead) return '#F5F5F5';
   switch (type) {
     case 'booking':
       return '#E8F5E9';
@@ -106,10 +56,215 @@ const getIconBgColor = type => {
   }
 };
 
+// Format time ago from date string
+const timeAgo = dateStr => {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const seconds = Math.floor((now - date) / 1000);
+
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return date.toLocaleDateString();
+};
+
+// Extract model name from related_type (e.g. "App\\Models\\Hangout" → "Hangout")
+const getModelName = relatedType => {
+  if (!relatedType) return null;
+  const parts = relatedType.split('\\');
+  return parts[parts.length - 1];
+};
+
 const NotificationScreen = ({ navigation }) => {
-  // Handle notification press
+  const { user } = useSelector(state => state.auth);
+  const { resetNotificationCount } = useBadgeCounts();
+
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [markingRead, setMarkingRead] = useState(false);
+
+  const notificationsRef = useRef(notifications);
+  notificationsRef.current = notifications;
+
+  // Fetch notifications from API
+  const fetchNotifications = useCallback(async (page = 1, refresh = false) => {
+    try {
+      const response = await api.get(NOTIFICATION.GET_ALL, {
+        params: { page },
+      });
+
+      if (response.data?.success) {
+        const fetched = response.data.notifications || [];
+        if (refresh || page === 1) {
+          setNotifications(fetched);
+        } else {
+          setNotifications(prev => [...prev, ...fetched]);
+        }
+        setUnreadCount(response.data.unread_count || 0);
+        setCurrentPage(response.data.pagination?.current_page || 1);
+        setLastPage(response.data.pagination?.last_page || 1);
+      }
+    } catch (error) {
+      console.log('Fetch notifications error:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchNotifications(1);
+  }, [fetchNotifications]);
+
+  // Subscribe to real-time notifications via Pusher
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channelName = `user-notifications.${user.id}`;
+
+    subscribeToChannel(channelName, 'new-notification', data => {
+      if (data?.notification) {
+        setNotifications(prev => [data.notification, ...prev]);
+        setUnreadCount(prev => prev + 1);
+      }
+    });
+
+    return () => {
+      unsubscribeFromChannel(channelName);
+    };
+  }, [user?.id]);
+
+  // Re-fetch on screen focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchNotifications(1, true);
+    });
+    return unsubscribe;
+  }, [navigation, fetchNotifications]);
+
+  // Pull to refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchNotifications(1, true);
+  }, [fetchNotifications]);
+
+  // Load more (pagination)
+  const loadMore = useCallback(() => {
+    if (loadingMore || currentPage >= lastPage) return;
+    setLoadingMore(true);
+    fetchNotifications(currentPage + 1);
+  }, [loadingMore, currentPage, lastPage, fetchNotifications]);
+
+  // Mark all as read
+  const handleMarkAllRead = async () => {
+    if (unreadCount === 0 || markingRead) return;
+    setMarkingRead(true);
+    try {
+      const response = await api.post(NOTIFICATION.READ_ALL);
+      if (response.data?.success) {
+        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        setUnreadCount(0);
+        resetNotificationCount();
+      }
+    } catch (error) {
+      console.log('Mark all read error:', error);
+    } finally {
+      setMarkingRead(false);
+    }
+  };
+
+  // Handle notification press — navigate to related screen
   const handleNotificationPress = notification => {
-    console.log('Notification pressed:', notification.title);
+    const modelName = getModelName(notification.related_type);
+    const relatedId = notification.related_id;
+
+    if (!modelName || !relatedId) return;
+
+    switch (modelName) {
+      case 'Hangout':
+        navigation.navigate(Screens.HangoutDetail, { hangoutId: relatedId });
+        break;
+      case 'Activity':
+        navigation.navigate(Screens.ActivityDetail, { activityId: relatedId });
+        break;
+      case 'Property':
+        navigation.navigate(Screens.PropertyDetail, { propertyId: relatedId });
+        break;
+      default:
+        break;
+    }
+  };
+
+  const renderNotification = ({ item }) => (
+    <TouchableOpacity
+      style={[styles.notificationCard, !item.is_read && styles.unreadCard]}
+      activeOpacity={0.7}
+      onPress={() => handleNotificationPress(item)}
+    >
+      <View
+        style={[
+          styles.iconContainer,
+          { backgroundColor: getIconBgColor(item.type, item.is_read) },
+        ]}
+      >
+        <Image
+          source={getNotificationIcon(item.type)}
+          style={styles.notificationIcon}
+          resizeMode="contain"
+        />
+      </View>
+      <View style={styles.contentContainer}>
+        <View style={styles.titleRow}>
+          <Text style={styles.notificationTitle} numberOfLines={1}>
+            {item.title}
+          </Text>
+          {!item.is_read && <View style={styles.unreadDot} />}
+        </View>
+        <Text style={styles.notificationDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
+        <Text style={styles.notificationTime}>{timeAgo(item.created_at)}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderFooter = () => {
+    if (!loadingMore) return <View style={styles.bottomSpacing} />;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={Colors.primary} />
+      </View>
+    );
+  };
+
+  const renderEmpty = () => {
+    if (loading) return null;
+    return (
+      <View style={styles.emptyContainer}>
+        <Image
+          source={require('../../assets/images/icons/notification.png')}
+          style={styles.emptyIcon}
+          resizeMode="contain"
+        />
+        <Text style={styles.emptyTitle}>No Notifications</Text>
+        <Text style={styles.emptyDescription}>
+          You don't have any notifications yet.
+        </Text>
+      </View>
+    );
   };
 
   return (
@@ -128,61 +283,46 @@ const NotificationScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
+        <View style={styles.headerRight}>
+          {unreadCount > 0 && (
+            <TouchableOpacity
+              onPress={handleMarkAllRead}
+              disabled={markingRead}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.markReadText}>
+                {markingRead ? 'Marking...' : 'Mark all read'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Notification Cards */}
-        {notificationsData.map(notification => (
-          <TouchableOpacity
-            key={notification.id}
-            style={styles.notificationCard}
-            activeOpacity={0.7}
-            onPress={() => handleNotificationPress(notification)}
-          >
-            <View
-              style={[
-                styles.iconContainer,
-                { backgroundColor: getIconBgColor(notification.type) },
-              ]}
-            >
-              <Image
-                source={getNotificationIcon(notification.type)}
-                style={styles.notificationIcon}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.contentContainer}>
-              <Text style={styles.notificationTitle}>{notification.title}</Text>
-              <Text style={styles.notificationDescription} numberOfLines={2}>
-                {notification.description}
-              </Text>
-              <Text style={styles.notificationTime}>{notification.time}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-
-        {/* Empty State */}
-        {notificationsData.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Image
-              source={require('../../assets/images/icons/notification.png')}
-              style={styles.emptyIcon}
-              resizeMode="contain"
+      {loading ? (
+        <View style={styles.centerLoader}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={item => String(item.id)}
+          renderItem={renderNotification}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.3}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[Colors.primary]}
+              tintColor={Colors.primary}
             />
-            <Text style={styles.emptyTitle}>No Notifications</Text>
-            <Text style={styles.emptyDescription}>
-              You don't have any notifications yet.
-            </Text>
-          </View>
-        )}
-
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
+          }
+        />
+      )}
     </View>
   );
 };
@@ -219,15 +359,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.primary,
     marginLeft: 8,
+    flex: 1,
+  },
+  headerRight: {
+    minWidth: 80,
+    alignItems: 'flex-end',
+  },
+  markReadText: {
+    fontFamily: Fonts.poppinsMedium,
+    fontSize: 12,
+    color: Colors.primary,
   },
 
   // Scroll
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
+    flexGrow: 1,
   },
 
   // Notification Card
@@ -242,6 +390,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+  },
+  unreadCard: {
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
   },
 
   // Icon Container
@@ -263,10 +415,23 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   notificationTitle: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.textBlack,
+    flex: 1,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+    marginLeft: 8,
   },
   notificationDescription: {
     fontFamily: Fonts.RobotoRegular,
@@ -280,6 +445,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textGray,
     marginTop: 8,
+  },
+
+  // Loaders
+  centerLoader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
 
   // Empty State

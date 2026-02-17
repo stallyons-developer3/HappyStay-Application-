@@ -21,6 +21,7 @@ import FloatingMapButton from '../../components/FloatingMapButton';
 import FilterModal from '../../components/FilterModal';
 
 import { fetchHomeData } from '../../store/slices/homeSlice';
+import { useBadgeCounts } from '../../context/BadgeContext';
 
 const formatDate = dateStr => {
   if (!dateStr) return '';
@@ -65,6 +66,7 @@ const HomeScreen = ({ navigation }) => {
     state => state.home,
   );
   const { user } = useSelector(state => state.auth);
+  const { notificationCount } = useBadgeCounts();
 
   const [searchText, setSearchText] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -167,7 +169,7 @@ const HomeScreen = ({ navigation }) => {
           showGreeting={true}
           showProfile={true}
           showNotification={true}
-          notificationCount={2}
+          notificationCount={notificationCount}
           profileImage={profileImage}
           onProfilePress={() => navigation.navigate(Screens.Profile)}
           onNotificationPress={() => navigation.navigate(Screens.Notification)}

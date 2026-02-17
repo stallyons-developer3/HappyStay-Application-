@@ -1,18 +1,89 @@
-import React, { useRef } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Colors, Fonts } from '../../constants/Constants';
+import { Colors, Fonts, Screens } from '../../constants/Constants';
+import api from '../../api/axiosInstance';
+import { ACTIVITY } from '../../api/endpoints';
 
 const MapScreen = ({ navigation }) => {
   const webViewRef = useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState([]);
+  const [mapReady, setMapReady] = useState(false);
 
-  // Default coordinates (Karachi)
-  const defaultLocation = {
-    latitude: 24.8607,
-    longitude: 67.0011,
-  };
+  // Fetch all public activities
+  const fetchActivities = useCallback(async () => {
+    try {
+      let allActivities = [];
+      let page = 1;
+      let lastPage = 1;
 
-  // OpenStreetMap HTML with Leaflet
+      // Fetch all pages
+      do {
+        const response = await api.get(ACTIVITY.GET_ALL, {
+          params: { page, per_page: 50 },
+        });
+
+        if (response.data?.success) {
+          allActivities = [...allActivities, ...response.data.activities];
+          lastPage = response.data.pagination?.last_page || 1;
+        } else {
+          break;
+        }
+        page++;
+      } while (page <= lastPage);
+
+      // Filter: only public activities with valid coordinates
+      const publicWithCoords = allActivities.filter(
+        a => !a.is_private && a.latitude && a.longitude,
+      );
+
+      setActivities(publicWithCoords);
+    } catch (error) {
+      console.log('Fetch activities for map error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchActivities();
+  }, [fetchActivities]);
+
+  // Send markers to WebView once map is ready and activities are loaded
+  useEffect(() => {
+    if (mapReady && activities.length > 0 && webViewRef.current) {
+      const markersJSON = JSON.stringify(
+        activities.map(a => ({
+          id: a.id,
+          lat: parseFloat(a.latitude),
+          lng: parseFloat(a.longitude),
+          title: a.title || 'Activity',
+          location: a.location || '',
+          typology: a.typology || '',
+          date: a.start_date || '',
+          time: a.start_time || '',
+          price: a.price || '0.00',
+        })),
+      );
+
+      webViewRef.current.injectJavaScript(`
+        if (typeof addMarkers === 'function') {
+          addMarkers(${markersJSON});
+        }
+        true;
+      `);
+    }
+  }, [mapReady, activities]);
+
+  // Leaflet map HTML
   const mapHTML = `
     <!DOCTYPE html>
     <html>
@@ -33,17 +104,23 @@ const MapScreen = ({ navigation }) => {
           height: 20px;
           box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
-        
+
         .leaflet-popup-content-wrapper {
           border-radius: 12px;
           padding: 0;
+          overflow: hidden;
         }
         
         .leaflet-popup-content {
-          margin: 12px 16px;
-          font-family: sans-serif;
+          margin: 0;
+          min-width: 180px;
         }
         
+        .popup-card {
+          padding: 12px 14px;
+          cursor: pointer;
+        }
+
         .popup-title {
           font-weight: bold;
           font-size: 14px;
@@ -51,88 +128,113 @@ const MapScreen = ({ navigation }) => {
           margin-bottom: 4px;
         }
         
-        .popup-desc {
+        .popup-location {
           font-size: 12px;
           color: #666;
+          margin-bottom: 3px;
+        }
+
+        .popup-meta {
+          font-size: 11px;
+          color: #888;
+          margin-bottom: 6px;
+        }
+
+        .popup-badge {
+          display: inline-block;
+          background: #E8F8F0;
+          color: #26B16D;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 10px;
+        }
+
+        .popup-tap {
+          font-size: 10px;
+          color: #26B16D;
+          text-align: right;
+          margin-top: 6px;
+          font-weight: 600;
+        }
+
+        .loading-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(255,255,255,0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: sans-serif;
+          font-size: 14px;
+          color: #666;
+          z-index: 1000;
         }
       </style>
     </head>
     <body>
       <div id="map"></div>
+      <div id="loading" class="loading-overlay">Loading activities...</div>
       <script>
-        // Initialize map
-        var map = L.map('map', {
-          zoomControl: false
-        }).setView([${defaultLocation.latitude}, ${defaultLocation.longitude}], 14);
+        var map = L.map('map', { zoomControl: false }).setView([24.8607, 67.0011], 12);
         
-        // Add tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap'
         }).addTo(map);
         
-        // Add zoom control to bottom right
-        L.control.zoom({
-          position: 'bottomright'
-        }).addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
         
-        // Custom marker icon
         var customIcon = L.divIcon({
           className: 'custom-marker',
           iconSize: [20, 20],
           iconAnchor: [10, 10]
         });
-        
-        // Sample markers data
-        var locations = [
-          {
-            lat: 24.8607,
-            lng: 67.0011,
-            title: 'Beach Party',
-            desc: 'Tonight at 8 PM'
-          },
-          {
-            lat: 24.8700,
-            lng: 67.0100,
-            title: 'Hiking Trail',
-            desc: 'Tomorrow 6 AM'
-          },
-          {
-            lat: 24.8550,
-            lng: 66.9900,
-            title: 'Food Festival',
-            desc: 'This Weekend'
-          },
-          {
-            lat: 24.8650,
-            lng: 66.9950,
-            title: 'Bonfire Night',
-            desc: 'Friday 9 PM'
-          },
-          {
-            lat: 24.8750,
-            lng: 67.0050,
-            title: 'City Tour',
-            desc: 'Daily 10 AM'
+
+        var markersGroup = L.featureGroup();
+
+        function addMarkers(locations) {
+          markersGroup.clearLayers();
+
+          locations.forEach(function(loc) {
+            if (!loc.lat || !loc.lng) return;
+
+            var meta = '';
+            if (loc.date) meta += loc.date;
+            if (loc.time) meta += (meta ? ' • ' : '') + loc.time;
+
+            var popupHTML = 
+              '<div class="popup-card" onclick="onMarkerTap(' + loc.id + ')">' +
+                '<div class="popup-title">' + loc.title + '</div>' +
+                (loc.location ? '<div class="popup-location">📍 ' + loc.location + '</div>' : '') +
+                (meta ? '<div class="popup-meta">' + meta + '</div>' : '') +
+                (loc.typology ? '<span class="popup-badge">' + loc.typology + '</span>' : '') +
+                '<div class="popup-tap">Tap to view →</div>' +
+              '</div>';
+
+            var marker = L.marker([loc.lat, loc.lng], { icon: customIcon });
+            marker.bindPopup(popupHTML, { closeButton: false });
+            markersGroup.addLayer(marker);
+          });
+
+          markersGroup.addTo(map);
+
+          // Fit map to show all markers
+          if (markersGroup.getLayers().length > 0) {
+            map.fitBounds(markersGroup.getBounds().pad(0.15));
           }
-        ];
-        
-        // Add markers
-        locations.forEach(function(loc) {
-          var marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).addTo(map);
-          marker.bindPopup(
-            '<div class="popup-title">' + loc.title + '</div>' +
-            '<div class="popup-desc">' + loc.desc + '</div>'
-          );
-        });
-        
-        // Handle map click
-        map.on('click', function(e) {
+
+          document.getElementById('loading').style.display = 'none';
+        }
+
+        function onMarkerTap(activityId) {
           window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'mapClick',
-            latitude: e.latlng.lat,
-            longitude: e.latlng.lng
+            type: 'activityTap',
+            activityId: activityId
           }));
-        });
+        }
+
+        // Notify RN that map is ready
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapReady' }));
       </script>
     </body>
     </html>
@@ -142,7 +244,14 @@ const MapScreen = ({ navigation }) => {
   const handleMessage = event => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      console.log('Map event:', data);
+
+      if (data.type === 'mapReady') {
+        setMapReady(true);
+      } else if (data.type === 'activityTap' && data.activityId) {
+        navigation.navigate(Screens.ActivityDetail, {
+          activityId: data.activityId,
+        });
+      }
     } catch (error) {
       console.log('Map message error:', error);
     }
@@ -164,9 +273,14 @@ const MapScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Explore Map</Text>
+        {activities.length > 0 && (
+          <Text style={styles.countBadge}>
+            {activities.length} activit{activities.length === 1 ? 'y' : 'ies'}
+          </Text>
+        )}
       </View>
 
-      {/* Full Screen Map */}
+      {/* Map */}
       <View style={styles.mapContainer}>
         <WebView
           ref={webViewRef}
@@ -175,9 +289,15 @@ const MapScreen = ({ navigation }) => {
           onMessage={handleMessage}
           javaScriptEnabled={true}
           domStorageEnabled={true}
-          startInLoadingState={true}
+          startInLoadingState={false}
           scalesPageToFit={true}
         />
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Loading activities...</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -216,6 +336,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.primary,
     marginLeft: 8,
+    flex: 1,
+  },
+  countBadge: {
+    fontFamily: Fonts.poppinsMedium,
+    fontSize: 12,
+    color: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
 
   // Map
@@ -224,6 +355,20 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+
+  // Loading
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
+    marginTop: 12,
   },
 });
 

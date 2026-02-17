@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
@@ -14,32 +16,58 @@ import { STORAGE_URL } from '../../api/endpoints';
 import { logoutUser } from '../../store/slices/authSlice';
 import Button from '../../components/common/Button';
 import TripCard from '../../components/TripCard';
+import api from '../../api/axiosInstance';
+import { PROPERTY } from '../../api/endpoints';
 
-const pastTripsData = [
-  {
-    id: '1',
-    image: require('../../assets/images/villa.png'),
-    title: 'Dream Villa',
-    location: 'Sorem ipsum dolor sit.',
-    checkIn: '12-1-2026',
-    checkOut: '12-1-2026',
-  },
-];
-
-const nextTripsData = [
-  {
-    id: '1',
-    image: require('../../assets/images/villa.png'),
-    title: 'The Villa',
-    location: 'Sorem ipsum dolor sit.',
-    checkIn: '12-1-2026',
-    checkOut: '12-1-2026',
-  },
-];
+const formatDate = dateStr => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+};
 
 const ProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
+
+  const [pastTrip, setPastTrip] = useState(null);
+  const [nextTrip, setNextTrip] = useState(null);
+  const [tripsLoading, setTripsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchMyTrips = useCallback(async () => {
+    try {
+      const response = await api.get(PROPERTY.MY_TRIPS);
+      if (response.data?.success) {
+        setPastTrip(response.data.past_trip || null);
+        setNextTrip(response.data.next_trip || null);
+      }
+    } catch (error) {
+      console.log('Fetch trips error:', error);
+    } finally {
+      setTripsLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMyTrips();
+  }, [fetchMyTrips]);
+
+  // Re-fetch when screen comes back into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchMyTrips();
+    });
+    return unsubscribe;
+  }, [navigation, fetchMyTrips]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchMyTrips();
+  }, [fetchMyTrips]);
 
   const getProfileImage = () => {
     if (user?.profile_picture) {
@@ -49,6 +77,13 @@ const ProfileScreen = ({ navigation }) => {
       return { uri };
     }
     return require('../../assets/images/profile.png');
+  };
+
+  const getTripImage = thumbnail => {
+    if (thumbnail) {
+      return { uri: thumbnail };
+    }
+    return require('../../assets/images/villa.png');
   };
 
   const displayName =
@@ -76,12 +111,49 @@ const ProfileScreen = ({ navigation }) => {
     ]);
   };
 
+  const renderTripSection = (title, trip) => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {tripsLoading ? (
+        <ActivityIndicator
+          size="small"
+          color={Colors.primary}
+          style={styles.loader}
+        />
+      ) : trip ? (
+        <TripCard
+          image={getTripImage(trip.property?.thumbnail)}
+          title={trip.property?.name || 'Property'}
+          location={trip.property?.location || ''}
+          checkIn={formatDate(trip.check_in)}
+          checkOut={formatDate(trip.check_out)}
+          onPress={() =>
+            trip.property?.id &&
+            navigation.navigate(Screens.PropertyDetail, {
+              propertyId: trip.property.id,
+            })
+          }
+        />
+      ) : (
+        <Text style={styles.emptyText}>No {title.toLowerCase()} yet</Text>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
       >
         <View style={styles.header}>
           <TouchableOpacity
@@ -123,33 +195,8 @@ const ProfileScreen = ({ navigation }) => {
           <Text style={styles.profileEmail}>{displayEmail}</Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Past Trips</Text>
-          {pastTripsData.map(trip => (
-            <TripCard
-              key={trip.id}
-              image={trip.image}
-              title={trip.title}
-              location={trip.location}
-              checkIn={trip.checkIn}
-              checkOut={trip.checkOut}
-            />
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Next Trips</Text>
-          {nextTripsData.map(trip => (
-            <TripCard
-              key={trip.id}
-              image={trip.image}
-              title={trip.title}
-              location={trip.location}
-              checkIn={trip.checkIn}
-              checkOut={trip.checkOut}
-            />
-          ))}
-        </View>
+        {renderTripSection('Past Trips', pastTrip)}
+        {renderTripSection('Next Trips', nextTrip)}
 
         <View style={styles.spacer} />
 
@@ -253,6 +300,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.textBlack,
     marginBottom: 16,
+  },
+  emptyText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
+    textAlign: 'center',
+    paddingVertical: 16,
+  },
+  loader: {
+    paddingVertical: 16,
   },
   spacer: {
     flex: 1,
