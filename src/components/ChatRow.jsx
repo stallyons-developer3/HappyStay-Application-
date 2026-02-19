@@ -2,7 +2,14 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, Fonts } from '../constants/Constants';
 
-const ChatRow = ({ image, title, message, isAI = false, onPress }) => {
+const ChatRow = ({
+  image,
+  title,
+  message,
+  isAI = false,
+  onPress,
+  unreadCount = 0,
+}) => {
   return (
     <TouchableOpacity
       style={[styles.container, isAI && styles.aiContainer]}
@@ -26,6 +33,15 @@ const ChatRow = ({ image, title, message, isAI = false, onPress }) => {
           {message}
         </Text>
       </View>
+
+      {/* Unread Badge */}
+      {unreadCount > 0 && (
+        <View style={[styles.badge, isAI && styles.aiBadge]}>
+          <Text style={[styles.badgeText, isAI && styles.aiBadgeText]}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -79,6 +95,27 @@ const styles = StyleSheet.create({
   aiMessage: {
     color: Colors.white,
     opacity: 0.9,
+  },
+  badge: {
+    backgroundColor: Colors.red || '#FF3B30',
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    marginLeft: 8,
+  },
+  aiBadge: {
+    backgroundColor: Colors.white,
+  },
+  badgeText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 11,
+    color: Colors.white,
+  },
+  aiBadgeText: {
+    color: Colors.primary,
   },
 });
 

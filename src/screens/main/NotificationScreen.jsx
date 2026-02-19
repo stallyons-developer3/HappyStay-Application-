@@ -83,7 +83,7 @@ const getModelName = relatedType => {
 
 const NotificationScreen = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
-  const { resetNotificationCount } = useBadgeCounts();
+  const { resetNotificationCount, updateNotificationCount } = useBadgeCounts();
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -186,8 +186,30 @@ const NotificationScreen = ({ navigation }) => {
     }
   };
 
-  // Handle notification press — navigate to related screen
-  const handleNotificationPress = notification => {
+  // Handle notification press — mark as read and navigate to related screen
+  const handleNotificationPress = async notification => {
+    // Mark as read if unread
+    if (!notification.is_read) {
+      try {
+        const response = await api.post(
+          NOTIFICATION.READ_SINGLE(notification.id),
+        );
+        if (response.data?.success) {
+          setNotifications(prev =>
+            prev.map(n =>
+              n.id === notification.id ? { ...n, is_read: true } : n,
+            ),
+          );
+          const newUnreadCount =
+            response.data.unread_count ?? Math.max(0, unreadCount - 1);
+          setUnreadCount(newUnreadCount);
+          updateNotificationCount(newUnreadCount);
+        }
+      } catch (error) {
+        console.log('Mark read error:', error);
+      }
+    }
+
     const modelName = getModelName(notification.related_type);
     const relatedId = notification.related_id;
 

@@ -12,12 +12,12 @@ import Button from './common/Button';
 
 const categoryOptions = [
   { id: 'all', name: 'All' },
-  { id: 'Nature & Active', name: 'Nature & Active' },
-  { id: 'Sightseeing', name: 'Sightseeing' },
-  { id: 'Party', name: 'Party' },
-  { id: 'Events', name: 'Events' },
-  { id: 'Food & Drink', name: 'Food & Drink' },
-  { id: 'Transport', name: 'Transport' },
+  { id: 'nature_active', name: 'Nature & Active' },
+  { id: 'sightseeing', name: 'Sightseeing' },
+  { id: 'party', name: 'Party' },
+  { id: 'event', name: 'Events' },
+  { id: 'food_drink', name: 'Food & Drink' },
+  { id: 'transport', name: 'Transport' },
 ];
 
 const priceOptions = [

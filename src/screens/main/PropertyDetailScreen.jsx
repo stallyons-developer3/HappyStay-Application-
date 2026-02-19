@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
@@ -52,6 +53,10 @@ const PropertyDetailScreen = ({ navigation, route }) => {
   const [checkOutSelected, setCheckOutSelected] = useState(false);
   const [showCheckInPicker, setShowCheckInPicker] = useState(false);
   const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
+
+  // Menu Image Viewer
+  const [menuImageUrl, setMenuImageUrl] = useState(null);
+  const [showMenuModal, setShowMenuModal] = useState(false);
 
   // Fetch property detail
   useEffect(() => {
@@ -112,7 +117,35 @@ const PropertyDetailScreen = ({ navigation, route }) => {
 
   // Handle Get Direction
   const handleGetDirection = () => {
-    navigation.navigate(Screens.Map);
+    if (property?.latitude && property?.longitude) {
+      const lat = property.latitude;
+      const lng = property.longitude;
+      const label = encodeURIComponent(property.name || 'Property');
+      const url = Platform.select({
+        ios: `maps:0,0?q=${label}@${lat},${lng}`,
+        android: `geo:${lat},${lng}?q=${lat},${lng}(${label})`,
+      });
+
+      Linking.openURL(url).catch(() => {
+        // Fallback to Google Maps web
+        Linking.openURL(
+          `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
+        );
+      });
+    } else {
+      Alert.alert(
+        'Location Unavailable',
+        'No coordinates available for this property.',
+      );
+    }
+  };
+
+  // Handle View Menu
+  const handleViewMenu = menuUrl => {
+    if (menuUrl) {
+      setMenuImageUrl(menuUrl);
+      setShowMenuModal(true);
+    }
   };
 
   // Handle Request Booking
@@ -318,7 +351,10 @@ const PropertyDetailScreen = ({ navigation, route }) => {
                     {hour.title}: {hour.start_time} - {hour.end_time}
                   </Text>
                   {hour.menu && (
-                    <TouchableOpacity style={styles.menuLink}>
+                    <TouchableOpacity
+                      style={styles.menuLink}
+                      onPress={() => handleViewMenu(hour.menu)}
+                    >
                       <Text style={styles.menuLinkText}>View Menu</Text>
                     </TouchableOpacity>
                   )}
@@ -525,6 +561,31 @@ const PropertyDetailScreen = ({ navigation, route }) => {
               )}
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Menu Image Viewer Modal */}
+      <Modal
+        visible={showMenuModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowMenuModal(false)}
+      >
+        <View style={styles.menuModalOverlay}>
+          <TouchableOpacity
+            style={styles.menuModalClose}
+            onPress={() => setShowMenuModal(false)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.menuModalCloseText}>✕</Text>
+          </TouchableOpacity>
+          {menuImageUrl && (
+            <Image
+              source={{ uri: menuImageUrl }}
+              style={styles.menuModalImage}
+              resizeMode="contain"
+            />
+          )}
         </View>
       </Modal>
 
@@ -914,6 +975,35 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.white,
     textTransform: 'lowercase',
+  },
+
+  // Menu Image Modal
+  menuModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuModalClose: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  menuModalCloseText: {
+    fontSize: 18,
+    color: Colors.white,
+    fontWeight: '700',
+  },
+  menuModalImage: {
+    width: width - 20,
+    height: '80%',
   },
 });
 

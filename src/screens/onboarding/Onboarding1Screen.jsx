@@ -12,6 +12,7 @@ import {
   Modal,
   Animated,
   Alert,
+  StatusBar,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useDispatch } from 'react-redux';
@@ -43,12 +44,13 @@ const genders = [
   { id: '3', name: 'Other' },
 ];
 
-const Onboarding1Screen = ({ navigation }) => {
+const Onboarding1Screen = ({ navigation, route }) => {
   const dispatch = useDispatch();
+  const prefillUsername = route.params?.username || '';
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState(prefillUsername);
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [selectedGender, setSelectedGender] = useState(null);
@@ -133,7 +135,7 @@ const Onboarding1Screen = ({ navigation }) => {
       }),
     );
 
-    navigation.navigate(Screens.Onboarding3);
+    navigation.navigate(Screens.Onboarding2);
   };
 
   return (
@@ -145,6 +147,18 @@ const Onboarding1Screen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../../assets/images/arrow-left.png')}
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+
         <Text style={styles.title}>Welcome! Let's get started</Text>
         <Text style={styles.subtitle}>
           Please provide the following information to{'\n'}
@@ -339,6 +353,9 @@ const Onboarding1Screen = ({ navigation }) => {
   );
 };
 
+const SAFE_TOP =
+  Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 5 : 5;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -347,8 +364,18 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: SAFE_TOP,
     paddingBottom: 30,
+  },
+  backButton: {
+    marginBottom: 10,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
   },
   title: {
     fontFamily: Fonts.RobotoBold,

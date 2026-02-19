@@ -2,172 +2,235 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Dimensions,
+  ActivityIndicator,
+  Platform,
+  StatusBar,
 } from 'react-native';
-import { useDispatch } from 'react-redux';
-import { Colors, Fonts, Screens } from '../../constants/Constants';
+import { useDispatch, useSelector } from 'react-redux';
+import ImagePicker from 'react-native-image-crop-picker';
+import { Colors, Fonts } from '../../constants/Constants';
 import Button from '../../components/common/Button';
-import { setOnboardingData } from '../../store/slices/onboardingSlice';
-
-const { width } = Dimensions.get('window');
-const chipWidth = (width - 48 - 16) / 2;
-
-const tripTypes = [
-  { id: '1', name: 'Solo' },
-  { id: '2', name: 'Digital Nomad' },
-  { id: '3', name: 'Backpacker' },
-  { id: '4', name: 'Business Travel' },
-  { id: '5', name: 'Family Trip' },
-  { id: '6', name: 'Short Escape' },
-  { id: '7', name: 'Volunteer' },
-  { id: '8', name: 'Road Trip' },
-  { id: '9', name: 'Friends & Fun' },
-  { id: '10', name: 'Couple Trip' },
-  { id: '11', name: 'Studying Abroad' },
-];
+import api from '../../api/axiosInstance';
+import { PROFILE } from '../../api/endpoints';
+import { setUser } from '../../store/slices/authSlice';
+import { resetOnboarding } from '../../store/slices/onboardingSlice';
 
 const Onboarding3Screen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const [selectedTrips, setSelectedTrips] = useState([]);
+  const onboardingData = useSelector(state => state.onboarding);
+  const [profileImage, setProfileImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const toggleTrip = id => {
-    if (selectedTrips.includes(id)) {
-      setSelectedTrips(selectedTrips.filter(item => item !== id));
-    } else {
-      if (selectedTrips.length < 3) {
-        setSelectedTrips([...selectedTrips, id]);
-      } else {
-        Alert.alert('Limit Reached', 'You can only select up to 3 options.');
+  const pickImage = () => {
+    ImagePicker.openPicker({
+      width: 800,
+      height: 800,
+      cropping: true,
+      cropperCircleOverlay: true,
+      compressImageQuality: 0.8,
+    })
+      .then(image => {
+        setProfileImage(image);
+      })
+      .catch(err => {
+        if (err.code !== 'E_PICKER_CANCELLED') {
+          Alert.alert('Error', 'Failed to pick image');
+        }
+      });
+  };
+
+  const handleContinue = async () => {
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
+
+      formData.append('first_name', onboardingData.first_name);
+      formData.append('last_name', onboardingData.last_name);
+      formData.append('username', onboardingData.username);
+      formData.append('gender', onboardingData.gender);
+      formData.append('nationality', onboardingData.nationality);
+      formData.append('age', onboardingData.age);
+
+      onboardingData.trip_interests.forEach(item => {
+        formData.append('trip_interests[]', item);
+      });
+
+      if (profileImage) {
+        const filename = profileImage.path.split('/').pop();
+        formData.append('profile_picture', {
+          uri: profileImage.path,
+          type: profileImage.mime || 'image/jpeg',
+          name: filename || 'profile.jpg',
+        });
       }
+
+      const response = await api.post(PROFILE.SETUP_PROFILE, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Navigate FIRST before dispatching state changes
+      navigation.replace('Onboarding4');
+
+      if (response.data?.user) {
+        dispatch(setUser(response.data.user));
+      }
+      dispatch(resetOnboarding());
+    } catch (error) {
+      const errors = error.response?.data?.errors;
+      const message = errors
+        ? errors.join('\n')
+        : error.response?.data?.message ||
+          'Profile setup failed. Please try again.';
+      Alert.alert('Error', message);
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  const isSelected = id => selectedTrips.includes(id);
-
-  const handleContinue = () => {
-    if (selectedTrips.length === 0) {
-      Alert.alert('Error', 'Please select at least 1 trip interest');
-      return;
-    }
-
-    const tripNames = selectedTrips.map(
-      id => tripTypes.find(t => t.id === id).name,
-    );
-
-    dispatch(setOnboardingData({ trip_interests: tripNames }));
-    navigation.navigate(Screens.Onboarding2);
-  };
-
-  const renderChip = trip => (
-    <TouchableOpacity
-      key={trip.id}
-      style={[styles.chip, isSelected(trip.id) && styles.chipSelected]}
-      activeOpacity={0.8}
-      onPress={() => toggleTrip(trip.id)}
-    >
-      <Text
-        style={[
-          styles.chipText,
-          isSelected(trip.id) && styles.chipTextSelected,
-        ]}
-      >
-        {trip.name}
-      </Text>
-    </TouchableOpacity>
-  );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>What best describes your trips?</Text>
-      <Text style={styles.subtitle}>
-        Select 1 to 3 options. They will be visible on your profile
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+        activeOpacity={0.7}
+      >
+        <Image
+          source={require('../../assets/images/arrow-left.png')}
+          style={styles.backIcon}
+          resizeMode="contain"
+        />
+      </TouchableOpacity>
+
+      <Text style={styles.title}>Profile Picture</Text>
+      <Text style={styles.tagline}>
+        Let's put a face to your name!{'\n'}
+        Upload a photo so others can recognize you.
       </Text>
 
-      <View style={styles.chipsContainer}>
-        <View style={styles.row}>
-          {renderChip(tripTypes[0])}
-          {renderChip(tripTypes[1])}
+      <View style={styles.profileContainer}>
+        <View style={styles.profileRing}>
+          <View style={styles.profileImageWrapper}>
+            <Image
+              source={
+                profileImage
+                  ? { uri: profileImage.path }
+                  : require('../../assets/images/profile.png')
+              }
+              style={styles.profileImage}
+              resizeMode="cover"
+            />
+          </View>
         </View>
-        <View style={styles.row}>
-          {renderChip(tripTypes[2])}
-          {renderChip(tripTypes[3])}
-        </View>
-        <View style={styles.row}>
-          {renderChip(tripTypes[4])}
-          {renderChip(tripTypes[5])}
-        </View>
-        <View style={styles.row}>
-          {renderChip(tripTypes[6])}
-          {renderChip(tripTypes[7])}
-        </View>
-        <View style={styles.row}>
-          {renderChip(tripTypes[8])}
-          {renderChip(tripTypes[9])}
-        </View>
-        <View style={styles.row}>{renderChip(tripTypes[10])}</View>
+        <TouchableOpacity style={styles.cameraButton} onPress={pickImage}>
+          <Image
+            source={require('../../assets/images/camera.png')}
+            style={styles.cameraIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.buttonContainer}>
-        <Button title="Continue" onPress={handleContinue} size="full" />
+        {isLoading && (
+          <ActivityIndicator
+            size="large"
+            color={Colors.primary}
+            style={{ marginBottom: 20 }}
+          />
+        )}
+        <Button
+          title={isLoading ? 'Setting up...' : 'Continue'}
+          onPress={handleContinue}
+          size="full"
+          style={{ opacity: isLoading ? 0.7 : 1 }}
+          disabled={isLoading}
+        />
       </View>
     </View>
   );
 };
+
+const SAFE_TOP =
+  Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 5 : 5;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: SAFE_TOP,
+  },
+  backButton: {
+    marginBottom: 10,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
   },
   title: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.textBlack,
+    textAlign: 'center',
     marginBottom: 12,
   },
-  subtitle: {
+  tagline: {
     fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
-    color: Colors.textBlack,
+    color: Colors.textGray,
+    textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 30,
+    marginBottom: 40,
   },
-  chipsContainer: {
-    flex: 1,
+  profileContainer: {
+    alignItems: 'center',
+    position: 'relative',
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  chip: {
-    width: chipWidth,
-    paddingVertical: 14,
-    borderRadius: 50,
+  profileRing: {
+    width: 180,
+    height: 180,
+    borderRadius: 100,
     borderWidth: 1,
     borderColor: Colors.primary,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  chipSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+  profileImageWrapper: {
+    width: 165,
+    height: 165,
+    borderRadius: 82.5,
+    overflow: 'hidden',
   },
-  chipText: {
-    fontFamily: Fonts.poppinsRegular,
-    fontSize: 14,
-    color: Colors.textBlack,
+  profileImage: {
+    width: '100%',
+    height: '100%',
   },
-  chipTextSelected: {
-    color: Colors.white,
+  cameraButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: '22%',
+    width: 50,
+    height: 50,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraIcon: {
+    width: 36,
+    height: 36,
   },
   buttonContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
     paddingBottom: 40,
   },
 });

@@ -7,6 +7,7 @@ import React, {
   useRef,
 } from 'react';
 import { useSelector } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../api/axiosInstance';
 import { NOTIFICATION, SUPPORT } from '../api/endpoints';
 import {
@@ -14,10 +15,20 @@ import {
   unsubscribeFromChannel,
 } from '../services/pusherService';
 
+const STORAGE_KEY = 'chat_unreads';
+
 const BadgeContext = createContext({
   notificationCount: 0,
   chatCount: 0,
+  chatUnreads: {},
   refreshCounts: () => {},
+  resetNotificationCount: () => {},
+  updateNotificationCount: () => {},
+  resetChatCount: () => {},
+  incrementChatUnread: () => {},
+  clearChatUnread: () => {},
+  getChatUnread: () => 0,
+  registerGroupChats: () => {},
 });
 
 export const useBadgeCounts = () => useContext(BadgeContext);
@@ -25,81 +36,187 @@ export const useBadgeCounts = () => useContext(BadgeContext);
 export const BadgeProvider = ({ children }) => {
   const { user } = useSelector(state => state.auth);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [chatCount, setChatCount] = useState(0);
+  const [chatUnreads, setChatUnreads] = useState({});
+  const subscribedChannelsRef = useRef(new Set());
+  // Track which chat is currently open so we don't increment it
+  const activeChatRef = useRef(null);
 
-  const fetchCounts = useCallback(async () => {
+  // Load persisted unreads from AsyncStorage
+  useEffect(() => {
+    const loadUnreads = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          setChatUnreads(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.log('Failed to load chat unreads:', e);
+      }
+    };
+    loadUnreads();
+  }, []);
+
+  // Persist unreads to AsyncStorage whenever they change
+  useEffect(() => {
+    const saveUnreads = async () => {
+      try {
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(chatUnreads));
+      } catch (e) {
+        console.log('Failed to save chat unreads:', e);
+      }
+    };
+    saveUnreads();
+  }, [chatUnreads]);
+
+  // Total chat count = sum of all per-chat unreads
+  const chatCount = Object.values(chatUnreads).reduce((sum, c) => sum + c, 0);
+
+  // Fetch notification count from backend
+  const fetchNotifCount = useCallback(async () => {
     try {
-      const [notifRes, chatRes] = await Promise.all([
-        api
-          .get(NOTIFICATION.GET_ALL, { params: { page: 1 } })
-          .catch(() => null),
-        api.get(SUPPORT.UNREAD_COUNT).catch(() => null),
-      ]);
+      const res = await api
+        .get(NOTIFICATION.GET_ALL, { params: { page: 1 } })
+        .catch(() => null);
+      if (res?.data?.unread_count !== undefined) {
+        setNotificationCount(res.data.unread_count);
+      }
+    } catch (e) {
+      console.log('Notif count error:', e);
+    }
+  }, []);
 
-      if (notifRes?.data?.unread_count !== undefined) {
-        setNotificationCount(notifRes.data.unread_count);
+  // Fetch support unread count from backend and set it
+  const fetchSupportUnread = useCallback(async () => {
+    try {
+      const res = await api.get(SUPPORT.UNREAD_COUNT).catch(() => null);
+      if (res?.data?.unread_count !== undefined) {
+        setChatUnreads(prev => ({ ...prev, support: res.data.unread_count }));
       }
-      if (chatRes?.data?.unread_count !== undefined) {
-        setChatCount(chatRes.data.unread_count);
-      }
-    } catch (error) {
-      console.log('Badge count fetch error:', error);
+    } catch (e) {
+      console.log('Support unread error:', e);
     }
   }, []);
 
   // Initial fetch
   useEffect(() => {
     if (user?.id) {
-      fetchCounts();
+      fetchNotifCount();
+      fetchSupportUnread();
     }
-  }, [user?.id, fetchCounts]);
+  }, [user?.id, fetchNotifCount, fetchSupportUnread]);
 
   // Poll every 30s
   useEffect(() => {
     if (!user?.id) return;
-    const interval = setInterval(fetchCounts, 30000);
+    const interval = setInterval(() => {
+      fetchNotifCount();
+      fetchSupportUnread();
+    }, 30000);
     return () => clearInterval(interval);
-  }, [user?.id, fetchCounts]);
+  }, [user?.id, fetchNotifCount, fetchSupportUnread]);
 
-  // Real-time: notification Pusher channel
+  // Real-time: notification channel
   useEffect(() => {
     if (!user?.id) return;
-
-    const channelName = `user-notifications.${user.id}`;
-    subscribeToChannel(channelName, 'new-notification', () => {
+    const ch = `user-notifications.${user.id}`;
+    subscribeToChannel(ch, 'new-notification', () => {
       setNotificationCount(prev => prev + 1);
     });
-
-    return () => unsubscribeFromChannel(channelName);
+    return () => unsubscribeFromChannel(ch);
   }, [user?.id]);
 
-  // Real-time: support chat Pusher channel
+  // Real-time: support chat channel
   useEffect(() => {
     if (!user?.id) return;
-
-    const channelName = `support-chat.${user.id}`;
-    subscribeToChannel(channelName, 'new-message', data => {
-      // Only increment if the message is not from the current user (bot or admin reply)
+    const ch = `support-chat.${user.id}`;
+    subscribeToChannel(ch, 'new-message', data => {
       if (data?.sender_id !== user.id) {
-        setChatCount(prev => prev + 1);
+        // Don't increment if user is currently viewing support chat
+        if (activeChatRef.current === 'support') return;
+        setChatUnreads(prev => ({ ...prev, support: (prev.support || 0) + 1 }));
       }
     });
-
-    return () => unsubscribeFromChannel(channelName);
+    return () => unsubscribeFromChannel(ch);
   }, [user?.id]);
 
-  const refreshCounts = useCallback(() => {
-    fetchCounts();
-  }, [fetchCounts]);
+  // Subscribe to a group chat channel for real-time unread tracking
+  const subscribeGroupChannel = useCallback(
+    (type, id) => {
+      const chatKey = `${type}-${id}`;
+      const channelName = `${type}-chat.${id}`;
 
-  // Allow resetting notification count (e.g. after mark all read)
+      if (subscribedChannelsRef.current.has(channelName)) return;
+      subscribedChannelsRef.current.add(channelName);
+
+      subscribeToChannel(channelName, 'new-message', data => {
+        const msgUserId =
+          data?.message?.user?.id || data?.user?.id || data?.message?.user_id;
+        // Don't count own messages
+        if (String(msgUserId) === String(user?.id)) return;
+        // Don't increment if user is currently viewing this chat
+        if (activeChatRef.current === chatKey) return;
+        setChatUnreads(prev => ({
+          ...prev,
+          [chatKey]: (prev[chatKey] || 0) + 1,
+        }));
+      });
+    },
+    [user?.id],
+  );
+
+  // Register multiple group chats at once (called from ChatScreen)
+  const registerGroupChats = useCallback(
+    groups => {
+      groups.forEach(g => {
+        subscribeGroupChannel(g.type, g.id);
+      });
+    },
+    [subscribeGroupChannel],
+  );
+
+  // Increment a specific chat's unread count
+  const incrementChatUnread = useCallback(chatKey => {
+    setChatUnreads(prev => ({ ...prev, [chatKey]: (prev[chatKey] || 0) + 1 }));
+  }, []);
+
+  // Clear a specific chat's unread count (when user opens that chat)
+  const clearChatUnread = useCallback(chatKey => {
+    activeChatRef.current = chatKey;
+    setChatUnreads(prev => {
+      const updated = { ...prev };
+      delete updated[chatKey];
+      return updated;
+    });
+  }, []);
+
+  // Called when user leaves a chat screen
+  const unsetActiveChat = useCallback(() => {
+    activeChatRef.current = null;
+  }, []);
+
+  // Get unread count for a specific chat
+  const getChatUnread = useCallback(
+    chatKey => {
+      return chatUnreads[chatKey] || 0;
+    },
+    [chatUnreads],
+  );
+
+  const refreshCounts = useCallback(() => {
+    fetchNotifCount();
+    fetchSupportUnread();
+  }, [fetchNotifCount, fetchSupportUnread]);
+
   const resetNotificationCount = useCallback(() => {
     setNotificationCount(0);
   }, []);
 
-  // Allow resetting chat count (e.g. when entering chat)
+  const updateNotificationCount = useCallback(count => {
+    setNotificationCount(count);
+  }, []);
+
   const resetChatCount = useCallback(() => {
-    setChatCount(0);
+    // No-op; individual chats are cleared via clearChatUnread
   }, []);
 
   return (
@@ -107,9 +224,16 @@ export const BadgeProvider = ({ children }) => {
       value={{
         notificationCount,
         chatCount,
+        chatUnreads,
         refreshCounts,
         resetNotificationCount,
+        updateNotificationCount,
         resetChatCount,
+        incrementChatUnread,
+        clearChatUnread,
+        unsetActiveChat,
+        getChatUnread,
+        registerGroupChats,
       }}
     >
       {children}

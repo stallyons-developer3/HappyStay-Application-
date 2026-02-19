@@ -14,22 +14,22 @@ import api from '../../api/axiosInstance';
 import { SUPPORT, CHAT } from '../../api/endpoints';
 
 import ChatRow from '../../components/ChatRow';
+import { useBadgeCounts } from '../../context/BadgeContext';
 
 const ChatScreen = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
   const [groupChats, setGroupChats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
   const { user } = useSelector(state => state.auth);
+  const { getChatUnread, registerGroupChats, clearChatUnread, chatUnreads } =
+    useBadgeCounts();
 
   useEffect(() => {
     fetchGroupChats();
-    fetchUnreadCount();
   }, []);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      fetchUnreadCount();
       fetchGroupChats();
     });
     return unsubscribe;
@@ -38,10 +38,11 @@ const ChatScreen = ({ navigation }) => {
   const fetchGroupChats = async () => {
     try {
       const response = await api.get(CHAT.MY_GROUPS);
-      if (response.data?.chat_groups) {
-        setGroupChats(response.data.chat_groups);
-      } else if (response.data?.groups) {
-        setGroupChats(response.data.groups);
+      const groups = response.data?.chat_groups || response.data?.groups || [];
+      setGroupChats(groups);
+      // Register all group chats for Pusher real-time unread tracking
+      if (groups.length > 0) {
+        registerGroupChats(groups);
       }
     } catch (error) {
       console.log('Fetch groups error:', error);
@@ -50,18 +51,8 @@ const ChatScreen = ({ navigation }) => {
     }
   };
 
-  const fetchUnreadCount = async () => {
-    try {
-      const response = await api.get(SUPPORT.UNREAD_COUNT);
-      if (response.data?.unread_count !== undefined) {
-        setUnreadCount(response.data.unread_count);
-      }
-    } catch (error) {
-      console.log('Unread count error:', error);
-    }
-  };
-
   const handleSupportPress = () => {
+    clearChatUnread('support');
     navigation.navigate(Screens.ChatDetail, {
       isSupport: true,
     });
@@ -69,6 +60,8 @@ const ChatScreen = ({ navigation }) => {
 
   const handleChatPress = chat => {
     const isActivity = chat.type === 'activity';
+    const chatKey = `${chat.type}-${chat.id}`;
+    clearChatUnread(chatKey);
     navigation.navigate(Screens.ChatDetail, {
       activityId: isActivity ? chat.id : undefined,
       hangoutId: !isActivity ? chat.id : undefined,
@@ -81,6 +74,8 @@ const ChatScreen = ({ navigation }) => {
     const name = (chat.title || chat.name || '').toLowerCase();
     return name.includes(searchText.trim().toLowerCase());
   });
+
+  const supportUnread = getChatUnread('support');
 
   return (
     <View style={styles.container}>
@@ -110,12 +105,13 @@ const ChatScreen = ({ navigation }) => {
           image={require('../../assets/images/ai-avatar.png')}
           title="Support"
           message={
-            unreadCount > 0
-              ? `${unreadCount} new message${unreadCount > 1 ? 's' : ''}`
+            supportUnread > 0
+              ? `${supportUnread} new message${supportUnread > 1 ? 's' : ''}`
               : 'Tap to chat with support'
           }
           isAI={true}
           onPress={handleSupportPress}
+          unreadCount={supportUnread}
         />
 
         {isLoading ? (
@@ -130,6 +126,9 @@ const ChatScreen = ({ navigation }) => {
               ? { uri: chat.thumbnail }
               : require('../../assets/images/profile.png');
 
+            const chatKey = `${chat.type}-${chat.id}`;
+            const unread = getChatUnread(chatKey);
+
             const lastMsg = chat.last_message
               ? `${chat.last_message.user_name || ''}: ${
                   chat.last_message.message || ''
@@ -141,9 +140,14 @@ const ChatScreen = ({ navigation }) => {
                 key={`chat-${chat.type}-${chat.id}`}
                 image={chatImage}
                 title={chat.title || chat.name || 'Chat'}
-                message={lastMsg}
+                message={
+                  unread > 0
+                    ? `${unread} new message${unread > 1 ? 's' : ''}`
+                    : lastMsg
+                }
                 isAI={false}
                 onPress={() => handleChatPress(chat)}
+                unreadCount={unread}
               />
             );
           })

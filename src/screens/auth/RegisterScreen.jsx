@@ -18,7 +18,7 @@ import Button from '../../components/common/Button';
 import { registerUser, clearError } from '../../store/slices/authSlice';
 
 const RegisterScreen = ({ navigation }) => {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -40,13 +40,21 @@ const RegisterScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigation.replace(Screens.Onboarding1);
+      navigation.replace(Screens.Onboarding1, { username: username.trim() });
     }
   }, [isAuthenticated, user, navigation]);
 
   const handleRegister = () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+    if (!username.trim()) {
+      Alert.alert('Error', 'Please enter a username');
+      return;
+    }
+    if (username.trim().length < 3) {
+      Alert.alert('Error', 'Username must be at least 3 characters');
+      return;
+    }
+    if (/\s/.test(username.trim())) {
+      Alert.alert('Error', 'Username cannot contain spaces');
       return;
     }
     if (!email.trim()) {
@@ -68,7 +76,7 @@ const RegisterScreen = ({ navigation }) => {
 
     dispatch(
       registerUser({
-        name: name.trim(),
+        name: username.trim(),
         email: email.trim(),
         password,
         password_confirmation: confirmPassword,
@@ -100,7 +108,7 @@ const RegisterScreen = ({ navigation }) => {
         <Text style={styles.title}>Hello !</Text>
         <Text style={styles.subtitle}>Sign up to Continue</Text>
 
-        <Text style={styles.inputLabel}>Name</Text>
+        <Text style={styles.inputLabel}>Username</Text>
         <View style={styles.inputContainer}>
           <Image
             source={require('../../assets/images/user.png')}
@@ -109,10 +117,11 @@ const RegisterScreen = ({ navigation }) => {
           />
           <TextInput
             style={styles.input}
-            placeholder="Enter"
+            placeholder="Enter username"
             placeholderTextColor={Colors.textLight}
-            value={name}
-            onChangeText={setName}
+            value={username}
+            onChangeText={text => setUsername(text.replace(/\s/g, ''))}
+            autoCapitalize="none"
             editable={!isLoading}
           />
         </View>

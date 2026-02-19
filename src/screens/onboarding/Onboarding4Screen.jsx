@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
@@ -167,6 +168,18 @@ const Onboarding4Screen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../../assets/images/arrow-left.png')}
+            style={styles.backIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+
         <View style={styles.titleSection}>
           <Text style={styles.mainTitle}>Where are you going next?</Text>
           <Text style={styles.subtitle}>
@@ -313,6 +326,9 @@ const Onboarding4Screen = ({ navigation }) => {
   );
 };
 
+const SAFE_TOP =
+  Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 5 : 5;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -322,9 +338,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 60,
+    paddingTop: SAFE_TOP,
     paddingBottom: 30,
     paddingHorizontal: 24,
+  },
+  backButton: {
+    marginBottom: 10,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
   },
   titleSection: {
     marginBottom: 20,

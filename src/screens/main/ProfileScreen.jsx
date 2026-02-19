@@ -32,8 +32,8 @@ const ProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
 
-  const [pastTrip, setPastTrip] = useState(null);
-  const [nextTrip, setNextTrip] = useState(null);
+  const [pastTrips, setPastTrips] = useState([]);
+  const [nextTrips, setNextTrips] = useState([]);
   const [tripsLoading, setTripsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -41,8 +41,8 @@ const ProfileScreen = ({ navigation }) => {
     try {
       const response = await api.get(PROPERTY.MY_TRIPS);
       if (response.data?.success) {
-        setPastTrip(response.data.past_trip || null);
-        setNextTrip(response.data.next_trip || null);
+        setPastTrips(response.data.past_trips || []);
+        setNextTrips(response.data.next_trips || []);
       }
     } catch (error) {
       console.log('Fetch trips error:', error);
@@ -111,7 +111,7 @@ const ProfileScreen = ({ navigation }) => {
     ]);
   };
 
-  const renderTripSection = (title, trip) => (
+  const renderTripSection = (title, trips) => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {tripsLoading ? (
@@ -120,20 +120,23 @@ const ProfileScreen = ({ navigation }) => {
           color={Colors.primary}
           style={styles.loader}
         />
-      ) : trip ? (
-        <TripCard
-          image={getTripImage(trip.property?.thumbnail)}
-          title={trip.property?.name || 'Property'}
-          location={trip.property?.location || ''}
-          checkIn={formatDate(trip.check_in)}
-          checkOut={formatDate(trip.check_out)}
-          onPress={() =>
-            trip.property?.id &&
-            navigation.navigate(Screens.PropertyDetail, {
-              propertyId: trip.property.id,
-            })
-          }
-        />
+      ) : trips.length > 0 ? (
+        trips.map(trip => (
+          <TripCard
+            key={trip.id}
+            image={getTripImage(trip.property?.thumbnail)}
+            title={trip.property?.name || 'Property'}
+            location={trip.property?.location || ''}
+            checkIn={formatDate(trip.check_in)}
+            checkOut={formatDate(trip.check_out)}
+            onPress={() =>
+              trip.property?.id &&
+              navigation.navigate(Screens.PropertyDetail, {
+                propertyId: trip.property.id,
+              })
+            }
+          />
+        ))
       ) : (
         <Text style={styles.emptyText}>No {title.toLowerCase()} yet</Text>
       )}
@@ -195,8 +198,8 @@ const ProfileScreen = ({ navigation }) => {
           <Text style={styles.profileEmail}>{displayEmail}</Text>
         </View>
 
-        {renderTripSection('Past Trips', pastTrip)}
-        {renderTripSection('Next Trips', nextTrip)}
+        {renderTripSection('Past Trips', pastTrips)}
+        {renderTripSection('Next Trips', nextTrips)}
 
         <View style={styles.spacer} />
 

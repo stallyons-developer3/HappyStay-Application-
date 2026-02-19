@@ -62,6 +62,7 @@ export const SUPPORT = {
 export const NOTIFICATION = {
   GET_ALL: '/notifications',
   READ_ALL: '/notifications/read-all',
+  READ_SINGLE: id => `/notifications/${id}/read`,
 };
 
 export const POST = {

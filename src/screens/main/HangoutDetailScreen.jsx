@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { Shadow } from 'react-native-shadow-2';
 import { useSelector } from 'react-redux';
@@ -79,7 +81,30 @@ const HangoutDetailScreen = ({ navigation, route }) => {
   const [isSending, setIsSending] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
+  const scrollViewRef = React.useRef(null);
+  const [keyboardHeight, setKeyboardHeight] = React.useState(0);
+
   const isOwner = hangout?.user?.id === user?.id;
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, e => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     fetchHangoutDetail();
@@ -224,6 +249,7 @@ const HangoutDetailScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -448,7 +474,13 @@ const HangoutDetailScreen = ({ navigation, route }) => {
         </View>
       </ScrollView>
 
-      <View style={styles.commentInputContainer}>
+      <View
+        style={[
+          styles.commentInputContainer,
+          Platform.OS === 'android' &&
+            keyboardHeight > 0 && { paddingBottom: keyboardHeight + 16 },
+        ]}
+      >
         <Shadow
           distance={8}
           startColor="rgba(0, 0, 0, 0.06)"
@@ -491,7 +523,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -821,10 +853,6 @@ const styles = StyleSheet.create({
     color: '#23232380',
   },
   commentInputContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,

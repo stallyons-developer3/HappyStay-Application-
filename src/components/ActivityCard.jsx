@@ -26,6 +26,8 @@ const ActivityCard = ({
   const imageSource =
     typeof image === 'string' ? { uri: image } : image || defaultImage;
 
+  const displayValue = val => (val && val.trim() !== '' ? val : '–');
+
   return (
     <TouchableOpacity
       style={styles.container}
@@ -46,32 +48,36 @@ const ActivityCard = ({
           {description}
         </Text>
 
-        <View style={styles.infoRow}>
-          <View style={styles.infoItem}>
-            <Image
-              source={require('../assets/images/icons/clock.png')}
-              style={styles.infoIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.infoText}>{time}</Text>
+        <View style={styles.infoSection}>
+          <View style={styles.infoTopRow}>
+            <View style={styles.infoItem}>
+              <Image
+                source={require('../assets/images/icons/clock.png')}
+                style={styles.infoIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.infoText}>{displayValue(time)}</Text>
+            </View>
+
+            <View style={styles.infoItem}>
+              <Image
+                source={require('../assets/images/icons/calendar-small.png')}
+                style={styles.infoIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.infoText}>{displayValue(date)}</Text>
+            </View>
           </View>
 
-          <View style={styles.infoItem}>
-            <Image
-              source={require('../assets/images/icons/calendar-small.png')}
-              style={styles.infoIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.infoText}>{date}</Text>
-          </View>
-
-          <View style={styles.infoItem}>
+          <View style={styles.infoLocationRow}>
             <Image
               source={require('../assets/images/icons/map-pin.png')}
-              style={styles.infoIcon}
+              style={[styles.infoIcon, { marginTop: 2 }]}
               resizeMode="contain"
             />
-            <Text style={styles.infoText}>{location}</Text>
+            <Text style={styles.locationText} numberOfLines={2}>
+              {displayValue(location)}
+            </Text>
           </View>
 
           <TouchableOpacity
@@ -143,15 +149,21 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 12,
   },
-  infoRow: {
+  infoSection: {
+    gap: 6,
+  },
+  infoTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 12,
+  },
+  infoLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   infoIcon: {
     width: 14,
@@ -163,6 +175,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textGray,
+  },
+  locationText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.textGray,
+    flex: 1,
   },
   mapButton: {
     flexDirection: 'row',

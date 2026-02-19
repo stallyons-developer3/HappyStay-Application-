@@ -4,6 +4,14 @@ import { Colors, Fonts } from '../constants/Constants';
 import AvatarStack from './common/AvatarStack';
 import Button from './common/Button';
 
+const formatTypology = value => {
+  if (!value) return '';
+  return value
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 const HangoutCard = ({
   profileImage,
   name,
@@ -105,7 +113,7 @@ const HangoutCard = ({
         )}
       </View>
 
-      <Text style={styles.activityType}>{activityType}</Text>
+      <Text style={styles.activityType}>{formatTypology(activityType)}</Text>
 
       <Text style={styles.description} numberOfLines={3}>
         {description}

@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { Shadow } from 'react-native-shadow-2';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
@@ -44,6 +46,14 @@ const getInitial = name => {
   return name.charAt(0).toUpperCase();
 };
 
+const formatTypology = value => {
+  if (!value) return '';
+  return value
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 const ActivityDetailScreen = ({ navigation, route }) => {
   const { activityId } = route.params || {};
 
@@ -53,6 +63,29 @@ const ActivityDetailScreen = ({ navigation, route }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+
+  const scrollViewRef = React.useRef(null);
+  const [keyboardHeight, setKeyboardHeight] = React.useState(0);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, e => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     fetchActivityDetail();
@@ -119,6 +152,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
   const getJoinButtonText = () => {
     if (isJoining) return 'Sending...';
     if (!activity) return 'Request to Join';
+    if (!activity.is_private) return 'Public Activity';
     switch (activity.user_request_status) {
       case 'pending':
         return 'Request Pending';
@@ -133,6 +167,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
 
   const isJoinDisabled =
     isJoining ||
+    !activity?.is_private ||
     activity?.user_request_status === 'pending' ||
     activity?.user_request_status === 'accepted';
 
@@ -171,6 +206,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -196,38 +232,40 @@ const ActivityDetailScreen = ({ navigation, route }) => {
 
         <View style={styles.content}>
           <View style={styles.titleRow}>
-            <View style={styles.titleLeft}>
-              <Text style={styles.title}>{activity.title}</Text>
-
-              {activity.location && (
-                <View style={styles.infoItem}>
-                  <Image
-                    source={require('../../assets/images/icons/map-pin.png')}
-                    style={styles.infoIcon}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.infoText}>{activity.location}</Text>
-                </View>
-              )}
-
-              {ageRange && (
-                <View style={styles.infoItem}>
-                  <Image
-                    source={require('../../assets/images/icons/users.png')}
-                    style={styles.infoIcon}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.infoText}>{ageRange}</Text>
-                </View>
-              )}
-            </View>
+            <Text style={styles.title}>{activity.title}</Text>
 
             {activity.typology && (
               <View style={styles.categoryTag}>
-                <Text style={styles.categoryText}>{activity.typology}</Text>
+                <Text style={styles.categoryText}>
+                  {formatTypology(activity.typology)}
+                </Text>
               </View>
             )}
           </View>
+
+          {activity.location && (
+            <View style={styles.locationRow}>
+              <Image
+                source={require('../../assets/images/icons/map-pin.png')}
+                style={[styles.infoIcon, { marginTop: 2 }]}
+                resizeMode="contain"
+              />
+              <Text style={styles.locationText} numberOfLines={2}>
+                {activity.location}
+              </Text>
+            </View>
+          )}
+
+          {ageRange && (
+            <View style={[styles.infoItem, { marginBottom: 12 }]}>
+              <Image
+                source={require('../../assets/images/icons/users.png')}
+                style={styles.infoIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.infoText}>{ageRange}</Text>
+            </View>
+          )}
 
           <View style={styles.timeRow}>
             {timeDisplay ? (
@@ -345,7 +383,13 @@ const ActivityDetailScreen = ({ navigation, route }) => {
         </View>
       </ScrollView>
 
-      <View style={styles.commentInputContainer}>
+      <View
+        style={[
+          styles.commentInputContainer,
+          Platform.OS === 'android' &&
+            keyboardHeight > 0 && { paddingBottom: keyboardHeight + 16 },
+        ]}
+      >
         <Shadow
           distance={8}
           startColor="rgba(0, 0, 0, 0.06)"
@@ -388,7 +432,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -434,19 +478,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  titleLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    flex: 1,
+    marginBottom: 8,
   },
   title: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.primary,
+    flex: 1,
     marginRight: 12,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  locationText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.textGray,
+    flex: 1,
   },
   infoItem: {
     flexDirection: 'row',
@@ -610,10 +660,6 @@ const styles = StyleSheet.create({
     color: '#23232380',
   },
   commentInputContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
