@@ -33,6 +33,9 @@ const formatDate = dateStr => {
 
 const formatTime = timeStr => {
   if (!timeStr) return '';
+  // If already has AM/PM, return as-is
+  if (/am|pm/i.test(timeStr)) return timeStr.trim();
+  // Otherwise parse HH:MM and add AM/PM
   const parts = timeStr.split(':');
   let hours = parseInt(parts[0], 10);
   const mins = parts[1] || '00';

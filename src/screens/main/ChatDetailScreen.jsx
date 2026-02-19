@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
   Platform,
   Keyboard,
+  Modal,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { Shadow } from 'react-native-shadow-2';
@@ -27,6 +28,7 @@ import { useBadgeCounts } from '../../context/BadgeContext';
 
 const { width } = Dimensions.get('window');
 const INPUT_WIDTH = width - 40 - 48 - 12;
+const INACTIVITY_TIMEOUT = 60000; // 1 minute
 
 const ChatDetailScreen = ({ navigation, route }) => {
   const {
@@ -76,16 +78,64 @@ const ChatDetailScreen = ({ navigation, route }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [showEndChatModal, setShowEndChatModal] = useState(false);
+  const [isBotActive, setIsBotActive] = useState(true);
   const scrollViewRef = useRef(null);
   const messageIdsRef = useRef(new Set());
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const inactivityTimerRef = useRef(null);
+  const isBotActiveRef = useRef(true);
+
+  // Keep ref in sync with state (for use inside callbacks/timeouts)
+  useEffect(() => {
+    isBotActiveRef.current = isBotActive;
+  }, [isBotActive]);
+
+  // ========== INACTIVITY TIMER (Support chat only, when bot is OFF) ==========
+  const clearInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
+    }
+  }, []);
+
+  const resetInactivityTimer = useCallback(() => {
+    clearInactivityTimer();
+    // Only start timer if this is support chat AND bot is OFF (admin is chatting)
+    if (isSupport && !isBotActiveRef.current) {
+      inactivityTimerRef.current = setTimeout(() => {
+        setShowEndChatModal(true);
+      }, INACTIVITY_TIMEOUT);
+    }
+  }, [isSupport, clearInactivityTimer]);
+
+  const handleContinueChat = useCallback(() => {
+    setShowEndChatModal(false);
+    resetInactivityTimer();
+  }, [resetInactivityTimer]);
+
+  const handleEndChat = useCallback(async () => {
+    setShowEndChatModal(false);
+    clearInactivityTimer();
+    // Call API to reactivate bot
+    try {
+      await api.post(SUPPORT.END_CHAT);
+      setIsBotActive(true);
+      isBotActiveRef.current = true;
+    } catch (error) {
+      console.log('End chat error:', error);
+    }
+  }, [clearInactivityTimer]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => clearInactivityTimer();
+  }, [clearInactivityTimer]);
 
   useEffect(() => {
-    const showEvent =
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent =
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, e => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e) => {
       setKeyboardHeight(e.endCoordinates.height);
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -124,6 +174,15 @@ const ChatDetailScreen = ({ navigation, route }) => {
           const ids = new Set();
           msgs.forEach(m => ids.add(m.id));
           messageIdsRef.current = ids;
+
+          // Track bot status from API response
+          const botActive = response.data.is_bot_active !== false;
+          setIsBotActive(botActive);
+          isBotActiveRef.current = botActive;
+          // If bot is OFF (admin is chatting), start inactivity timer
+          if (!botActive) {
+            resetInactivityTimer();
+          }
         }
       } else {
         const endpoint = isActivityChat
@@ -171,6 +230,12 @@ const ChatDetailScreen = ({ navigation, route }) => {
       };
       messageIdsRef.current.add(msgId);
       setMessages(prev => [...prev, newMessage]);
+
+      // If we receive a non-bot message from support/admin, bot is OFF
+      if (!newMessage.is_bot) {
+        setIsBotActive(false);
+        isBotActiveRef.current = false;
+      }
     } else {
       if (String(msg.user?.id) === String(user?.id)) return;
       messageIdsRef.current.add(msgId);
@@ -180,6 +245,8 @@ const ChatDetailScreen = ({ navigation, route }) => {
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 100);
+    // Reset inactivity timer on new message received
+    resetInactivityTimer();
   };
 
   const getCurrentTime = () => {
@@ -256,6 +323,12 @@ const ChatDetailScreen = ({ navigation, route }) => {
             setMessages(prev => [...prev, botMsg]);
           }
         }
+        // Track bot status from response (may change after escalation)
+        if (response.data?.is_bot_active !== undefined) {
+          const newBotActive = response.data.is_bot_active;
+          setIsBotActive(newBotActive);
+          isBotActiveRef.current = newBotActive;
+        }
       } else {
         const endpoint = isActivityChat
           ? ACTIVITY.SEND_CHAT(groupId)
@@ -273,6 +346,8 @@ const ChatDetailScreen = ({ navigation, route }) => {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 150);
+      // Reset inactivity timer after sending message
+      resetInactivityTimer();
     } catch (error) {
       setMessages(prev => prev.filter(m => m.id !== tempId));
       setMessage(text);
@@ -430,99 +505,131 @@ const ChatDetailScreen = ({ navigation, route }) => {
           <Text style={styles.headerTitle} numberOfLines={1}>
             {headerTitle}
           </Text>
-          <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
-        </View>
-      </View>
-
-      <View style={{ flex: 1 }}>
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-          </View>
-        ) : (
-          <ScrollView
-            ref={scrollViewRef}
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            onContentSizeChange={() =>
-              scrollViewRef.current?.scrollToEnd({ animated: true })
-            }
-          >
-            {messages.length === 0 && (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>
-                  {isSupport
-                    ? 'Start a conversation with support'
-                    : 'No messages yet. Start the conversation!'}
-                </Text>
-              </View>
-            )}
-
+          <Text style={styles.headerSubtitle}>
             {isSupport
-              ? messages.map(msg => (
-                  <ChatBubble
-                    key={`msg-${msg.id}`}
-                    message={msg.message}
-                    time={msg.time || ''}
-                    isSent={msg.is_mine}
-                  />
-                ))
-              : renderGroupMessages()}
-
-            {isSupport && isSending && (
-              <View style={styles.typingContainer}>
-                <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.typingText}>Support is typing...</Text>
-              </View>
-            )}
-          </ScrollView>
-        )}
-
-        <View
-          style={[
-            styles.inputContainer,
-            Platform.OS === 'android' &&
-              keyboardHeight > 0 && { paddingBottom: keyboardHeight + 16 },
-          ]}
-        >
-          <Shadow
-            distance={8}
-            startColor="rgba(0, 0, 0, 0.06)"
-            endColor="rgba(0, 0, 0, 0)"
-            offset={[0, 0]}
-          >
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Message"
-                placeholderTextColor={Colors.textLight}
-                value={message}
-                onChangeText={setMessage}
-                multiline
-                editable={!isSending}
-              />
-            </View>
-          </Shadow>
-
-          <TouchableOpacity
-            style={[styles.sendButton, isSending && { opacity: 0.5 }]}
-            onPress={handleSend}
-            activeOpacity={0.8}
-            disabled={isSending}
-          >
-            {isSending ? (
-              <ActivityIndicator size="small" color={Colors.white} />
-            ) : (
-              <Image
-                source={require('../../assets/images/icons/send.png')}
-                style={styles.sendIcon}
-                resizeMode="contain"
-              />
-            )}
-          </TouchableOpacity>
+              ? isBotActive ? 'Bot' : 'Live Support'
+              : headerSubtitle}
+          </Text>
         </View>
       </View>
+
+      <View style={{flex: 1}}>
+        {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          onContentSizeChange={() =>
+            scrollViewRef.current?.scrollToEnd({ animated: true })
+          }
+        >
+          {messages.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {isSupport
+                  ? 'Start a conversation with support'
+                  : 'No messages yet. Start the conversation!'}
+              </Text>
+            </View>
+          )}
+
+          {isSupport
+            ? messages.map(msg => (
+                <ChatBubble
+                  key={`msg-${msg.id}`}
+                  message={msg.message}
+                  time={formatTime(msg.created_at)}
+                  isSent={msg.is_mine}
+                />
+              ))
+            : renderGroupMessages()}
+
+          {isSupport && isSending && (
+            <View style={styles.typingContainer}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={styles.typingText}>Support is typing...</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      <View style={[styles.inputContainer, Platform.OS === 'android' && keyboardHeight > 0 && { paddingBottom: keyboardHeight + 16 }]}>
+        <Shadow
+          distance={8}
+          startColor="rgba(0, 0, 0, 0.06)"
+          endColor="rgba(0, 0, 0, 0)"
+          offset={[0, 0]}
+        >
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Message"
+              placeholderTextColor={Colors.textLight}
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              editable={!isSending}
+            />
+          </View>
+        </Shadow>
+
+        <TouchableOpacity
+          style={[styles.sendButton, isSending && { opacity: 0.5 }]}
+          onPress={handleSend}
+          activeOpacity={0.8}
+          disabled={isSending}
+        >
+          {isSending ? (
+            <ActivityIndicator size="small" color={Colors.white} />
+          ) : (
+            <Image
+              source={require('../../assets/images/icons/send.png')}
+              style={styles.sendIcon}
+              resizeMode="contain"
+            />
+          )}
+        </TouchableOpacity>
+      </View>
+      </View>
+
+      {/* End Chat Inactivity Modal (Support only) */}
+      <Modal
+        visible={showEndChatModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleContinueChat}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalEmoji}>💬</Text>
+            <Text style={styles.modalTitle}>Chat Inactive</Text>
+            <Text style={styles.modalDescription}>
+              No new messages for a while. Would you like to end this live support session and switch back to the bot?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalContinueButton}
+                onPress={handleContinueChat}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalContinueText}>Continue</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalEndButton}
+                onPress={handleEndChat}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalEndText}>End Chat</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -740,6 +847,73 @@ const styles = StyleSheet.create({
   },
   msgTimeMine: {
     color: 'rgba(255,255,255,0.7)',
+  },
+  // End Chat Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  modalContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    paddingVertical: 30,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalEmoji: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 18,
+    color: Colors.textBlack,
+    marginBottom: 8,
+  },
+  modalDescription: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalContinueButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  modalContinueText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: '#374151',
+  },
+  modalEndButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+  },
+  modalEndText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.white,
   },
 });
 

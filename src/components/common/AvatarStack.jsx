@@ -2,10 +2,7 @@ import React from 'react';
 import { View, Image, Text, StyleSheet } from 'react-native';
 import { Colors, Fonts } from '../../constants/Constants';
 
-const getInitial = name => {
-  if (!name) return '?';
-  return name.charAt(0).toUpperCase();
-};
+const defaultProfileImage = require('../../assets/images/profile.png');
 
 const AvatarStack = ({
   images = [],
@@ -24,7 +21,6 @@ const AvatarStack = ({
           : typeof item === 'string'
           ? item
           : null;
-        const name = isObject ? item.name : null;
         const hasImage = imageUrl && imageUrl !== null;
 
         return (
@@ -41,37 +37,24 @@ const AvatarStack = ({
               },
             ]}
           >
-            {hasImage ? (
-              <Image
-                source={
-                  typeof imageUrl === 'string' ? { uri: imageUrl } : imageUrl
-                }
-                style={[
-                  styles.avatar,
-                  {
-                    width: size - 4,
-                    height: size - 4,
-                    borderRadius: (size - 4) / 2,
-                  },
-                ]}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={[
-                  styles.initialCircle,
-                  {
-                    width: size - 4,
-                    height: size - 4,
-                    borderRadius: (size - 4) / 2,
-                  },
-                ]}
-              >
-                <Text style={[styles.initialText, { fontSize: size * 0.35 }]}>
-                  {getInitial(name)}
-                </Text>
-              </View>
-            )}
+            <Image
+              source={
+                hasImage
+                  ? typeof imageUrl === 'string'
+                    ? { uri: imageUrl }
+                    : imageUrl
+                  : defaultProfileImage
+              }
+              style={[
+                styles.avatar,
+                {
+                  width: size - 4,
+                  height: size - 4,
+                  borderRadius: (size - 4) / 2,
+                },
+              ]}
+              resizeMode="cover"
+            />
           </View>
         );
       })}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   ScrollView,
@@ -74,9 +75,11 @@ const HomeScreen = ({ navigation }) => {
   const [activeFilters, setActiveFilters] = useState({});
   const [filtering, setFiltering] = useState(false);
 
-  useEffect(() => {
-    dispatch(fetchHomeData());
-  }, [dispatch]);
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(fetchHomeData());
+    }, [dispatch])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -241,6 +244,8 @@ const HomeScreen = ({ navigation }) => {
                   description={h.description}
                   peopleCount={h.joined_count || 0}
                   peopleImages={peopleData}
+                  isOwner={h.user?.id === user?.id}
+                  isPublic={!h.is_private}
                   onPress={() =>
                     navigation.navigate(Screens.HangoutDetail, {
                       hangoutId: h.id,
@@ -249,6 +254,12 @@ const HomeScreen = ({ navigation }) => {
                   onJoinPress={() =>
                     navigation.navigate(Screens.HangoutDetail, {
                       hangoutId: h.id,
+                    })
+                  }
+                  onChatPress={() =>
+                    navigation.navigate(Screens.ChatDetail, {
+                      hangoutId: h.id,
+                      title: h.title,
                     })
                   }
                 />

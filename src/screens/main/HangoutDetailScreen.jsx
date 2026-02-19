@@ -25,6 +25,9 @@ const INPUT_WIDTH = width - 40 - 48 - 12;
 
 const formatTime = timeStr => {
   if (!timeStr) return '';
+  // If already has AM/PM, return as-is
+  if (/am|pm/i.test(timeStr)) return timeStr.trim();
+  // Otherwise parse HH:MM and add AM/PM
   const parts = timeStr.split(':');
   let hours = parseInt(parts[0], 10);
   const mins = parts[1] || '00';
@@ -85,6 +88,7 @@ const HangoutDetailScreen = ({ navigation, route }) => {
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
 
   const isOwner = hangout?.user?.id === user?.id;
+  const isPublic = hangout ? !hangout.is_private : false;
 
   useEffect(() => {
     const showEvent =
@@ -287,31 +291,9 @@ const HangoutDetailScreen = ({ navigation, route }) => {
 
         <View style={styles.content}>
           <View style={styles.titleRow}>
-            <View style={styles.titleLeft}>
-              <Text style={styles.title}>{hangout.title}</Text>
-
-              {hangout.location && (
-                <View style={styles.infoItem}>
-                  <Image
-                    source={require('../../assets/images/icons/map-pin.png')}
-                    style={styles.infoIcon}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.infoText}>{hangout.location}</Text>
-                </View>
-              )}
-
-              {ageRange && (
-                <View style={styles.infoItem}>
-                  <Image
-                    source={require('../../assets/images/icons/users.png')}
-                    style={styles.infoIcon}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.infoText}>{ageRange}</Text>
-                </View>
-              )}
-            </View>
+            <Text style={styles.title} numberOfLines={2}>
+              {hangout.title}
+            </Text>
 
             {hangout.typology && (
               <View style={styles.categoryTag}>
@@ -319,6 +301,30 @@ const HangoutDetailScreen = ({ navigation, route }) => {
               </View>
             )}
           </View>
+
+          {hangout.location && (
+            <View style={styles.infoItem}>
+              <Image
+                source={require('../../assets/images/icons/map-pin.png')}
+                style={styles.infoIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.infoText} numberOfLines={2}>
+                {hangout.location}
+              </Text>
+            </View>
+          )}
+
+          {ageRange && (
+            <View style={styles.infoItem}>
+              <Image
+                source={require('../../assets/images/icons/users.png')}
+                style={styles.infoIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.infoText}>{ageRange}</Text>
+            </View>
+          )}
 
           <View style={styles.timeRow}>
             {hangout.time && (
@@ -353,24 +359,27 @@ const HangoutDetailScreen = ({ navigation, route }) => {
           ) : null}
 
           <Text style={styles.peopleJoined}>
-            {hangout.joined_count || 0} People Joined
+            {hangout.joined_count || 0}{' '}
+            {(hangout.joined_count || 0) === 1 ? 'Person' : 'People'} Joined
           </Text>
 
           <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[
-                styles.joinButton,
-                isJoinDisabled && styles.disabledButton,
-              ]}
-              activeOpacity={0.8}
-              onPress={handleJoinRequest}
-              disabled={isJoinDisabled}
-            >
-              <Text style={styles.joinButtonText}>{getJoinButtonText()}</Text>
-            </TouchableOpacity>
+            {!isOwner && !isPublic && (
+              <TouchableOpacity
+                style={[
+                  styles.joinButton,
+                  isJoinDisabled && styles.disabledButton,
+                ]}
+                activeOpacity={0.8}
+                onPress={handleJoinRequest}
+                disabled={isJoinDisabled}
+              >
+                <Text style={styles.joinButtonText}>{getJoinButtonText()}</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
-              style={styles.chatButton}
+              style={[styles.chatButton, (isOwner || isPublic) && { flex: 1 }]}
               activeOpacity={0.8}
               onPress={() =>
                 navigation.navigate(Screens.ChatDetail, {
@@ -379,7 +388,9 @@ const HangoutDetailScreen = ({ navigation, route }) => {
                 })
               }
             >
-              <Text style={styles.chatButtonText}>Join Chat</Text>
+              <Text style={styles.chatButtonText}>
+                {isOwner ? 'Chat' : 'Join Chat'}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -600,32 +611,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  titleLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    flex: 1,
-  },
   title: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.primary,
+    flex: 1,
     marginRight: 12,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 10,
+    marginBottom: 8,
   },
   infoIcon: {
-    width: 14,
-    height: 14,
-    marginRight: 4,
+    width: 16,
+    height: 16,
+    tintColor: Colors.primary,
+    marginRight: 6,
   },
   infoText: {
     fontFamily: Fonts.RobotoRegular,
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textGray,
+    flex: 1,
   },
   categoryTag: {
     backgroundColor: Colors.primary,

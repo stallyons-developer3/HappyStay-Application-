@@ -178,8 +178,10 @@ const MapScreen = ({ navigation }) => {
       <script>
         var map = L.map('map', { zoomControl: false }).setView([24.8607, 67.0011], 12);
         
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap'
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '© OpenStreetMap © CARTO',
+          subdomains: 'abcd',
+          maxZoom: 19
         }).addTo(map);
         
         L.control.zoom({ position: 'bottomright' }).addTo(map);

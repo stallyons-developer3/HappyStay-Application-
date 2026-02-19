@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   ScrollView,
@@ -62,10 +63,6 @@ const ActivitiesScreen = ({ navigation }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [activeFilters, setActiveFilters] = useState({});
 
-  useEffect(() => {
-    fetchActivities({});
-  }, []);
-
   const fetchActivities = async (params = {}) => {
     try {
       const queryParams = new URLSearchParams();
@@ -87,6 +84,12 @@ const ActivitiesScreen = ({ navigation }) => {
       setIsLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchActivities({});
+    }, [])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

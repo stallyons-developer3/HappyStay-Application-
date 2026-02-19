@@ -195,9 +195,17 @@ const ManageScreen = ({ navigation }) => {
                 peopleCount={hangout.joined_count || 0}
                 peopleImages={peopleData}
                 showMenu={true}
+                isOwner={true}
+                isPublic={!hangout.is_private}
                 onPress={() =>
                   navigation.navigate(Screens.HangoutDetail, {
                     hangoutId: hangout.id,
+                  })
+                }
+                onChatPress={() =>
+                  navigation.navigate(Screens.ChatDetail, {
+                    hangoutId: hangout.id,
+                    title: hangout.title,
                   })
                 }
                 onJoinPress={() =>

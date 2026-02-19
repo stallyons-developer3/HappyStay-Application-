@@ -57,6 +57,8 @@ export const SUPPORT = {
   GET_MESSAGES: '/support/messages',
   SEND_MESSAGE: '/support/send',
   UNREAD_COUNT: '/support/unread-count',
+  BOT_STATUS: '/support/bot-status',
+  END_CHAT: '/support/end-chat',
 };
 
 export const NOTIFICATION = {

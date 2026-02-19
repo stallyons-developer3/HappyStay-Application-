@@ -147,7 +147,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
 
   const reverseGeocode = async (lat, lng) => {
     try {
-      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`;
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1&accept-language=en`;
       const response = await fetch(url, {
         headers: { 'User-Agent': 'HappyStay-App' },
       });
@@ -187,8 +187,10 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       <div id="map"></div>
       <script>
         var map = L.map('map').setView([${markerPosition.latitude}, ${markerPosition.longitude}], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap'
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '© OpenStreetMap © CARTO',
+          subdomains: 'abcd',
+          maxZoom: 19
         }).addTo(map);
         var marker = L.marker([${markerPosition.latitude}, ${markerPosition.longitude}]).addTo(map);
         map.on('click', function(e) {
@@ -484,6 +486,11 @@ const CreateHangoutScreen = ({ navigation, route }) => {
             onPress={() => setShowDatePicker(true)}
           >
             <Text style={styles.dateTimeText}>{formatDateDisplay(date)}</Text>
+            <Image
+              source={require('../../assets/images/icons/calendar-small.png')}
+              style={styles.dateTimeIcon}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
         </View>
 
@@ -495,6 +502,11 @@ const CreateHangoutScreen = ({ navigation, route }) => {
             onPress={() => setShowTimePicker(true)}
           >
             <Text style={styles.dateTimeText}>{formatTimeDisplay(time)}</Text>
+            <Image
+              source={require('../../assets/images/icons/clock.png')}
+              style={styles.dateTimeIcon}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -822,6 +834,9 @@ const styles = StyleSheet.create({
     flex: 0.5,
   },
   dateTimeInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1.5,
     borderColor: '#00000050',
     borderRadius: 30,
@@ -829,7 +844,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginBottom: 20,
     minHeight: 50,
-    justifyContent: 'center',
+  },
+  dateTimeIcon: {
+    width: 18,
+    height: 18,
+    tintColor: Colors.textGray,
+    marginLeft: 8,
   },
   dateTimeText: {
     fontFamily: Fonts.RobotoRegular,

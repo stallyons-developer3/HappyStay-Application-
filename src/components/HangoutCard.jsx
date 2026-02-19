@@ -21,6 +21,9 @@ const HangoutCard = ({
   peopleImages = [],
   onPress,
   onJoinPress,
+  onChatPress,
+  isOwner = false,
+  isPublic = false,
   showMenu = false,
   onEditPress,
   onDeletePress,
@@ -119,7 +122,9 @@ const HangoutCard = ({
         {description}
       </Text>
 
-      <Text style={styles.peopleCount}>{peopleCount} peoples</Text>
+      <Text style={styles.peopleCount}>
+        {peopleCount} {peopleCount === 1 ? 'person' : 'people'}
+      </Text>
 
       <View style={styles.avatarSection}>
         <AvatarStack
@@ -130,7 +135,11 @@ const HangoutCard = ({
         />
       </View>
 
-      <Button title="Request to Join" size="full" onPress={onJoinPress} />
+      {isOwner || isPublic ? (
+        <Button title="Chat" size="full" onPress={onChatPress} />
+      ) : (
+        <Button title="Request to Join" size="full" onPress={onJoinPress} />
+      )}
     </TouchableOpacity>
   );
 };

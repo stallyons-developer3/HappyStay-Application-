@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   ScrollView,
@@ -31,10 +32,6 @@ const HangoutsScreen = ({ navigation }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [activeFilters, setActiveFilters] = useState({});
 
-  useEffect(() => {
-    fetchHangouts({});
-  }, []);
-
   const fetchHangouts = async (params = {}) => {
     try {
       const queryParams = new URLSearchParams();
@@ -56,6 +53,12 @@ const HangoutsScreen = ({ navigation }) => {
       setIsLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchHangouts({});
+    }, [])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -154,6 +157,8 @@ const HangoutsScreen = ({ navigation }) => {
                   description={hangout.description}
                   peopleCount={hangout.joined_count || 0}
                   peopleImages={peopleData}
+                  isOwner={hangout.user?.id === user?.id}
+                  isPublic={!hangout.is_private}
                   onPress={() =>
                     navigation.navigate(Screens.HangoutDetail, {
                       hangoutId: hangout.id,
@@ -162,6 +167,12 @@ const HangoutsScreen = ({ navigation }) => {
                   onJoinPress={() =>
                     navigation.navigate(Screens.HangoutDetail, {
                       hangoutId: hangout.id,
+                    })
+                  }
+                  onChatPress={() =>
+                    navigation.navigate(Screens.ChatDetail, {
+                      hangoutId: hangout.id,
+                      title: hangout.title,
                     })
                   }
                 />
