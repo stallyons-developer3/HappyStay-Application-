@@ -11,7 +11,6 @@ import {
   Platform,
   Modal,
   Animated,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -23,6 +22,7 @@ import { PROFILE, STORAGE_URL } from '../../api/endpoints';
 import { setUser } from '../../store/slices/authSlice';
 import { saveUserData } from '../../utils/storage';
 import ImagePicker from 'react-native-image-crop-picker';
+import { useToast } from '../../context/ToastContext';
 
 const countries = [
   { id: '1', name: 'Indonesia', flag: '🇮🇩' },
@@ -54,6 +54,7 @@ const genderOptions = [
 ];
 
 const EditProfileScreen = ({ navigation }) => {
+  const { showToast } = useToast();
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
 
@@ -168,14 +169,14 @@ const EditProfileScreen = ({ navigation }) => {
       })
       .catch(err => {
         if (err?.code !== 'E_PICKER_CANCELLED') {
-          Alert.alert('Error', 'Failed to pick image');
+          showToast('error', 'Failed to pick image');
         }
       });
   };
 
   const handleSave = async () => {
     if (!firstName.trim() || !lastName.trim() || !userName.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields.');
+      showToast('error', 'Please fill in all required fields.');
       return;
     }
 
@@ -207,16 +208,14 @@ const EditProfileScreen = ({ navigation }) => {
         const updatedUser = response.data.user;
         dispatch(setUser(updatedUser));
         await saveUserData(updatedUser);
-        Alert.alert('Success', 'Profile updated successfully!', [
-          { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        showToast('success', 'Profile updated successfully!'); setTimeout(() => navigation.goBack(), 1000);
       }
     } catch (error) {
       const errorMsg =
         error.response?.data?.errors?.[0] ||
         error.response?.data?.message ||
         'Failed to update profile.';
-      Alert.alert('Error', errorMsg);
+      showToast('error', errorMsg);
     } finally {
       setIsUpdating(false);
     }

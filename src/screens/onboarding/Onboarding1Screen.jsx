@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,15 @@ import {
   Platform,
   Modal,
   Animated,
-  Alert,
   StatusBar,
+  BackHandler,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useDispatch } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
 import { setOnboardingData } from '../../store/slices/onboardingSlice';
+import { useToast } from '../../context/ToastContext';
 
 const countries = [
   { id: '1', name: 'Indonesia', flag: '🇮🇩' },
@@ -45,6 +46,7 @@ const genders = [
 ];
 
 const Onboarding1Screen = ({ navigation, route }) => {
+  const { showToast } = useToast();
   const dispatch = useDispatch();
   const prefillUsername = route.params?.username || '';
 
@@ -57,6 +59,15 @@ const Onboarding1Screen = ({ navigation, route }) => {
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [date, setDate] = useState(new Date(1999, 9, 18));
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Block hardware back button
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => true,
+    );
+    return () => backHandler.remove();
+  }, []);
 
   const [scrollIndicator] = useState(new Animated.Value(0));
   const [contentHeight, setContentHeight] = useState(1);
@@ -104,23 +115,23 @@ const Onboarding1Screen = ({ navigation, route }) => {
 
   const handleContinue = () => {
     if (!firstName.trim()) {
-      Alert.alert('Error', 'Please enter your first name');
+      showToast('error', 'Please enter your first name');
       return;
     }
     if (!lastName.trim()) {
-      Alert.alert('Error', 'Please enter your last name');
+      showToast('error', 'Please enter your last name');
       return;
     }
     if (!userName.trim()) {
-      Alert.alert('Error', 'Please enter a username');
+      showToast('error', 'Please enter a username');
       return;
     }
     if (!selectedGender) {
-      Alert.alert('Error', 'Please select your gender');
+      showToast('error', 'Please select your gender');
       return;
     }
     if (!selectedCountry) {
-      Alert.alert('Error', 'Please select your nationality');
+      showToast('error', 'Please select your nationality');
       return;
     }
 
@@ -147,18 +158,6 @@ const Onboarding1Screen = ({ navigation, route }) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Image
-            source={require('../../assets/images/arrow-left.png')}
-            style={styles.backIcon}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-
         <Text style={styles.title}>Welcome! Let's get started</Text>
         <Text style={styles.subtitle}>
           Please provide the following information to{'\n'}

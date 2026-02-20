@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Modal,
   Platform,
-  Alert,
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
@@ -18,8 +17,10 @@ import TripCard from '../../components/TripCard';
 import Button from '../../components/common/Button';
 import api from '../../api/axiosInstance';
 import { PROPERTY } from '../../api/endpoints';
+import { useToast } from '../../context/ToastContext';
 
 const Onboarding4Screen = ({ navigation }) => {
+  const { showToast } = useToast();
   const [properties, setProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -86,10 +87,7 @@ const Onboarding4Screen = ({ navigation }) => {
 
   const handleRequestBooking = property => {
     if (property.user_request_status) {
-      Alert.alert(
-        'Already Requested',
-        `Status: ${property.user_request_status}`,
-      );
+      showToast('info', `Status: ${property.user_request_status}`);
       return;
     }
     setSelectedProperty(property);
@@ -102,11 +100,11 @@ const Onboarding4Screen = ({ navigation }) => {
 
   const handleBookNow = async () => {
     if (!checkInSelected || !checkOutSelected) {
-      Alert.alert('Error', 'Please select both check-in and check-out dates.');
+      showToast('error', 'Please select both check-in and check-out dates.');
       return;
     }
     if (checkOutDate <= checkInDate) {
-      Alert.alert('Error', 'Check-out date must be after check-in date.');
+      showToast('error', 'Check-out date must be after check-in date.');
       return;
     }
 
@@ -126,18 +124,15 @@ const Onboarding4Screen = ({ navigation }) => {
               : p,
           ),
         );
-        Alert.alert(
-          'Success',
-          response.data.message || 'Booking request sent!',
-          [{ text: 'OK', onPress: () => navigation.navigate('MainApp') }],
-        );
+        showToast('success', response.data.message || 'Booking request sent!');
+        setTimeout(() => navigation.replace('MainApp'), 1000);
       }
     } catch (error) {
       const errorMsg =
         error.response?.data?.message ||
         error.response?.data?.errors?.[0] ||
         'Failed to send booking request.';
-      Alert.alert('Error', errorMsg);
+      showToast('error', errorMsg);
     } finally {
       setIsBooking(false);
     }
@@ -158,7 +153,7 @@ const Onboarding4Screen = ({ navigation }) => {
   };
 
   const handleSkip = () => {
-    navigation.navigate('MainApp');
+    navigation.replace('MainApp');
   };
 
   return (

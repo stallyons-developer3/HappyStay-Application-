@@ -221,7 +221,14 @@ const HomeScreen = ({ navigation }) => {
                       })
                     }
                     onMapPress={() => {
-                      if (a.map_url) Linking.openURL(a.map_url);
+                      if (a.latitude && a.longitude) {
+                        navigation.navigate(Screens.LocationMap, {
+                          latitude: a.latitude,
+                          longitude: a.longitude,
+                          title: a.title,
+                          location: a.location,
+                        });
+                      }
                     }}
                   />
                 </View>

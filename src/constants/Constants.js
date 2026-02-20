@@ -62,6 +62,7 @@ export const Screens = {
 
   Notification: 'Notification',
   Map: 'Map',
+  LocationMap: 'LocationMap',
 };
 
 export default Colors;

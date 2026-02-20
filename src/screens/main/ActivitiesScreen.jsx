@@ -189,7 +189,14 @@ const ActivitiesScreen = ({ navigation }) => {
                   })
                 }
                 onMapPress={() => {
-                  if (activity.map_url) Linking.openURL(activity.map_url);
+                  if (activity.latitude && activity.longitude) {
+                    navigation.navigate(Screens.LocationMap, {
+                      latitude: activity.latitude,
+                      longitude: activity.longitude,
+                      title: activity.title,
+                      location: activity.location,
+                    });
+                  }
                 }}
               />
             ))

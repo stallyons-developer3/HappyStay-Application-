@@ -9,10 +9,10 @@ import {
   Modal,
   Platform,
   ActivityIndicator,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 
 // Components
@@ -23,11 +23,21 @@ import FloatingMapButton from '../../components/FloatingMapButton';
 
 // API
 import api from '../../api/axiosInstance';
-import { PROPERTY } from '../../api/endpoints';
+import { PROPERTY, STORAGE_URL } from '../../api/endpoints';
 import { useBadgeCounts } from '../../context/BadgeContext';
+import { useToast } from '../../context/ToastContext';
 
 const TripScreen = ({ navigation }) => {
+  const { showToast } = useToast();
   const { notificationCount } = useBadgeCounts();
+  const { user } = useSelector(state => state.auth);
+  const profileImage = user?.profile_picture
+    ? {
+        uri: user.profile_picture.startsWith('http')
+          ? user.profile_picture
+          : `${STORAGE_URL}/storage/${user.profile_picture}`,
+      }
+    : null;
   const [searchText, setSearchText] = useState('');
   const [properties, setProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -157,10 +167,7 @@ const TripScreen = ({ navigation }) => {
   // Open booking modal
   const handleRequestBooking = property => {
     if (property.user_request_status) {
-      Alert.alert(
-        'Already Requested',
-        `Your booking status: ${property.user_request_status}`,
-      );
+      showToast('info', `Your booking status: ${property.user_request_status}`);
       return;
     }
     setSelectedProperty(property);
@@ -174,12 +181,12 @@ const TripScreen = ({ navigation }) => {
   // Book Now - API call
   const handleBookNow = async () => {
     if (!checkInSelected || !checkOutSelected) {
-      Alert.alert('Error', 'Please select both check-in and check-out dates.');
+      showToast('error', 'Please select both check-in and check-out dates.');
       return;
     }
 
     if (checkOutDate <= checkInDate) {
-      Alert.alert('Error', 'Check-out date must be after check-in date.');
+      showToast('error', 'Check-out date must be after check-in date.');
       return;
     }
 
@@ -192,10 +199,7 @@ const TripScreen = ({ navigation }) => {
 
       if (response.data?.success) {
         setShowBookingModal(false);
-        Alert.alert(
-          'Success',
-          response.data.message || 'Booking request sent!',
-        );
+        showToast('success', response.data.message || 'Booking request sent!');
 
         // Update property status locally
         setProperties(prev =>
@@ -211,7 +215,7 @@ const TripScreen = ({ navigation }) => {
         error.response?.data?.message ||
         error.response?.data?.errors?.[0] ||
         'Failed to send booking request.';
-      Alert.alert('Error', errorMsg);
+      showToast('error', errorMsg);
     } finally {
       setIsBooking(false);
     }
@@ -253,9 +257,11 @@ const TripScreen = ({ navigation }) => {
           title="Trip"
           showGreeting={true}
           showBackIcon={true}
+          showProfile={true}
           onBackPress={() => navigation.goBack()}
           greeting="Select Your Trip"
           notificationCount={notificationCount}
+          profileImage={profileImage}
           onProfilePress={() => navigation.navigate(Screens.Profile)}
           onNotificationPress={() => navigation.navigate(Screens.Notification)}
         />

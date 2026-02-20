@@ -9,7 +9,6 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
   Keyboard,
@@ -19,6 +18,7 @@ import { useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { HANGOUT } from '../../api/endpoints';
+import { useToast } from '../../context/ToastContext';
 
 const { width } = Dimensions.get('window');
 const INPUT_WIDTH = width - 40 - 48 - 12;
@@ -73,6 +73,7 @@ const getTimeAgo = dateStr => {
 };
 
 const HangoutDetailScreen = ({ navigation, route }) => {
+  const { showToast } = useToast();
   const { hangoutId } = route.params || {};
   const { user } = useSelector(state => state.auth);
 
@@ -128,7 +129,7 @@ const HangoutDetailScreen = ({ navigation, route }) => {
         setHangout(response.data.hangout);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load hangout details');
+      showToast('error', 'Failed to load hangout details');
     } finally {
       setIsLoading(false);
     }
@@ -168,7 +169,7 @@ const HangoutDetailScreen = ({ navigation, route }) => {
         setCommentText('');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to send comment');
+      showToast('error', 'Failed to send comment');
     } finally {
       setIsSending(false);
     }
@@ -178,12 +179,12 @@ const HangoutDetailScreen = ({ navigation, route }) => {
     setIsJoining(true);
     try {
       const response = await api.post(HANGOUT.SEND_REQUEST(hangoutId));
-      Alert.alert('Success', response.data?.message || 'Request sent!');
+      showToast('success', response.data?.message || 'Request sent!');
       setHangout(prev => ({ ...prev, user_request_status: 'pending' }));
     } catch (error) {
       const msg =
         error.response?.data?.message || 'Failed to send join request';
-      Alert.alert('Info', msg);
+      showToast('info', msg);
     } finally {
       setIsJoining(false);
     }
@@ -195,12 +196,12 @@ const HangoutDetailScreen = ({ navigation, route }) => {
       const response = await api.post(HANGOUT.RESPOND_REQUEST(requestId), {
         status,
       });
-      Alert.alert('Success', response.data?.message || `Request ${status}`);
+      showToast('success', response.data?.message || `Request ${status}`);
       setRequests(prev =>
         prev.map(r => (r.id === requestId ? { ...r, status } : r)),
       );
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.message || 'Action failed');
+      showToast('error', error.response?.data?.message || 'Action failed');
     }
   };
 
@@ -342,7 +343,14 @@ const HangoutDetailScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 style={styles.mapLinkButton}
                 activeOpacity={0.7}
-                onPress={() => Linking.openURL(hangout.map_url)}
+                onPress={() =>
+                  navigation.navigate(Screens.LocationMap, {
+                    latitude: hangout.latitude,
+                    longitude: hangout.longitude,
+                    title: hangout.title,
+                    location: hangout.location,
+                  })
+                }
               >
                 <Image
                   source={require('../../assets/images/icons/map-card.png')}

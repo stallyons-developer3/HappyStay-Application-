@@ -88,6 +88,8 @@ export const BadgeProvider = ({ children }) => {
   // Fetch support unread count from backend and set it
   const fetchSupportUnread = useCallback(async () => {
     try {
+      // Don't overwrite if user is currently viewing support chat
+      if (activeChatRef.current === 'support') return;
       const res = await api.get(SUPPORT.UNREAD_COUNT).catch(() => null);
       if (res?.data?.unread_count !== undefined) {
         setChatUnreads(prev => ({ ...prev, support: res.data.unread_count }));

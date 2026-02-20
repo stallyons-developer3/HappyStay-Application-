@@ -19,8 +19,10 @@ import { HANGOUT } from '../../api/endpoints';
 import HangoutCard from '../../components/HangoutCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
 import { useBadgeCounts } from '../../context/BadgeContext';
+import { useToast } from '../../context/ToastContext';
 
 const ManageScreen = ({ navigation }) => {
+  const { showToast } = useToast();
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
   const { notificationCount } = useBadgeCounts();
@@ -75,12 +77,9 @@ const ManageScreen = ({ navigation }) => {
             try {
               await api.delete(HANGOUT.DELETE(hangoutId));
               setMyHangouts(prev => prev.filter(h => h.id !== hangoutId));
-              Alert.alert('Success', 'Hangout deleted successfully!');
+              showToast('success', 'Hangout deleted successfully!');
             } catch (error) {
-              Alert.alert(
-                'Error',
-                error.response?.data?.message || 'Failed to delete hangout',
-              );
+              showToast('error', error.response?.data?.message || 'Failed to delete hangout');
             }
           },
         },

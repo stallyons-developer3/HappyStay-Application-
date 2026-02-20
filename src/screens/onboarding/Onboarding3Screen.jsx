@@ -5,7 +5,6 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
   StatusBar,
@@ -18,8 +17,10 @@ import api from '../../api/axiosInstance';
 import { PROFILE } from '../../api/endpoints';
 import { setUser } from '../../store/slices/authSlice';
 import { resetOnboarding } from '../../store/slices/onboardingSlice';
+import { useToast } from '../../context/ToastContext';
 
 const Onboarding3Screen = ({ navigation }) => {
+  const { showToast } = useToast();
   const dispatch = useDispatch();
   const onboardingData = useSelector(state => state.onboarding);
   const [profileImage, setProfileImage] = useState(null);
@@ -38,7 +39,7 @@ const Onboarding3Screen = ({ navigation }) => {
       })
       .catch(err => {
         if (err.code !== 'E_PICKER_CANCELLED') {
-          Alert.alert('Error', 'Failed to pick image');
+          showToast('error', 'Failed to pick image');
         }
       });
   };
@@ -87,7 +88,7 @@ const Onboarding3Screen = ({ navigation }) => {
         ? errors.join('\n')
         : error.response?.data?.message ||
           'Profile setup failed. Please try again.';
-      Alert.alert('Error', message);
+      showToast('error', message);
     } finally {
       setIsLoading(false);
     }

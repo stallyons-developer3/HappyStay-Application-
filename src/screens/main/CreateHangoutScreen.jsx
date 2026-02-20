@@ -11,7 +11,6 @@ import {
   FlatList,
   Switch,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -19,6 +18,7 @@ import { WebView } from 'react-native-webview';
 import { Colors, Fonts } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { HANGOUT } from '../../api/endpoints';
+import { useToast } from '../../context/ToastContext';
 
 const typologyOptions = [
   { id: '1', name: 'Nature & Active' },
@@ -41,6 +41,7 @@ const interestOptions = [
 ];
 
 const CreateHangoutScreen = ({ navigation, route }) => {
+  const { showToast } = useToast();
   const isEdit = route?.params?.isEdit || false;
   const hangoutId = route?.params?.hangoutId || null;
 
@@ -125,7 +126,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load hangout details');
+      showToast('error', 'Failed to load hangout details');
     } finally {
       setIsFetching(false);
     }
@@ -265,10 +266,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
           selectedTime.getHours() * 60 + selectedTime.getMinutes();
         const nowMinutes = now.getHours() * 60 + now.getMinutes();
         if (selectedMinutes < nowMinutes) {
-          Alert.alert(
-            'Invalid Time',
-            'You cannot select a past time for today.',
-          );
+          showToast('error', 'You cannot select a past time for today.');
           return;
         }
       }
@@ -285,19 +283,19 @@ const CreateHangoutScreen = ({ navigation, route }) => {
 
   const validateStep1 = () => {
     if (!title.trim()) {
-      Alert.alert('Error', 'Title is required');
+      showToast('error', 'Title is required');
       return false;
     }
     if (!typology) {
-      Alert.alert('Error', 'Please select a typology');
+      showToast('error', 'Please select a typology');
       return false;
     }
     if (!minAge.trim() || !maxAge.trim()) {
-      Alert.alert('Error', 'Min age and max age are required');
+      showToast('error', 'Min age and max age are required');
       return false;
     }
     if (parseInt(maxAge) < parseInt(minAge)) {
-      Alert.alert('Error', 'Max age must be greater than min age');
+      showToast('error', 'Max age must be greater than min age');
       return false;
     }
     if (isToday(date)) {
@@ -305,7 +303,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       const selectedMinutes = time.getHours() * 60 + time.getMinutes();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       if (selectedMinutes < nowMinutes) {
-        Alert.alert('Error', 'You cannot select a past time for today.');
+        showToast('error', 'You cannot select a past time for today.');
         return false;
       }
     }
@@ -320,18 +318,15 @@ const CreateHangoutScreen = ({ navigation, route }) => {
 
   const handleCreate = async () => {
     if (!interest) {
-      Alert.alert('Error', 'Please select an interest');
+      showToast('error', 'Please select an interest');
       return;
     }
     if (!location.trim()) {
-      Alert.alert(
-        'Error',
-        'Location is required. Please tap on the map to select a location.',
-      );
+      showToast('error', 'Location is required. Please tap on the map to select a location.');
       return;
     }
     if (!description.trim()) {
-      Alert.alert('Error', 'Description is required');
+      showToast('error', 'Description is required');
       return;
     }
 
@@ -359,18 +354,14 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         response = await api.post(HANGOUT.CREATE, payload);
       }
 
-      Alert.alert(
-        'Success',
-        response.data?.message ||
-          (isEdit ? 'Hangout updated!' : 'Hangout created!'),
-        [{ text: 'OK', onPress: () => navigation.goBack() }],
-      );
+      showToast('success', response.data?.message || (isEdit ? 'Hangout updated!' : 'Hangout created!'));
+      setTimeout(() => navigation.goBack(), 1000);
     } catch (error) {
       const errors = error.response?.data?.errors;
       const message = errors
         ? errors.join('\n')
         : error.response?.data?.message || 'Something went wrong';
-      Alert.alert('Error', message);
+      showToast('error', message);
     } finally {
       setIsSubmitting(false);
     }

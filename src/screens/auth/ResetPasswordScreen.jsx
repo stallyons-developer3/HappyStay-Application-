@@ -9,13 +9,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
 import api from '../../api/axiosInstance';
 import { AUTH } from '../../api/endpoints';
+import { useToast } from '../../context/ToastContext';
 
 const ResetPasswordScreen = ({ navigation, route }) => {
   const { email } = route.params;
@@ -25,24 +25,17 @@ const ResetPasswordScreen = ({ navigation, route }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const { showToast } = useToast();
 
   const handleResetPassword = async () => {
-    if (!otp.trim()) {
-      Alert.alert('Error', 'Please enter the OTP');
-      return;
-    }
-    if (!password) {
-      Alert.alert('Error', 'Please enter a new password');
-      return;
-    }
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
+    const errors = {};
+    if (!otp.trim()) errors.otp = 'Please enter the OTP';
+    if (!password) errors.password = 'Please enter a new password';
+    else if (password.length < 8) errors.password = 'Password must be at least 8 characters';
+    if (password !== confirmPassword) errors.confirmPassword = 'Passwords do not match';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     setIsLoading(true);
     try {
@@ -52,21 +45,13 @@ const ResetPasswordScreen = ({ navigation, route }) => {
         password,
         password_confirmation: confirmPassword,
       });
-      Alert.alert(
-        'Success',
-        response.data?.message || 'Password reset successfully',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate(Screens.Login),
-          },
-        ],
-      );
+      showToast('success', response.data?.message || 'Password reset successfully');
+      setTimeout(() => navigation.navigate(Screens.Login), 1000);
     } catch (error) {
       const message =
         error.response?.data?.message ||
         'Failed to reset password. Please try again.';
-      Alert.alert('Error', message);
+      showToast('error', message);
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +84,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
         </Text>
 
         <Text style={styles.inputLabel}>OTP Code</Text>
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, fieldErrors.otp && styles.inputError]}>
           <Image
             source={require('../../assets/images/password_icon.png')}
             style={styles.inputIcon}
@@ -112,7 +97,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
             keyboardType="number-pad"
             maxLength={6}
             value={otp}
-            onChangeText={setOtp}
+            onChangeText={t => { setOtp(t); setFieldErrors(p => ({...p, otp: ''})); }}
             editable={!isLoading}
           />
         </View>
@@ -130,7 +115,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
             placeholderTextColor={Colors.textLight}
             secureTextEntry={!showPassword}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={t => { setPassword(t); setFieldErrors(p => ({...p, password: ''})); }}
             editable={!isLoading}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -159,7 +144,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
             placeholderTextColor={Colors.textLight}
             secureTextEntry={!showConfirmPassword}
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={t => { setConfirmPassword(t); setFieldErrors(p => ({...p, confirmPassword: ''})); }}
             editable={!isLoading}
           />
           <TouchableOpacity
@@ -241,10 +226,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.background,
-    marginBottom: 16,
+    marginBottom: 4,
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 50,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+  fieldError: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: '#EF4444',
+    marginBottom: 8,
+    marginLeft: 20,
+    marginTop: 2,
   },
   inputIcon: {
     width: 24,

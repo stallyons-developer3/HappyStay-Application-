@@ -10,14 +10,13 @@ import {
   Modal,
   Platform,
   ActivityIndicator,
-  Alert,
-  Linking,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
 import api from '../../api/axiosInstance';
 import { PROPERTY } from '../../api/endpoints';
+import { useToast } from '../../context/ToastContext';
 
 const { width } = Dimensions.get('window');
 
@@ -37,6 +36,7 @@ const amenityLabels = {
 };
 
 const PropertyDetailScreen = ({ navigation, route }) => {
+  const { showToast } = useToast();
   const { propertyId } = route.params || {};
 
   const [property, setProperty] = useState(null);
@@ -55,7 +55,8 @@ const PropertyDetailScreen = ({ navigation, route }) => {
   const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
 
   // Menu Image Viewer
-  const [menuImageUrl, setMenuImageUrl] = useState(null);
+  const [menuImages, setMenuImages] = useState([]);
+  const [currentMenuIndex, setCurrentMenuIndex] = useState(0);
   const [showMenuModal, setShowMenuModal] = useState(false);
 
   // Fetch property detail
@@ -73,7 +74,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.log('Fetch property detail error:', error);
-      Alert.alert('Error', 'Failed to load property details.');
+      showToast('error', 'Failed to load property details.');
     } finally {
       setIsLoading(false);
     }
@@ -118,43 +119,23 @@ const PropertyDetailScreen = ({ navigation, route }) => {
   // Handle Get Direction
   const handleGetDirection = () => {
     if (property?.latitude && property?.longitude) {
-      const lat = property.latitude;
-      const lng = property.longitude;
-      const label = encodeURIComponent(property.name || 'Property');
-      const url = Platform.select({
-        ios: `maps:0,0?q=${label}@${lat},${lng}`,
-        android: `geo:${lat},${lng}?q=${lat},${lng}(${label})`,
-      });
-
-      Linking.openURL(url).catch(() => {
-        // Fallback to Google Maps web
-        Linking.openURL(
-          `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
-        );
+      navigation.navigate(Screens.LocationMap, {
+        latitude: property.latitude,
+        longitude: property.longitude,
+        title: property.name || 'Property',
+        location: property.address || property.location || '',
       });
     } else {
-      Alert.alert(
-        'Location Unavailable',
-        'No coordinates available for this property.',
-      );
+      showToast('info', 'No coordinates available for this property.');
     }
   };
 
-  // Handle View Menu
-  const handleViewMenu = menuUrl => {
-    if (menuUrl) {
-      setMenuImageUrl(menuUrl);
-      setShowMenuModal(true);
-    }
-  };
+  // Menu images displayed directly in grid on screen
 
   // Handle Request Booking
   const handleRequestBooking = () => {
     if (property?.user_request_status) {
-      Alert.alert(
-        'Already Requested',
-        `Your booking status: ${property.user_request_status}`,
-      );
+      showToast('info', `Your booking status: ${property.user_request_status}`);
       return;
     }
     setCheckInSelected(false);
@@ -167,12 +148,12 @@ const PropertyDetailScreen = ({ navigation, route }) => {
   // Handle Book Now - API Call
   const handleBookNow = async () => {
     if (!checkInSelected || !checkOutSelected) {
-      Alert.alert('Error', 'Please select both check-in and check-out dates.');
+      showToast('error', 'Please select both check-in and check-out dates.');
       return;
     }
 
     if (checkOutDate <= checkInDate) {
-      Alert.alert('Error', 'Check-out date must be after check-in date.');
+      showToast('error', 'Check-out date must be after check-in date.');
       return;
     }
 
@@ -185,10 +166,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
 
       if (response.data?.success) {
         setShowBookingModal(false);
-        Alert.alert(
-          'Success',
-          response.data.message || 'Booking request sent!',
-        );
+        showToast('success', response.data.message || 'Booking request sent!');
         // Update local status
         setProperty(prev => ({ ...prev, user_request_status: 'pending' }));
       }
@@ -197,7 +175,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
         error.response?.data?.message ||
         error.response?.data?.errors?.[0] ||
         'Failed to send booking request.';
-      Alert.alert('Error', errorMsg);
+      showToast('error', errorMsg);
     } finally {
       setIsBooking(false);
     }
@@ -340,28 +318,61 @@ const PropertyDetailScreen = ({ navigation, route }) => {
             </View>
           )}
 
-          {/* Opening Hours Section */}
-          {property.opening_hours && property.opening_hours.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Opening Hours</Text>
-              {property.opening_hours.map((hour, index) => (
-                <View key={index} style={styles.hourRow}>
-                  <Text style={styles.hoursText}>
-                    {hour.title}: {hour.start_time} - {hour.end_time}
-                  </Text>
-                  {hour.menu && (
-                    <TouchableOpacity
-                      style={styles.menuLink}
-                      onPress={() => handleViewMenu(hour.menu)}
-                    >
-                      <Text style={styles.menuLinkText}>View Menu</Text>
-                    </TouchableOpacity>
+          {/* Opening Hours + Restaurant Menu Section */}
+          {property.opening_hours &&
+            property.opening_hours.length > 0 &&
+            (() => {
+              const allMenuImages = property.opening_hours.reduce(
+                (acc, hour) => {
+                  const menus = Array.isArray(hour.menu)
+                    ? hour.menu
+                    : hour.menu
+                    ? [hour.menu]
+                    : [];
+                  return [...acc, ...menus];
+                },
+                [],
+              );
+              return (
+                <>
+                  <View style={styles.divider} />
+                  <Text style={styles.sectionTitle}>Opening Hours</Text>
+                  {property.opening_hours.map((hour, index) => (
+                    <View key={index} style={styles.hourRow}>
+                      <Text style={styles.hoursText}>
+                        {hour.title}: {hour.start_time} - {hour.end_time}
+                      </Text>
+                    </View>
+                  ))}
+                  {allMenuImages.length > 0 && (
+                    <>
+                      <View style={styles.divider} />
+                      <Text style={styles.sectionTitle}>Restaurant Menu</Text>
+                      <View style={styles.menuGrid}>
+                        {allMenuImages.map((img, idx) => (
+                          <TouchableOpacity
+                            key={idx}
+                            style={styles.menuGridItem}
+                            activeOpacity={0.9}
+                            onPress={() => {
+                              setMenuImages(allMenuImages);
+                              setCurrentMenuIndex(idx);
+                              setShowMenuModal(true);
+                            }}
+                          >
+                            <Image
+                              source={{ uri: img }}
+                              style={styles.menuGridImage}
+                              resizeMode="cover"
+                            />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </>
                   )}
-                </View>
-              ))}
-            </>
-          )}
+                </>
+              );
+            })()}
 
           {/* Amenities Section */}
           {amenities.length > 0 && (
@@ -564,7 +575,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
         </View>
       </Modal>
 
-      {/* Menu Image Viewer Modal */}
+      {/* Menu Image Fullscreen Modal */}
       <Modal
         visible={showMenuModal}
         transparent={true}
@@ -579,12 +590,39 @@ const PropertyDetailScreen = ({ navigation, route }) => {
           >
             <Text style={styles.menuModalCloseText}>✕</Text>
           </TouchableOpacity>
-          {menuImageUrl && (
+          {menuImages.length > 0 && (
             <Image
-              source={{ uri: menuImageUrl }}
+              source={{ uri: menuImages[currentMenuIndex] }}
               style={styles.menuModalImage}
               resizeMode="contain"
             />
+          )}
+          {menuImages.length > 1 && (
+            <View style={styles.menuModalNav}>
+              <TouchableOpacity
+                onPress={() =>
+                  setCurrentMenuIndex(prev =>
+                    prev > 0 ? prev - 1 : menuImages.length - 1,
+                  )
+                }
+                style={styles.menuModalNavBtn}
+              >
+                <Text style={styles.menuModalNavText}>‹</Text>
+              </TouchableOpacity>
+              <Text style={styles.menuModalCounter}>
+                {currentMenuIndex + 1} / {menuImages.length}
+              </Text>
+              <TouchableOpacity
+                onPress={() =>
+                  setCurrentMenuIndex(prev =>
+                    prev < menuImages.length - 1 ? prev + 1 : 0,
+                  )
+                }
+                style={styles.menuModalNavBtn}
+              >
+                <Text style={styles.menuModalNavText}>›</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </Modal>
@@ -734,14 +772,22 @@ const styles = StyleSheet.create({
     color: Colors.textBlack,
     lineHeight: 22,
   },
-  menuLink: {
-    marginTop: 4,
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 12,
   },
-  menuLinkText: {
-    fontFamily: Fonts.RobotoBold,
-    fontSize: 12,
-    color: Colors.primary,
-    textDecorationLine: 'underline',
+  menuGridItem: {
+    width: (width - 60) / 4,
+    height: ((width - 60) / 4) * 1.35,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+  },
+  menuGridImage: {
+    width: '100%',
+    height: '100%',
   },
 
   // Divider
@@ -784,12 +830,14 @@ const styles = StyleSheet.create({
   directionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 15,
+    justifyContent: 'space-between',
+    gap: 10,
   },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    flexShrink: 1,
   },
   directionIcon: {
     width: 16,
@@ -800,10 +848,13 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: Colors.textBlack,
+    flex: 1,
+    flexShrink: 1,
   },
   getDirectionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
   },
   directionButtonIcon: {
     width: 18,
@@ -1003,7 +1054,33 @@ const styles = StyleSheet.create({
   },
   menuModalImage: {
     width: width - 20,
-    height: '80%',
+    height: '75%',
+  },
+  menuModalNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+    position: 'absolute',
+    bottom: 40,
+  },
+  menuModalNavBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuModalNavText: {
+    fontSize: 28,
+    color: Colors.white,
+    fontWeight: '700',
+  },
+  menuModalCounter: {
+    fontSize: 14,
+    color: Colors.white,
+    fontFamily: Fonts.RobotoMedium,
   },
 });
 

@@ -10,7 +10,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -22,6 +21,7 @@ import {
   clearError,
 } from '../../store/slices/authSlice';
 import { configureGoogleSignIn } from '../../services/googleAuthService';
+import { useToast } from '../../context/ToastContext';
 
 const { width } = Dimensions.get('window');
 
@@ -29,8 +29,10 @@ const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const dispatch = useDispatch();
+  const { showToast } = useToast();
   const { isLoading, isGoogleLoading, error, isAuthenticated, user } =
     useSelector(state => state.auth);
 
@@ -40,9 +42,28 @@ const LoginScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (error) {
-      Alert.alert('Login Failed', error, [
-        { text: 'OK', onPress: () => dispatch(clearError()) },
-      ]);
+      const fieldErrs = error.fieldErrors;
+      // fieldErrors is an object like {email: ["msg"], password: ["msg"]}
+      if (
+        fieldErrs &&
+        typeof fieldErrs === 'object' &&
+        !Array.isArray(fieldErrs)
+      ) {
+        const mapped = {};
+        Object.keys(fieldErrs).forEach(key => {
+          mapped[key] = Array.isArray(fieldErrs[key])
+            ? fieldErrs[key][0]
+            : fieldErrs[key];
+        });
+        setFieldErrors(mapped);
+      } else {
+        // flat message or array of messages — show toast
+        const msg =
+          error.message ||
+          (Array.isArray(fieldErrs) ? fieldErrs[0] : String(error));
+        showToast('error', msg, 'Login Failed');
+      }
+      dispatch(clearError());
     }
   }, [error, dispatch]);
 
@@ -57,14 +78,11 @@ const LoginScreen = ({ navigation }) => {
   }, [isAuthenticated, user, navigation]);
 
   const handleLogin = () => {
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
-      return;
-    }
-    if (!password.trim()) {
-      Alert.alert('Error', 'Please enter your password');
-      return;
-    }
+    const errors = {};
+    if (!email.trim()) errors.email = 'Please enter your email';
+    if (!password.trim()) errors.password = 'Please enter your password';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     dispatch(loginUser({ email: email.trim(), password }));
   };
 
@@ -97,7 +115,12 @@ const LoginScreen = ({ navigation }) => {
         <Text style={styles.subtitle}>Sign in to Continue</Text>
 
         <Text style={styles.inputLabel}>Email</Text>
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            fieldErrors.email && styles.inputError,
+          ]}
+        >
           <Image
             source={require('../../assets/images/user.png')}
             style={styles.inputIcon}
@@ -108,15 +131,26 @@ const LoginScreen = ({ navigation }) => {
             placeholder="Enter your email"
             placeholderTextColor={Colors.textLight}
             value={email}
-            onChangeText={setEmail}
+            onChangeText={t => {
+              setEmail(t);
+              setFieldErrors(p => ({ ...p, email: '' }));
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
             editable={!isLoading && !isGoogleLoading}
           />
         </View>
+        {fieldErrors.email ? (
+          <Text style={styles.fieldError}>{fieldErrors.email}</Text>
+        ) : null}
 
         <Text style={styles.inputLabel}>Password</Text>
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            fieldErrors.password && styles.inputError,
+          ]}
+        >
           <Image
             source={require('../../assets/images/password_icon.png')}
             style={styles.inputIcon}
@@ -128,7 +162,10 @@ const LoginScreen = ({ navigation }) => {
             placeholderTextColor={Colors.textLight}
             secureTextEntry={!showPassword}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={t => {
+              setPassword(t);
+              setFieldErrors(p => ({ ...p, password: '' }));
+            }}
             editable={!isLoading && !isGoogleLoading}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -143,6 +180,9 @@ const LoginScreen = ({ navigation }) => {
             />
           </TouchableOpacity>
         </View>
+        {fieldErrors.password ? (
+          <Text style={styles.fieldError}>{fieldErrors.password}</Text>
+        ) : null}
 
         <TouchableOpacity
           style={styles.forgotContainer}
@@ -200,14 +240,16 @@ const LoginScreen = ({ navigation }) => {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-          <Image
-            source={require('../../assets/images/apple.png')}
-            style={styles.socialIcon}
-            resizeMode="contain"
-          />
-          <Text style={styles.socialButtonText}>Sign in with Apple</Text>
-        </TouchableOpacity>
+        {Platform.OS === 'ios' && (
+          <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
+            <Image
+              source={require('../../assets/images/apple.png')}
+              style={styles.socialIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.socialButtonText}>Sign in with Apple</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>Don't have an account? </Text>
@@ -264,10 +306,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.background,
-    marginBottom: 15,
+    marginBottom: 4,
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 50,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+  fieldError: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: '#EF4444',
+    marginBottom: 8,
+    marginLeft: 20,
+    marginTop: 2,
   },
   inputIcon: {
     width: 24,

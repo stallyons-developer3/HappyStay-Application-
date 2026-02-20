@@ -9,7 +9,6 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
-  Alert,
   Platform,
   Keyboard,
   Modal,
@@ -25,12 +24,14 @@ import {
 } from '../../services/pusherService';
 import ChatBubble from '../../components/ChatBubble';
 import { useBadgeCounts } from '../../context/BadgeContext';
+import { useToast } from '../../context/ToastContext';
 
 const { width } = Dimensions.get('window');
 const INPUT_WIDTH = width - 40 - 48 - 12;
 const INACTIVITY_TIMEOUT = 60000; // 1 minute
 
 const ChatDetailScreen = ({ navigation, route }) => {
+  const { showToast } = useToast();
   const {
     isSupport,
     activityId,
@@ -70,7 +71,17 @@ const ChatDetailScreen = ({ navigation, route }) => {
   // Clear unread badge when entering chat, unset when leaving
   useEffect(() => {
     clearChatUnread(chatKey);
-    return () => unsetActiveChat();
+    // Mark support messages as read on backend
+    if (isSupport) {
+      api.post(SUPPORT.MARK_READ).catch(() => {});
+    }
+    return () => {
+      // Mark read again on leave so any real-time messages received while in chat are marked
+      if (isSupport) {
+        api.post(SUPPORT.MARK_READ).catch(() => {});
+      }
+      unsetActiveChat();
+    };
   }, [chatKey]);
 
   const [messages, setMessages] = useState([]);
@@ -133,9 +144,11 @@ const ChatDetailScreen = ({ navigation, route }) => {
   }, [clearInactivityTimer]);
 
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, (e) => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, e => {
       setKeyboardHeight(e.endCoordinates.height);
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -352,10 +365,7 @@ const ChatDetailScreen = ({ navigation, route }) => {
       setMessages(prev => prev.filter(m => m.id !== tempId));
       setMessage(text);
       if (error.response?.status === 403) {
-        Alert.alert(
-          'Access Denied',
-          'You need to be accepted to send messages.',
-        );
+        showToast('error', 'You need to be accepted to send messages.');
       }
     } finally {
       setIsSending(false);
@@ -507,94 +517,102 @@ const ChatDetailScreen = ({ navigation, route }) => {
           </Text>
           <Text style={styles.headerSubtitle}>
             {isSupport
-              ? isBotActive ? 'Bot' : 'Live Support'
+              ? isBotActive
+                ? 'Bot'
+                : 'Live Support'
               : headerSubtitle}
           </Text>
         </View>
       </View>
 
-      <View style={{flex: 1}}>
+      <View style={{ flex: 1 }}>
         {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-      ) : (
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() =>
-            scrollViewRef.current?.scrollToEnd({ animated: true })
-          }
-        >
-          {messages.length === 0 && (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {isSupport
-                  ? 'Start a conversation with support'
-                  : 'No messages yet. Start the conversation!'}
-              </Text>
-            </View>
-          )}
-
-          {isSupport
-            ? messages.map(msg => (
-                <ChatBubble
-                  key={`msg-${msg.id}`}
-                  message={msg.message}
-                  time={formatTime(msg.created_at)}
-                  isSent={msg.is_mine}
-                />
-              ))
-            : renderGroupMessages()}
-
-          {isSupport && isSending && (
-            <View style={styles.typingContainer}>
-              <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.typingText}>Support is typing...</Text>
-            </View>
-          )}
-        </ScrollView>
-      )}
-
-      <View style={[styles.inputContainer, Platform.OS === 'android' && keyboardHeight > 0 && { paddingBottom: keyboardHeight + 16 }]}>
-        <Shadow
-          distance={8}
-          startColor="rgba(0, 0, 0, 0.06)"
-          endColor="rgba(0, 0, 0, 0)"
-          offset={[0, 0]}
-        >
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Message"
-              placeholderTextColor={Colors.textLight}
-              value={message}
-              onChangeText={setMessage}
-              multiline
-              editable={!isSending}
-            />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
           </View>
-        </Shadow>
+        ) : (
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() =>
+              scrollViewRef.current?.scrollToEnd({ animated: true })
+            }
+          >
+            {messages.length === 0 && (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  {isSupport
+                    ? 'Start a conversation with support'
+                    : 'No messages yet. Start the conversation!'}
+                </Text>
+              </View>
+            )}
 
-        <TouchableOpacity
-          style={[styles.sendButton, isSending && { opacity: 0.5 }]}
-          onPress={handleSend}
-          activeOpacity={0.8}
-          disabled={isSending}
+            {isSupport
+              ? messages.map(msg => (
+                  <ChatBubble
+                    key={`msg-${msg.id}`}
+                    message={msg.message}
+                    time={formatTime(msg.created_at)}
+                    isSent={msg.is_mine}
+                  />
+                ))
+              : renderGroupMessages()}
+
+            {isSupport && isSending && (
+              <View style={styles.typingContainer}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.typingText}>Support is typing...</Text>
+              </View>
+            )}
+          </ScrollView>
+        )}
+
+        <View
+          style={[
+            styles.inputContainer,
+            Platform.OS === 'android' &&
+              keyboardHeight > 0 && { paddingBottom: keyboardHeight + 16 },
+          ]}
         >
-          {isSending ? (
-            <ActivityIndicator size="small" color={Colors.white} />
-          ) : (
-            <Image
-              source={require('../../assets/images/icons/send.png')}
-              style={styles.sendIcon}
-              resizeMode="contain"
-            />
-          )}
-        </TouchableOpacity>
-      </View>
+          <Shadow
+            distance={8}
+            startColor="rgba(0, 0, 0, 0.06)"
+            endColor="rgba(0, 0, 0, 0)"
+            offset={[0, 0]}
+          >
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Message"
+                placeholderTextColor={Colors.textLight}
+                value={message}
+                onChangeText={setMessage}
+                multiline
+                editable={!isSending}
+              />
+            </View>
+          </Shadow>
+
+          <TouchableOpacity
+            style={[styles.sendButton, isSending && { opacity: 0.5 }]}
+            onPress={handleSend}
+            activeOpacity={0.8}
+            disabled={isSending}
+          >
+            {isSending ? (
+              <ActivityIndicator size="small" color={Colors.white} />
+            ) : (
+              <Image
+                source={require('../../assets/images/icons/send.png')}
+                style={styles.sendIcon}
+                resizeMode="contain"
+              />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* End Chat Inactivity Modal (Support only) */}
@@ -609,7 +627,8 @@ const ChatDetailScreen = ({ navigation, route }) => {
             <Text style={styles.modalEmoji}>💬</Text>
             <Text style={styles.modalTitle}>Chat Inactive</Text>
             <Text style={styles.modalDescription}>
-              No new messages for a while. Would you like to end this live support session and switch back to the bot?
+              No new messages for a while. Would you like to end this live
+              support session and switch back to the bot?
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity

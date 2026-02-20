@@ -9,13 +9,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
 import { registerUser, clearError } from '../../store/slices/authSlice';
+import { useToast } from '../../context/ToastContext';
 
 const RegisterScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
@@ -24,17 +24,37 @@ const RegisterScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const dispatch = useDispatch();
+  const { showToast } = useToast();
   const { isLoading, error, isAuthenticated, user } = useSelector(
     state => state.auth,
   );
 
   useEffect(() => {
     if (error) {
-      Alert.alert('Registration Failed', error, [
-        { text: 'OK', onPress: () => dispatch(clearError()) },
-      ]);
+      const fieldErrs = error.fieldErrors;
+      if (
+        fieldErrs &&
+        typeof fieldErrs === 'object' &&
+        !Array.isArray(fieldErrs)
+      ) {
+        const mapped = {};
+        Object.keys(fieldErrs).forEach(key => {
+          const fieldKey = key === 'name' ? 'username' : key;
+          mapped[fieldKey] = Array.isArray(fieldErrs[key])
+            ? fieldErrs[key][0]
+            : fieldErrs[key];
+        });
+        setFieldErrors(mapped);
+      } else {
+        const msg =
+          error.message ||
+          (Array.isArray(fieldErrs) ? fieldErrs[0] : String(error));
+        showToast('error', msg, 'Registration Failed');
+      }
+      dispatch(clearError());
     }
   }, [error, dispatch]);
 
@@ -45,34 +65,20 @@ const RegisterScreen = ({ navigation }) => {
   }, [isAuthenticated, user, navigation]);
 
   const handleRegister = () => {
-    if (!username.trim()) {
-      Alert.alert('Error', 'Please enter a username');
-      return;
-    }
-    if (username.trim().length < 3) {
-      Alert.alert('Error', 'Username must be at least 3 characters');
-      return;
-    }
-    if (/\s/.test(username.trim())) {
-      Alert.alert('Error', 'Username cannot contain spaces');
-      return;
-    }
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
-      return;
-    }
-    if (!password) {
-      Alert.alert('Error', 'Please enter a password');
-      return;
-    }
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
+    const errors = {};
+    if (!username.trim()) errors.username = 'Please enter a username';
+    else if (username.trim().length < 3)
+      errors.username = 'Username must be at least 3 characters';
+    else if (/\s/.test(username.trim()))
+      errors.username = 'Username cannot contain spaces';
+    if (!email.trim()) errors.email = 'Please enter your email';
+    if (!password) errors.password = 'Please enter a password';
+    else if (password.length < 8)
+      errors.password = 'Password must be at least 8 characters';
+    if (password !== confirmPassword)
+      errors.confirmPassword = 'Passwords do not match';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     dispatch(
       registerUser({
@@ -109,7 +115,12 @@ const RegisterScreen = ({ navigation }) => {
         <Text style={styles.subtitle}>Sign up to Continue</Text>
 
         <Text style={styles.inputLabel}>Username</Text>
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            fieldErrors.username && styles.inputError,
+          ]}
+        >
           <Image
             source={require('../../assets/images/user.png')}
             style={styles.inputIcon}
@@ -120,14 +131,25 @@ const RegisterScreen = ({ navigation }) => {
             placeholder="Enter username"
             placeholderTextColor={Colors.textLight}
             value={username}
-            onChangeText={text => setUsername(text.replace(/\s/g, ''))}
+            onChangeText={text => {
+              setUsername(text.replace(/\s/g, ''));
+              setFieldErrors(p => ({ ...p, username: '' }));
+            }}
             autoCapitalize="none"
             editable={!isLoading}
           />
         </View>
+        {fieldErrors.username ? (
+          <Text style={styles.fieldError}>{fieldErrors.username}</Text>
+        ) : null}
 
         <Text style={styles.inputLabel}>Email</Text>
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            fieldErrors.email && styles.inputError,
+          ]}
+        >
           <Image
             source={require('../../assets/images/email.png')}
             style={styles.inputIcon}
@@ -140,13 +162,24 @@ const RegisterScreen = ({ navigation }) => {
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={t => {
+              setEmail(t);
+              setFieldErrors(p => ({ ...p, email: '' }));
+            }}
             editable={!isLoading}
           />
         </View>
+        {fieldErrors.email ? (
+          <Text style={styles.fieldError}>{fieldErrors.email}</Text>
+        ) : null}
 
         <Text style={styles.inputLabel}>Password</Text>
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            fieldErrors.password && styles.inputError,
+          ]}
+        >
           <Image
             source={require('../../assets/images/password_icon.png')}
             style={styles.inputIcon}
@@ -158,7 +191,10 @@ const RegisterScreen = ({ navigation }) => {
             placeholderTextColor={Colors.textLight}
             secureTextEntry={!showPassword}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={t => {
+              setPassword(t);
+              setFieldErrors(p => ({ ...p, password: '' }));
+            }}
             editable={!isLoading}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -173,9 +209,17 @@ const RegisterScreen = ({ navigation }) => {
             />
           </TouchableOpacity>
         </View>
+        {fieldErrors.password ? (
+          <Text style={styles.fieldError}>{fieldErrors.password}</Text>
+        ) : null}
 
         <Text style={styles.inputLabel}>Confirm Password</Text>
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            fieldErrors.confirmPassword && styles.inputError,
+          ]}
+        >
           <Image
             source={require('../../assets/images/password_icon.png')}
             style={styles.inputIcon}
@@ -187,7 +231,10 @@ const RegisterScreen = ({ navigation }) => {
             placeholderTextColor={Colors.textLight}
             secureTextEntry={!showConfirmPassword}
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={t => {
+              setConfirmPassword(t);
+              setFieldErrors(p => ({ ...p, confirmPassword: '' }));
+            }}
             editable={!isLoading}
           />
           <TouchableOpacity
@@ -204,6 +251,9 @@ const RegisterScreen = ({ navigation }) => {
             />
           </TouchableOpacity>
         </View>
+        {fieldErrors.confirmPassword ? (
+          <Text style={styles.fieldError}>{fieldErrors.confirmPassword}</Text>
+        ) : null}
 
         <Button
           title={isLoading ? 'Signing Up...' : 'Sign up'}
@@ -236,14 +286,16 @@ const RegisterScreen = ({ navigation }) => {
           <Text style={styles.socialButtonText}>Sign up with Google</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-          <Image
-            source={require('../../assets/images/apple.png')}
-            style={styles.socialIcon}
-            resizeMode="contain"
-          />
-          <Text style={styles.socialButtonText}>Sign up with Apple</Text>
-        </TouchableOpacity>
+        {Platform.OS === 'ios' && (
+          <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
+            <Image
+              source={require('../../assets/images/apple.png')}
+              style={styles.socialIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.socialButtonText}>Sign up with Apple</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.signInContainer}>
           <Text style={styles.signInText}>Already have an account? </Text>
@@ -299,10 +351,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.background,
-    marginBottom: 16,
+    marginBottom: 4,
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 50,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+  fieldError: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: '#EF4444',
+    marginBottom: 8,
+    marginLeft: 20,
+    marginTop: 2,
   },
   inputIcon: {
     width: 24,

@@ -9,7 +9,6 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
   Keyboard,
@@ -18,6 +17,7 @@ import { Shadow } from 'react-native-shadow-2';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { ACTIVITY } from '../../api/endpoints';
+import { useToast } from '../../context/ToastContext';
 
 const { width } = Dimensions.get('window');
 const INPUT_WIDTH = width - 40 - 48 - 12;
@@ -58,6 +58,7 @@ const formatTypology = value => {
 };
 
 const ActivityDetailScreen = ({ navigation, route }) => {
+  const { showToast } = useToast();
   const { activityId } = route.params || {};
 
   const [activity, setActivity] = useState(null);
@@ -102,7 +103,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
         setActivity(response.data.activity);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load activity details');
+      showToast('error', 'Failed to load activity details');
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +132,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
         setCommentText('');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to send comment');
+      showToast('error', 'Failed to send comment');
     } finally {
       setIsSending(false);
     }
@@ -141,12 +142,12 @@ const ActivityDetailScreen = ({ navigation, route }) => {
     setIsJoining(true);
     try {
       const response = await api.post(ACTIVITY.SEND_REQUEST(activityId));
-      Alert.alert('Success', response.data?.message || 'Request sent!');
+      showToast('success', response.data?.message || 'Request sent!');
       setActivity(prev => ({ ...prev, user_request_status: 'pending' }));
     } catch (error) {
       const msg =
         error.response?.data?.message || 'Failed to send join request';
-      Alert.alert('Info', msg);
+      showToast('info', msg);
     } finally {
       setIsJoining(false);
     }
@@ -299,7 +300,14 @@ const ActivityDetailScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 style={styles.mapButton}
                 activeOpacity={0.7}
-                onPress={() => Linking.openURL(activity.map_url)}
+                onPress={() =>
+                  navigation.navigate(Screens.LocationMap, {
+                    latitude: activity.latitude,
+                    longitude: activity.longitude,
+                    title: activity.title,
+                    location: activity.location,
+                  })
+                }
               >
                 <Image
                   source={require('../../assets/images/icons/map-card.png')}

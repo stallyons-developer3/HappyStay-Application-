@@ -5,7 +5,6 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Dimensions,
   Platform,
   StatusBar,
@@ -14,6 +13,7 @@ import { useDispatch } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
 import { setOnboardingData } from '../../store/slices/onboardingSlice';
+import { useToast } from '../../context/ToastContext';
 
 const { width } = Dimensions.get('window');
 const chipWidth = (width - 48 - 16) / 2;
@@ -33,6 +33,7 @@ const tripTypes = [
 ];
 
 const Onboarding2Screen = ({ navigation }) => {
+  const { showToast } = useToast();
   const dispatch = useDispatch();
   const [selectedTrips, setSelectedTrips] = useState([]);
 
@@ -43,7 +44,7 @@ const Onboarding2Screen = ({ navigation }) => {
       if (selectedTrips.length < 3) {
         setSelectedTrips([...selectedTrips, id]);
       } else {
-        Alert.alert('Limit Reached', 'You can only select up to 3 options.');
+        showToast('warning', 'You can only select up to 3 options.', 'Limit Reached');
       }
     }
   };
@@ -52,7 +53,7 @@ const Onboarding2Screen = ({ navigation }) => {
 
   const handleContinue = () => {
     if (selectedTrips.length === 0) {
-      Alert.alert('Error', 'Please select at least 1 trip interest');
+      showToast('error', 'Please select at least 1 trip interest');
       return;
     }
 

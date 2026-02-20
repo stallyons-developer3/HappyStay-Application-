@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Screens, Colors } from '../constants/Constants';
 import { BadgeProvider } from '../context/BadgeContext';
+import { ToastProvider } from '../context/ToastContext';
 
 import BottomTabNavigator from './BottomTabNavigator';
 
@@ -27,6 +28,7 @@ import TripScreen from '../screens/main/TripScreen';
 import PropertyDetailScreen from '../screens/main/PropertyDetailScreen';
 import NotificationScreen from '../screens/main/NotificationScreen';
 import MapScreen from '../screens/main/MapScreen';
+import LocationMapScreen from '../screens/main/LocationMapScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -43,6 +45,7 @@ const withSafeArea = (WrappedComponent, edges = ['top']) => {
 
 const AppNavigator = () => {
   return (
+    <ToastProvider>
     <BadgeProvider>
       <NavigationContainer>
         <Stack.Navigator
@@ -137,9 +140,15 @@ const AppNavigator = () => {
             name={Screens.Map}
             component={withSafeArea(MapScreen, ['top', 'bottom'])}
           />
+          <Stack.Screen
+            name={Screens.LocationMap}
+            component={LocationMapScreen}
+            options={{ headerShown: false }}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </BadgeProvider>
+    </ToastProvider>
   );
 };
 
