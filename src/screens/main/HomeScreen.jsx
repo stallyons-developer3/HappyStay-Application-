@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
-import { STORAGE_URL } from '../../api/endpoints';
+import { STORAGE_URL, HANGOUT } from '../../api/endpoints';
+import api from '../../api/axiosInstance';
 
 import Header from '../../components/Header';
 import SearchBar from '../../components/SearchBar';
@@ -23,6 +24,7 @@ import FilterModal from '../../components/FilterModal';
 
 import { fetchHomeData } from '../../store/slices/homeSlice';
 import { useBadgeCounts } from '../../context/BadgeContext';
+import { useToast } from '../../context/ToastContext';
 
 const formatDate = dateStr => {
   if (!dateStr) return '';
@@ -68,6 +70,8 @@ const HomeScreen = ({ navigation }) => {
   );
   const { user } = useSelector(state => state.auth);
   const { notificationCount } = useBadgeCounts();
+  const { showToast } = useToast();
+  const [joiningId, setJoiningId] = useState(null);
 
   const [searchText, setSearchText] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -139,6 +143,21 @@ const HomeScreen = ({ navigation }) => {
     }
 
     return feed;
+  };
+
+  const handleJoinRequest = async hangoutId => {
+    setJoiningId(hangoutId);
+    try {
+      const response = await api.post(HANGOUT.SEND_REQUEST(hangoutId));
+      showToast('success', response.data?.message || 'Request sent!');
+      dispatch(fetchHomeData());
+    } catch (error) {
+      const msg =
+        error.response?.data?.message || 'Failed to send join request';
+      showToast('info', msg);
+    } finally {
+      setJoiningId(null);
+    }
   };
 
   const profileImage = user?.profile_picture
@@ -253,16 +272,14 @@ const HomeScreen = ({ navigation }) => {
                   peopleImages={peopleData}
                   isOwner={h.user?.id === user?.id}
                   isPublic={!h.is_private}
+                  requestStatus={h.user_request_status}
+                  joinLoading={joiningId === h.id}
                   onPress={() =>
                     navigation.navigate(Screens.HangoutDetail, {
                       hangoutId: h.id,
                     })
                   }
-                  onJoinPress={() =>
-                    navigation.navigate(Screens.HangoutDetail, {
-                      hangoutId: h.id,
-                    })
-                  }
+                  onJoinPress={() => handleJoinRequest(h.id)}
                   onChatPress={() =>
                     navigation.navigate(Screens.ChatDetail, {
                       hangoutId: h.id,

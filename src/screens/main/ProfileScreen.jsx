@@ -89,6 +89,9 @@ const ProfileScreen = ({ navigation }) => {
   const displayName =
     user?.full_name || user?.first_name || user?.name || 'User';
   const displayEmail = user?.email || '';
+  const displayProperty = user?.property?.name;
+  const displayCheckin = user?.check_in;
+  const displayCheckout = user?.check_out;
 
   const handleTrips = () => {
     navigation.navigate(Screens.Trip);
@@ -196,6 +199,11 @@ const ProfileScreen = ({ navigation }) => {
           </View>
           <Text style={styles.profileName}>{displayName}</Text>
           <Text style={styles.profileEmail}>{displayEmail}</Text>
+          <Text style={styles.profileProperty}>{displayProperty}</Text>
+          <View style={styles.checinLine}>
+            <Text style={styles.checkinout}>{displayCheckin} - </Text>
+            <Text style={styles.checkinout}>{displayCheckout}</Text>
+          </View>
         </View>
 
         {renderTripSection('Past Trips', pastTrips)}
@@ -320,6 +328,16 @@ const styles = StyleSheet.create({
   },
   buttonsContainer: {
     gap: 12,
+  },
+  checinLine: {
+    display: 'flex',
+    flexDirection: 'row',
+  },
+  checkinout: {
+    fontFamily: Fonts.RobotoBold,
+  },
+  profileProperty: {
+    fontFamily: Fonts.RobotoBold,
   },
 });
 

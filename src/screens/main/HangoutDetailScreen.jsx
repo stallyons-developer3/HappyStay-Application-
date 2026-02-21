@@ -273,7 +273,7 @@ const HangoutDetailScreen = ({ navigation, route }) => {
 
           <View style={styles.imageContainer}>
             <Image
-              source={require('../../assets/images/hangoutdetailimage.png')}
+              source={require('../../assets/images/hangoutheader.png')}
               style={styles.hangoutImage}
               resizeMode="cover"
             />

@@ -247,6 +247,18 @@ const ActivityDetailScreen = ({ navigation, route }) => {
             )}
           </View>
 
+          {activity.provided_by && (
+            <View style={styles.providedByRow}>
+              <View style={styles.providedByTag}>
+                <Text style={styles.providedByText}>
+                  {activity.provided_by === 'partner'
+                    ? 'By a hostel partner'
+                    : 'By the hostel'}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {activity.location && (
             <View style={styles.locationRow}>
               <Image
@@ -534,6 +546,21 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoBold,
     fontSize: 12,
     color: Colors.white,
+  },
+  providedByRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  providedByTag: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  providedByText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 12,
+    color: '#FFFFFF',
   },
   timeRow: {
     flexDirection: 'row',
