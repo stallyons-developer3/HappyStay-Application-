@@ -88,7 +88,7 @@ const ActivitiesScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       fetchActivities({});
-    }, [])
+    }, []),
   );
 
   const onRefresh = useCallback(async () => {
@@ -180,7 +180,9 @@ const ActivitiesScreen = ({ navigation }) => {
                 title={activity.title}
                 price={activity.price ? `$${activity.price}` : 'Free'}
                 description={activity.description}
-                time={formatTime(activity.start_time)}
+                time={
+                  activity.all_day ? 'All Day' : formatTime(activity.start_time)
+                }
                 date={formatDate(activity.start_date)}
                 location={activity.location || ''}
                 onPress={() =>

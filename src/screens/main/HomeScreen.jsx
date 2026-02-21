@@ -78,7 +78,7 @@ const HomeScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       dispatch(fetchHomeData());
-    }, [dispatch])
+    }, [dispatch]),
   );
 
   const onRefresh = useCallback(async () => {
@@ -212,7 +212,7 @@ const HomeScreen = ({ navigation }) => {
                     title={a.title}
                     price={a.price ? `$${a.price}` : 'Free'}
                     description={a.description}
-                    time={formatTime(a.start_time)}
+                    time={a.all_day ? 'All Day' : formatTime(a.start_time)}
                     date={formatDate(a.start_date)}
                     location={a.location || ''}
                     onPress={() =>
@@ -247,7 +247,7 @@ const HomeScreen = ({ navigation }) => {
                   key={`hangout-${h.id}`}
                   profileImage={h.user?.profile_picture}
                   name={h.user?.name || 'User'}
-                  activityType={h.typology || h.title}
+                  activityType={h.interests || h.typology || h.title}
                   description={h.description}
                   peopleCount={h.joined_count || 0}
                   peopleImages={peopleData}

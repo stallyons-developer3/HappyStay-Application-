@@ -627,8 +627,8 @@ const ChatDetailScreen = ({ navigation, route }) => {
             <Text style={styles.modalEmoji}>💬</Text>
             <Text style={styles.modalTitle}>Chat Inactive</Text>
             <Text style={styles.modalDescription}>
-              No new messages for a while. Would you like to end this live
-              support session and switch back to the bot?
+              Are you still there? No new messages for a while. We're still here
+              to help! Tap Continue if you need more assistance.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity

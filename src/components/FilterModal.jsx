@@ -20,6 +20,18 @@ const categoryOptions = [
   { id: 'transport', name: 'Transport' },
 ];
 
+const interestOptions = [
+  { id: 'all', name: 'All' },
+  { id: 'Hiking', name: 'Hiking' },
+  { id: 'Swimming', name: 'Swimming' },
+  { id: 'Camping', name: 'Camping' },
+  { id: 'Beach Party', name: 'Beach Party' },
+  { id: 'Bonfire', name: 'Bonfire' },
+  { id: 'City Tour', name: 'City Tour' },
+  { id: 'Food Tasting', name: 'Food Tasting' },
+  { id: 'Night Club', name: 'Night Club' },
+];
+
 const priceOptions = [
   { id: 'all', name: 'All', min: null, max: null },
   { id: 'free', name: 'Free', min: 0, max: 0 },
@@ -51,6 +63,8 @@ const FilterModal = ({ visible, onClose, onApply, type = 'activities' }) => {
   const sortOptions =
     type === 'hangouts' ? hangoutSortOptions : activitySortOptions;
   const showPrice = type === 'activities';
+  const filterOptions = type === 'hangouts' ? interestOptions : categoryOptions;
+  const filterLabel = type === 'hangouts' ? 'Interest' : 'Category';
 
   const handleReset = () => {
     setSelectedCategory('all');
@@ -62,7 +76,11 @@ const FilterModal = ({ visible, onClose, onApply, type = 'activities' }) => {
     const params = {};
 
     if (selectedCategory !== 'all') {
-      params.typology = selectedCategory;
+      if (type === 'hangouts') {
+        params.interests = selectedCategory;
+      } else {
+        params.typology = selectedCategory;
+      }
     }
 
     if (showPrice && selectedPrice !== 'all') {
@@ -114,9 +132,9 @@ const FilterModal = ({ visible, onClose, onApply, type = 'activities' }) => {
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.sectionTitle}>Category</Text>
+            <Text style={styles.sectionTitle}>{filterLabel}</Text>
             <View style={styles.optionsContainer}>
-              {categoryOptions.map(option => (
+              {filterOptions.map(option => (
                 <TouchableOpacity
                   key={option.id}
                   style={[

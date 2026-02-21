@@ -79,7 +79,10 @@ const ManageScreen = ({ navigation }) => {
               setMyHangouts(prev => prev.filter(h => h.id !== hangoutId));
               showToast('success', 'Hangout deleted successfully!');
             } catch (error) {
-              showToast('error', error.response?.data?.message || 'Failed to delete hangout');
+              showToast(
+                'error',
+                error.response?.data?.message || 'Failed to delete hangout',
+              );
             }
           },
         },
@@ -189,7 +192,9 @@ const ManageScreen = ({ navigation }) => {
                 key={`manage-${hangout.id}`}
                 profileImage={hangout.user?.profile_picture}
                 name={hangout.user?.name || 'You'}
-                activityType={hangout.typology || hangout.title}
+                activityType={
+                  hangout.interests || hangout.typology || hangout.title
+                }
                 description={hangout.description}
                 peopleCount={hangout.joined_count || 0}
                 peopleImages={peopleData}

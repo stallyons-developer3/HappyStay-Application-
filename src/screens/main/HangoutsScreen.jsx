@@ -57,7 +57,7 @@ const HangoutsScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       fetchHangouts({});
-    }, [])
+    }, []),
   );
 
   const onRefresh = useCallback(async () => {
@@ -153,7 +153,9 @@ const HangoutsScreen = ({ navigation }) => {
                   key={`hangout-${hangout.id}`}
                   profileImage={hangout.user?.profile_picture}
                   name={hangout.user?.name || 'User'}
-                  activityType={hangout.typology || hangout.title}
+                  activityType={
+                    hangout.interests || hangout.typology || hangout.title
+                  }
                   description={hangout.description}
                   peopleCount={hangout.joined_count || 0}
                   peopleImages={peopleData}

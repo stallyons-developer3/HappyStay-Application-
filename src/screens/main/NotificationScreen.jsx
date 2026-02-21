@@ -74,7 +74,7 @@ const timeAgo = dateStr => {
   return date.toLocaleDateString();
 };
 
-// Extract model name from related_type (e.g. "App\\Models\\Hangout" → "Hangout")
+// Extract model name from related_type
 const getModelName = relatedType => {
   if (!relatedType) return null;
   const parts = relatedType.split('\\');
@@ -97,7 +97,6 @@ const NotificationScreen = ({ navigation }) => {
   const notificationsRef = useRef(notifications);
   notificationsRef.current = notifications;
 
-  // Fetch notifications from API
   const fetchNotifications = useCallback(async (page = 1, refresh = false) => {
     try {
       const response = await api.get(NOTIFICATION.GET_ALL, {
@@ -124,12 +123,10 @@ const NotificationScreen = ({ navigation }) => {
     }
   }, []);
 
-  // Initial fetch
   useEffect(() => {
     fetchNotifications(1);
   }, [fetchNotifications]);
 
-  // Subscribe to real-time notifications via Pusher
   useEffect(() => {
     if (!user?.id) return;
 
@@ -147,7 +144,6 @@ const NotificationScreen = ({ navigation }) => {
     };
   }, [user?.id]);
 
-  // Re-fetch on screen focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       fetchNotifications(1, true);
@@ -155,20 +151,17 @@ const NotificationScreen = ({ navigation }) => {
     return unsubscribe;
   }, [navigation, fetchNotifications]);
 
-  // Pull to refresh
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchNotifications(1, true);
   }, [fetchNotifications]);
 
-  // Load more (pagination)
   const loadMore = useCallback(() => {
     if (loadingMore || currentPage >= lastPage) return;
     setLoadingMore(true);
     fetchNotifications(currentPage + 1);
   }, [loadingMore, currentPage, lastPage, fetchNotifications]);
 
-  // Mark all as read
   const handleMarkAllRead = async () => {
     if (unreadCount === 0 || markingRead) return;
     setMarkingRead(true);
@@ -186,9 +179,7 @@ const NotificationScreen = ({ navigation }) => {
     }
   };
 
-  // Handle notification press — mark as read and navigate to related screen
   const handleNotificationPress = async notification => {
-    // Mark as read if unread
     if (!notification.is_read) {
       try {
         const response = await api.post(
@@ -291,7 +282,6 @@ const NotificationScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -354,8 +344,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.backgroundGray,
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -392,15 +380,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.primary,
   },
-
-  // Scroll
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
     flexGrow: 1,
   },
-
-  // Notification Card
   notificationCard: {
     flexDirection: 'row',
     backgroundColor: Colors.white,
@@ -412,13 +396,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+    borderLeftWidth: 3,
+    borderLeftColor: 'transparent',
   },
   unreadCard: {
-    borderLeftWidth: 3,
     borderLeftColor: Colors.primary,
   },
-
-  // Icon Container
   iconContainer: {
     width: 48,
     height: 48,
@@ -432,8 +415,6 @@ const styles = StyleSheet.create({
     height: 22,
     tintColor: Colors.primary,
   },
-
-  // Content
   contentContainer: {
     flex: 1,
   },
@@ -468,8 +449,6 @@ const styles = StyleSheet.create({
     color: Colors.textGray,
     marginTop: 8,
   },
-
-  // Loaders
   centerLoader: {
     flex: 1,
     justifyContent: 'center',
@@ -479,8 +458,6 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     alignItems: 'center',
   },
-
-  // Empty State
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -503,8 +480,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textGray,
   },
-
-  // Bottom Spacing
   bottomSpacing: {
     height: 40,
   },

@@ -243,7 +243,6 @@ const HangoutDetailScreen = ({ navigation, route }) => {
     );
   }
 
-  const ownerImage = hangout.user?.profile_picture;
   const ageRange =
     hangout.min_age && hangout.max_age
       ? `${hangout.min_age}-${hangout.max_age}`
@@ -273,21 +272,12 @@ const HangoutDetailScreen = ({ navigation, route }) => {
           </TouchableOpacity>
 
           <View style={styles.imageContainer}>
-            {ownerImage ? (
-              <Image
-                source={{ uri: ownerImage }}
-                style={styles.hangoutImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={styles.ownerInitialCircle}>
-                <Text style={styles.ownerInitialText}>
-                  {getInitial(hangout.user?.name)}
-                </Text>
-              </View>
-            )}
+            <Image
+              source={require('../../assets/images/hangoutdetailimage.png')}
+              style={styles.hangoutImage}
+              resizeMode="cover"
+            />
           </View>
-          <Text style={styles.ownerName}>{hangout.user?.name || 'User'}</Text>
         </View>
 
         <View style={styles.content}>
@@ -296,9 +286,11 @@ const HangoutDetailScreen = ({ navigation, route }) => {
               {hangout.title}
             </Text>
 
-            {hangout.typology && (
+            {(hangout.interests || hangout.typology) && (
               <View style={styles.categoryTag}>
-                <Text style={styles.categoryText}>{hangout.typology}</Text>
+                <Text style={styles.categoryText}>
+                  {hangout.interests || hangout.typology}
+                </Text>
               </View>
             )}
           </View>
@@ -335,7 +327,10 @@ const HangoutDetailScreen = ({ navigation, route }) => {
                   style={styles.timeIcon}
                   resizeMode="contain"
                 />
-                <Text style={styles.timeText}>{formatTime(hangout.time)}</Text>
+                <Text style={styles.timeText}>
+                  {formatTime(hangout.time)}
+                  {hangout.end_time ? ` - ${formatTime(hangout.end_time)}` : ''}
+                </Text>
               </>
             )}
 

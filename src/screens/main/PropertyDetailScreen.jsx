@@ -307,7 +307,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
         <View style={styles.content}>
           {/* Property Name & Location */}
           <Text style={styles.mainTitle}>{property.name}</Text>
-          {property.location && (
+          {/* {property.location && (
             <View style={styles.locationRow}>
               <Image
                 source={require('../../assets/images/icons/map-pin.png')}
@@ -316,7 +316,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
               />
               <Text style={styles.locationText}>{property.location}</Text>
             </View>
-          )}
+          )} */}
 
           {/* Opening Hours + Restaurant Menu Section */}
           {property.opening_hours &&
@@ -912,8 +912,9 @@ const styles = StyleSheet.create({
   // Wi-Fi Details
   wifiText: {
     fontFamily: Fonts.RobotoRegular,
-    fontSize: 14,
-    color: Colors.textGray,
+    fontSize: 12,
+    color: Colors.textBlack,
+    flex: 1,
     lineHeight: 22,
   },
 
