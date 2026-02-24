@@ -152,7 +152,7 @@ const RegisterScreen = ({ navigation }) => {
               setFieldErrors(p => ({ ...p, username: '' }));
             }}
             autoCapitalize="none"
-            editable={!isLoading}
+            editable={!isLoading && !isGoogleLoading}
           />
         </View>
         {fieldErrors.username ? (
@@ -182,7 +182,7 @@ const RegisterScreen = ({ navigation }) => {
               setEmail(t);
               setFieldErrors(p => ({ ...p, email: '' }));
             }}
-            editable={!isLoading}
+            editable={!isLoading && !isGoogleLoading}
           />
         </View>
         {fieldErrors.email ? (
@@ -211,7 +211,7 @@ const RegisterScreen = ({ navigation }) => {
               setPassword(t);
               setFieldErrors(p => ({ ...p, password: '' }));
             }}
-            editable={!isLoading}
+            editable={!isLoading && !isGoogleLoading}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
             <Image
@@ -251,7 +251,7 @@ const RegisterScreen = ({ navigation }) => {
               setConfirmPassword(t);
               setFieldErrors(p => ({ ...p, confirmPassword: '' }));
             }}
-            editable={!isLoading}
+            editable={!isLoading && !isGoogleLoading}
           />
           <TouchableOpacity
             onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -275,7 +275,7 @@ const RegisterScreen = ({ navigation }) => {
           title={isLoading ? 'Signing Up...' : 'Sign up'}
           onPress={handleRegister}
           size="full"
-          style={{ opacity: isLoading ? 0.7 : 1 }}
+          style={{ marginTop: 20, opacity: isLoading ? 0.7 : 1 }}
           disabled={isLoading || isGoogleLoading}
         />
 
@@ -306,7 +306,7 @@ const RegisterScreen = ({ navigation }) => {
                 color={Colors.primary}
                 style={{ marginRight: 12 }}
               />
-              <Text style={styles.socialButtonText}>Signing up...</Text>
+              <Text style={styles.socialButtonText}>Continuing...</Text>
             </>
           ) : (
             <>
@@ -315,7 +315,7 @@ const RegisterScreen = ({ navigation }) => {
                 style={styles.socialIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.socialButtonText}>Sign up with Google</Text>
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
             </>
           )}
         </TouchableOpacity>
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 30,
+    paddingBottom: 40,
   },
   backButton: {
     marginTop: 50,
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
     color: Colors.textLight,
-    marginBottom: 25,
+    marginBottom: 30,
   },
   inputLabel: {
     fontFamily: Fonts.RobotoRegular,
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.background,
-    marginBottom: 4,
+    marginBottom: 16,
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 50,
@@ -400,9 +400,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: '#EF4444',
-    marginBottom: 8,
+    marginBottom: 4,
     marginLeft: 20,
-    marginTop: 2,
+    marginTop: -12,
   },
   inputIcon: {
     width: 24,
@@ -424,8 +424,8 @@ const styles = StyleSheet.create({
   orContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 25,
-    marginBottom: 25,
+    marginTop: 20,
+    marginBottom: 20,
   },
   orLine: {
     flex: 1,
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 50,
     paddingVertical: 14,
-    marginBottom: 15,
+    marginBottom: 12,
     backgroundColor: Colors.background,
   },
   socialIcon: {
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
   signInContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 10,
+    marginTop: 20,
   },
   signInText: {
     fontFamily: Fonts.RobotoRegular,

@@ -195,7 +195,7 @@ const LoginScreen = ({ navigation }) => {
           title={isLoading ? 'Signing In...' : 'Sign In'}
           onPress={handleLogin}
           size="full"
-          style={{ marginBottom: 25, opacity: isLoading ? 0.7 : 1 }}
+          style={{ marginTop: 20, opacity: isLoading ? 0.7 : 1 }}
           disabled={isLoading || isGoogleLoading}
         />
 
@@ -226,7 +226,7 @@ const LoginScreen = ({ navigation }) => {
                 color={Colors.primary}
                 style={{ marginRight: 12 }}
               />
-              <Text style={styles.socialButtonText}>Signing in...</Text>
+              <Text style={styles.socialButtonText}>Continuing...</Text>
             </>
           ) : (
             <>
@@ -235,7 +235,7 @@ const LoginScreen = ({ navigation }) => {
                 style={styles.socialIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.socialButtonText}>Sign in with Google</Text>
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
             </>
           )}
         </TouchableOpacity>
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.background,
-    marginBottom: 4,
+    marginBottom: 16,
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 50,
@@ -321,9 +321,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoRegular,
     fontSize: 12,
     color: '#EF4444',
-    marginBottom: 8,
+    marginBottom: 4,
     marginLeft: 20,
-    marginTop: 2,
+    marginTop: -12,
   },
   inputIcon: {
     width: 24,
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   },
   forgotContainer: {
     alignSelf: 'flex-end',
-    marginBottom: 25,
+    marginBottom: 0,
   },
   forgotText: {
     fontFamily: Fonts.poppinsRegular,
@@ -355,7 +355,8 @@ const styles = StyleSheet.create({
   orContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 25,
+    marginTop: 20,
+    marginBottom: 20,
   },
   orLine: {
     flex: 1,
@@ -374,7 +375,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 50,
     paddingVertical: 14,
-    marginBottom: 15,
+    marginBottom: 12,
     backgroundColor: Colors.background,
   },
   socialIcon: {

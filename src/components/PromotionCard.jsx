@@ -15,12 +15,14 @@ const HtmlDescription = ({ html }) => {
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
+        html, body { background: transparent; overflow: hidden; height: auto; }
+        #content {
           font-family: -apple-system, sans-serif;
           font-size: 12px;
           color: #333;
           line-height: 1.6;
-          background: transparent;
+          display: block;
+          overflow: hidden;
         }
         ol, ul { padding-left: 20px; margin: 4px 0; }
         li { margin-bottom: 2px; }
@@ -28,17 +30,31 @@ const HtmlDescription = ({ html }) => {
         h2 { font-size: 16px; margin: 4px 0; }
         h3 { font-size: 14px; margin: 4px 0; }
         p { margin: 2px 0; }
+        p:empty { display: none; }
         a { color: #2EAF7D; }
       </style>
     </head>
-    <body>${html}</body>
+    <body><div id="content">${html}</div></body>
     <script>
+      var lastHeight = 0;
       function sendHeight() {
-        const height = document.body.scrollHeight;
-        window.ReactNativeWebView.postMessage(JSON.stringify({height: height}));
+        requestAnimationFrame(function() {
+          var el = document.getElementById('content');
+          var rect = el.getBoundingClientRect();
+          var h = Math.ceil(rect.height);
+          if (h !== lastHeight && h > 0) {
+            lastHeight = h;
+            window.ReactNativeWebView.postMessage(JSON.stringify({height: h}));
+          }
+        });
       }
       sendHeight();
-      new MutationObserver(sendHeight).observe(document.body, {childList: true, subtree: true});
+      window.addEventListener('load', sendHeight);
+      setTimeout(sendHeight, 100);
+      setTimeout(sendHeight, 300);
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(sendHeight).observe(document.getElementById('content'));
+      }
     </script>
     </html>
   `;
@@ -47,7 +63,7 @@ const HtmlDescription = ({ html }) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.height && data.height > 0) {
-        setWebViewHeight(data.height + 4);
+        setWebViewHeight(data.height);
       }
     } catch (e) {}
   };
