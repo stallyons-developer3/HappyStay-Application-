@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
-import { STORAGE_URL, HANGOUT } from '../../api/endpoints';
+import { STORAGE_URL, HANGOUT, ACTIVITY } from '../../api/endpoints';
 import api from '../../api/axiosInstance';
 
 import Header from '../../components/Header';
@@ -72,6 +72,37 @@ const HomeScreen = ({ navigation }) => {
   const { notificationCount } = useBadgeCounts();
   const { showToast } = useToast();
   const [joiningId, setJoiningId] = useState(null);
+  const [joiningActivityId, setJoiningActivityId] = useState(null);
+
+  const canJoinActivity = activity => {
+    if (!user?.property || !user?.check_in || !user?.check_out) {
+      return { canJoin: false, message: 'No active booking' };
+    }
+    if (activity.start_date) {
+      const actDate = new Date(activity.start_date);
+      const checkIn = new Date(user.check_in);
+      const checkOut = new Date(user.check_out);
+      if (actDate < checkIn || actDate > checkOut) {
+        return { canJoin: false, message: 'Outside trip dates' };
+      }
+    }
+    return { canJoin: true, message: '' };
+  };
+
+  const canJoinHangout = hangout => {
+    if (!user?.property || !user?.check_in || !user?.check_out) {
+      return { canJoin: false, message: 'No active booking' };
+    }
+    if (hangout.date) {
+      const hDate = new Date(hangout.date);
+      const checkIn = new Date(user.check_in);
+      const checkOut = new Date(user.check_out);
+      if (hDate < checkIn || hDate > checkOut) {
+        return { canJoin: false, message: 'Outside trip dates' };
+      }
+    }
+    return { canJoin: true, message: '' };
+  };
 
   const [searchText, setSearchText] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -160,6 +191,21 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const handleActivityJoin = async activityId => {
+    setJoiningActivityId(activityId);
+    try {
+      const response = await api.post(ACTIVITY.SEND_REQUEST(activityId));
+      showToast('success', response.data?.message || 'Request sent!');
+      dispatch(fetchHomeData());
+    } catch (error) {
+      const msg =
+        error.response?.data?.message || 'Failed to send join request';
+      showToast('info', msg);
+    } finally {
+      setJoiningActivityId(null);
+    }
+  };
+
   const profileImage = user?.profile_picture
     ? {
         uri: user.profile_picture.startsWith('http')
@@ -224,6 +270,7 @@ const HomeScreen = ({ navigation }) => {
           feed.map((item, index) => {
             if (item.type === 'activity') {
               const a = item.data;
+              const joinCheck = canJoinActivity(a);
               return (
                 <View key={`activity-${a.id}`}>
                   <ActivityCard
@@ -231,7 +278,12 @@ const HomeScreen = ({ navigation }) => {
                     title={a.title}
                     price={a.price ? `$${a.price}` : 'Free'}
                     description={a.description}
-                    time={a.all_day ? 'All Day' : formatTime(a.start_time)}
+                    time={
+                      a.all_day
+                        ? 'All Day'
+                        : formatTime(a.start_time) +
+                          (a.end_time ? ' - ' + formatTime(a.end_time) : '')
+                    }
                     date={formatDate(a.start_date)}
                     location={a.location || ''}
                     onPress={() =>
@@ -249,6 +301,13 @@ const HomeScreen = ({ navigation }) => {
                         });
                       }
                     }}
+                    isOwner={a.created_by === user?.id}
+                    isPrivate={a.is_private}
+                    requestStatus={a.user_request_status}
+                    joinLoading={joiningActivityId === a.id}
+                    onJoinPress={() => handleActivityJoin(a.id)}
+                    canJoin={joinCheck.canJoin}
+                    canJoinMessage={joinCheck.message}
                   />
                 </View>
               );
@@ -260,6 +319,7 @@ const HomeScreen = ({ navigation }) => {
                 image: p.profile_picture || null,
                 name: p.name || null,
               }));
+              const joinCheck = canJoinHangout(h);
 
               return (
                 <HangoutCard
@@ -274,6 +334,8 @@ const HomeScreen = ({ navigation }) => {
                   isPublic={!h.is_private}
                   requestStatus={h.user_request_status}
                   joinLoading={joiningId === h.id}
+                  canJoin={joinCheck.canJoin}
+                  canJoinMessage={joinCheck.message}
                   onPress={() =>
                     navigation.navigate(Screens.HangoutDetail, {
                       hangoutId: h.id,

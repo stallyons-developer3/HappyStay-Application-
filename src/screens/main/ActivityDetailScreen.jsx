@@ -14,6 +14,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { Shadow } from 'react-native-shadow-2';
+import { useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { ACTIVITY } from '../../api/endpoints';
@@ -59,6 +60,7 @@ const formatTypology = value => {
 
 const ActivityDetailScreen = ({ navigation, route }) => {
   const { showToast } = useToast();
+  const { user } = useSelector(state => state.auth);
   const { activityId } = route.params || {};
 
   const [activity, setActivity] = useState(null);
@@ -142,8 +144,16 @@ const ActivityDetailScreen = ({ navigation, route }) => {
     setIsJoining(true);
     try {
       const response = await api.post(ACTIVITY.SEND_REQUEST(activityId));
+      const newStatus = response.data?.request_status || 'pending';
       showToast('success', response.data?.message || 'Request sent!');
-      setActivity(prev => ({ ...prev, user_request_status: 'pending' }));
+      setActivity(prev => ({
+        ...prev,
+        user_request_status: newStatus,
+        joined_count:
+          newStatus === 'accepted'
+            ? (prev.joined_count || 0) + 1
+            : prev.joined_count,
+      }));
     } catch (error) {
       const msg =
         error.response?.data?.message || 'Failed to send join request';
@@ -153,10 +163,27 @@ const ActivityDetailScreen = ({ navigation, route }) => {
     }
   };
 
+  const isOwner = activity?.created_by === user?.id;
+
+  const canJoinActivity = (() => {
+    if (!user?.property || !user?.check_in || !user?.check_out) {
+      return { canJoin: false, message: 'No active booking' };
+    }
+    if (activity?.start_date) {
+      const actDate = new Date(activity.start_date);
+      const checkIn = new Date(user.check_in);
+      const checkOut = new Date(user.check_out);
+      if (actDate < checkIn || actDate > checkOut) {
+        return { canJoin: false, message: 'Outside trip dates' };
+      }
+    }
+    return { canJoin: true, message: '' };
+  })();
+
   const getJoinButtonText = () => {
     if (isJoining) return 'Sending...';
-    if (!activity) return 'Request to Join';
-    if (!activity.is_private) return 'Public Activity';
+    if (!activity) return 'Join';
+    if (!canJoinActivity.canJoin) return canJoinActivity.message;
     switch (activity.user_request_status) {
       case 'pending':
         return 'Request Pending';
@@ -165,13 +192,14 @@ const ActivityDetailScreen = ({ navigation, route }) => {
       case 'declined':
         return 'Declined';
       default:
-        return 'Request to Join';
+        return activity.is_private ? 'Request to Join' : 'Join';
     }
   };
 
   const isJoinDisabled =
     isJoining ||
-    !activity?.is_private ||
+    isOwner ||
+    !canJoinActivity.canJoin ||
     activity?.user_request_status === 'pending' ||
     activity?.user_request_status === 'accepted';
 
@@ -357,18 +385,30 @@ const ActivityDetailScreen = ({ navigation, route }) => {
               <Text style={styles.joinButtonText}>{getJoinButtonText()}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.chatButton}
-              activeOpacity={0.8}
-              onPress={() =>
-                navigation.navigate(Screens.ChatDetail, {
-                  activityId: activity.id,
-                  title: activity.title,
-                })
-              }
-            >
-              <Text style={styles.chatButtonText}>Join Chat</Text>
-            </TouchableOpacity>
+            {(() => {
+              const chatAllowed =
+                isOwner ||
+                activity?.user_request_status === 'accepted' ||
+                canJoinActivity.canJoin;
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.chatButton,
+                    !chatAllowed && styles.disabledButton,
+                  ]}
+                  activeOpacity={0.8}
+                  disabled={!chatAllowed}
+                  onPress={() =>
+                    navigation.navigate(Screens.ChatDetail, {
+                      activityId: activity.id,
+                      title: activity.title,
+                    })
+                  }
+                >
+                  <Text style={styles.chatButtonText}>Join Chat</Text>
+                </TouchableOpacity>
+              );
+            })()}
           </View>
 
           <Text style={styles.commentsTitle}>Comments</Text>
@@ -552,7 +592,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   providedByTag: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,

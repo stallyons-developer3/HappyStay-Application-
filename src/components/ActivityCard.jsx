@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { Colors, Fonts } from '../constants/Constants';
+import Button from './common/Button';
 
 const { width } = Dimensions.get('window');
 const defaultImage = require('../assets/images/bonfire.png');
@@ -22,6 +24,13 @@ const ActivityCard = ({
   location,
   onPress,
   onMapPress,
+  onJoinPress,
+  isOwner = false,
+  isPrivate = false,
+  requestStatus = null,
+  joinLoading = false,
+  canJoin = true,
+  canJoinMessage = '',
 }) => {
   const imageSource =
     typeof image === 'string' ? { uri: image } : image || defaultImage;
@@ -92,6 +101,28 @@ const ActivityCard = ({
             />
             <Text style={styles.mapText}>Open Map</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.joinSection}>
+          {isOwner || requestStatus === 'accepted' ? (
+            <Button title="Joined" size="full" disabled={true} />
+          ) : requestStatus === 'pending' ? (
+            <Button title="Pending" size="full" disabled={true} />
+          ) : !canJoin ? (
+            <Button
+              title={canJoinMessage || 'Cannot Join'}
+              size="full"
+              disabled={true}
+            />
+          ) : (
+            <Button
+              title={isPrivate ? 'Request to Join' : 'Join'}
+              size="full"
+              onPress={onJoinPress}
+              loading={joinLoading}
+              disabled={joinLoading}
+            />
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -199,6 +230,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.primary,
     textTransform: 'lowercase',
+  },
+  joinSection: {
+    marginTop: 12,
   },
 });
 

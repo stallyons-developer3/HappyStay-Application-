@@ -205,10 +205,26 @@ const HangoutDetailScreen = ({ navigation, route }) => {
     }
   };
 
+  const canJoinHangout = (() => {
+    if (!user?.property || !user?.check_in || !user?.check_out) {
+      return { canJoin: false, message: 'No active booking' };
+    }
+    if (hangout?.date) {
+      const hDate = new Date(hangout.date);
+      const checkIn = new Date(user.check_in);
+      const checkOut = new Date(user.check_out);
+      if (hDate < checkIn || hDate > checkOut) {
+        return { canJoin: false, message: 'Outside trip dates' };
+      }
+    }
+    return { canJoin: true, message: '' };
+  })();
+
   const getJoinButtonText = () => {
     if (isJoining) return 'Sending...';
     if (isOwner) return 'Your Hangout';
     if (!hangout) return 'Request to Join';
+    if (!canJoinHangout.canJoin) return canJoinHangout.message;
     switch (hangout.user_request_status) {
       case 'pending':
         return 'Request Pending';
@@ -224,6 +240,7 @@ const HangoutDetailScreen = ({ navigation, route }) => {
   const isJoinDisabled =
     isJoining ||
     isOwner ||
+    !canJoinHangout.canJoin ||
     hangout?.user_request_status === 'pending' ||
     hangout?.user_request_status === 'accepted';
 
@@ -381,20 +398,33 @@ const HangoutDetailScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              style={[styles.chatButton, (isOwner || isPublic) && { flex: 1 }]}
-              activeOpacity={0.8}
-              onPress={() =>
-                navigation.navigate(Screens.ChatDetail, {
-                  hangoutId: hangout.id,
-                  title: hangout.title,
-                })
-              }
-            >
-              <Text style={styles.chatButtonText}>
-                {isOwner ? 'Chat' : 'Join Chat'}
-              </Text>
-            </TouchableOpacity>
+            {(() => {
+              const chatAllowed =
+                isOwner ||
+                hangout?.user_request_status === 'accepted' ||
+                canJoinHangout.canJoin;
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.chatButton,
+                    (isOwner || isPublic) && { flex: 1 },
+                    !chatAllowed && styles.disabledButton,
+                  ]}
+                  activeOpacity={0.8}
+                  disabled={!chatAllowed}
+                  onPress={() =>
+                    navigation.navigate(Screens.ChatDetail, {
+                      hangoutId: hangout.id,
+                      title: hangout.title,
+                    })
+                  }
+                >
+                  <Text style={styles.chatButtonText}>
+                    {isOwner ? 'Chat' : 'Join Chat'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
           </View>
 
           {isOwner && pendingRequests.length > 0 && (

@@ -26,6 +26,8 @@ const HangoutCard = ({
   isPublic = false,
   requestStatus = null,
   joinLoading = false,
+  canJoin = true,
+  canJoinMessage = '',
   showMenu = false,
   onEditPress,
   onDeletePress,
@@ -137,13 +139,19 @@ const HangoutCard = ({
         />
       </View>
 
-      {isOwner || isPublic || requestStatus === 'accepted' ? (
+      {isOwner || requestStatus === 'accepted' ? (
         <Button title="Chat" size="full" onPress={onChatPress} />
       ) : requestStatus === 'pending' ? (
         <Button title="Pending" size="full" disabled={true} />
+      ) : !canJoin ? (
+        <Button
+          title={canJoinMessage || 'Cannot Join'}
+          size="full"
+          disabled={true}
+        />
       ) : (
         <Button
-          title="Request to Join"
+          title={isPublic ? 'Join' : 'Request to Join'}
           size="full"
           onPress={onJoinPress}
           loading={joinLoading}

@@ -163,9 +163,18 @@ const ManageScreen = ({ navigation }) => {
           <View style={styles.greetingRow}>
             <Text style={styles.greeting}>Create Your{'\n'}Hangout</Text>
             <TouchableOpacity
-              style={styles.createButton}
+              style={[styles.createButton, !user?.property && { opacity: 0.5 }]}
               activeOpacity={0.8}
-              onPress={() => navigation.navigate('CreateHangout')}
+              onPress={() => {
+                if (!user?.property || !user?.check_in || !user?.check_out) {
+                  showToast(
+                    'info',
+                    'You must be assigned to a property to create hangouts.',
+                  );
+                  return;
+                }
+                navigation.navigate('CreateHangout');
+              }}
             >
               <Text style={styles.createButtonText}>Create</Text>
             </TouchableOpacity>

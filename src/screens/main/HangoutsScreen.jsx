@@ -35,6 +35,23 @@ const HangoutsScreen = ({ navigation }) => {
   const [activeFilters, setActiveFilters] = useState({});
   const [joiningId, setJoiningId] = useState(null);
 
+  const canJoinHangout = hangout => {
+    if (!user?.property || !user?.check_in || !user?.check_out) {
+      return { canJoin: false, message: 'No active booking' };
+    }
+    if (hangout.date) {
+      const hDate = new Date(hangout.date);
+      const checkIn = new Date(user.check_in);
+      const checkOut = new Date(user.check_out);
+      if (hDate < checkIn || hDate > checkOut) {
+        return { canJoin: false, message: 'Outside trip dates' };
+      }
+    }
+    return { canJoin: true, message: '' };
+  };
+
+  const hasActiveBooking = user?.property && user?.check_in && user?.check_out;
+
   const fetchHangouts = async (params = {}) => {
     try {
       const queryParams = new URLSearchParams();
@@ -94,10 +111,20 @@ const HangoutsScreen = ({ navigation }) => {
     setJoiningId(hangoutId);
     try {
       const response = await api.post(HANGOUT.SEND_REQUEST(hangoutId));
+      const newStatus = response.data?.request_status || 'pending';
       showToast('success', response.data?.message || 'Request sent!');
       setHangouts(prev =>
         prev.map(h =>
-          h.id === hangoutId ? { ...h, user_request_status: 'pending' } : h,
+          h.id === hangoutId
+            ? {
+                ...h,
+                user_request_status: newStatus,
+                joined_count:
+                  newStatus === 'accepted'
+                    ? (h.joined_count || 0) + 1
+                    : h.joined_count,
+              }
+            : h,
         ),
       );
     } catch (error) {
@@ -169,6 +196,7 @@ const HangoutsScreen = ({ navigation }) => {
                 image: p.profile_picture || null,
                 name: p.name || null,
               }));
+              const joinCheck = canJoinHangout(hangout);
 
               return (
                 <HangoutCard
@@ -185,6 +213,8 @@ const HangoutsScreen = ({ navigation }) => {
                   isPublic={!hangout.is_private}
                   requestStatus={hangout.user_request_status}
                   joinLoading={joiningId === hangout.id}
+                  canJoin={joinCheck.canJoin}
+                  canJoinMessage={joinCheck.message}
                   onPress={() =>
                     navigation.navigate(Screens.HangoutDetail, {
                       hangoutId: hangout.id,
