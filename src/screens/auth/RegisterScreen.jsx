@@ -14,7 +14,12 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
-import { registerUser, clearError } from '../../store/slices/authSlice';
+import {
+  registerUser,
+  googleLogin,
+  clearError,
+} from '../../store/slices/authSlice';
+import { configureGoogleSignIn } from '../../services/googleAuthService';
 import { useToast } from '../../context/ToastContext';
 
 const RegisterScreen = ({ navigation }) => {
@@ -28,9 +33,12 @@ const RegisterScreen = ({ navigation }) => {
 
   const dispatch = useDispatch();
   const { showToast } = useToast();
-  const { isLoading, error, isAuthenticated, user } = useSelector(
-    state => state.auth,
-  );
+  const { isLoading, isGoogleLoading, error, isAuthenticated, user } =
+    useSelector(state => state.auth);
+
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
 
   useEffect(() => {
     if (error) {
@@ -60,7 +68,11 @@ const RegisterScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigation.replace(Screens.Onboarding1, { username: username.trim() });
+      if (user.is_profile_complete) {
+        navigation.replace(Screens.MainApp);
+      } else {
+        navigation.replace(Screens.Onboarding1, { username: username.trim() });
+      }
     }
   }, [isAuthenticated, user, navigation]);
 
@@ -88,6 +100,10 @@ const RegisterScreen = ({ navigation }) => {
         password_confirmation: confirmPassword,
       }),
     );
+  };
+
+  const handleGoogleSignUp = () => {
+    dispatch(googleLogin());
   };
 
   return (
@@ -260,7 +276,7 @@ const RegisterScreen = ({ navigation }) => {
           onPress={handleRegister}
           size="full"
           style={{ opacity: isLoading ? 0.7 : 1 }}
-          disabled={isLoading}
+          disabled={isLoading || isGoogleLoading}
         />
 
         {isLoading && (
@@ -277,13 +293,31 @@ const RegisterScreen = ({ navigation }) => {
           <View style={styles.orLine} />
         </View>
 
-        <TouchableOpacity style={styles.socialButton} activeOpacity={0.8}>
-          <Image
-            source={require('../../assets/images/google.png')}
-            style={styles.socialIcon}
-            resizeMode="contain"
-          />
-          <Text style={styles.socialButtonText}>Sign up with Google</Text>
+        <TouchableOpacity
+          style={[styles.socialButton, isGoogleLoading && { opacity: 0.7 }]}
+          activeOpacity={0.8}
+          onPress={handleGoogleSignUp}
+          disabled={isLoading || isGoogleLoading}
+        >
+          {isGoogleLoading ? (
+            <>
+              <ActivityIndicator
+                size="small"
+                color={Colors.primary}
+                style={{ marginRight: 12 }}
+              />
+              <Text style={styles.socialButtonText}>Signing up...</Text>
+            </>
+          ) : (
+            <>
+              <Image
+                source={require('../../assets/images/google.png')}
+                style={styles.socialIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.socialButtonText}>Sign up with Google</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         {Platform.OS === 'ios' && (

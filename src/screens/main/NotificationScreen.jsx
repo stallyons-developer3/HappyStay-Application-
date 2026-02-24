@@ -13,10 +13,7 @@ import { useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { NOTIFICATION } from '../../api/endpoints';
-import {
-  subscribeToChannel,
-  unsubscribeFromChannel,
-} from '../../services/pusherService';
+import { subscribeToChannel } from '../../services/pusherService';
 import { useBadgeCounts } from '../../context/BadgeContext';
 
 // Get icon based on notification type
@@ -132,15 +129,19 @@ const NotificationScreen = ({ navigation }) => {
 
     const channelName = `user-notifications.${user.id}`;
 
-    subscribeToChannel(channelName, 'new-notification', data => {
-      if (data?.notification) {
-        setNotifications(prev => [data.notification, ...prev]);
-        setUnreadCount(prev => prev + 1);
-      }
-    });
+    const cleanup = subscribeToChannel(
+      channelName,
+      'new-notification',
+      data => {
+        if (data?.notification) {
+          setNotifications(prev => [data.notification, ...prev]);
+          setUnreadCount(prev => prev + 1);
+        }
+      },
+    );
 
     return () => {
-      unsubscribeFromChannel(channelName);
+      if (typeof cleanup === 'function') cleanup();
     };
   }, [user?.id]);
 

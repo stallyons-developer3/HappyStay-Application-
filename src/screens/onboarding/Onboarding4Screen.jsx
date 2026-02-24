@@ -16,11 +16,15 @@ import { Colors, Fonts, Screens } from '../../constants/Constants';
 import TripCard from '../../components/TripCard';
 import Button from '../../components/common/Button';
 import api from '../../api/axiosInstance';
-import { PROPERTY } from '../../api/endpoints';
+import { PROPERTY, PROFILE } from '../../api/endpoints';
 import { useToast } from '../../context/ToastContext';
+import { useDispatch } from 'react-redux';
+import { setUser } from '../../store/slices/authSlice';
+import { saveUserData } from '../../utils/storage';
 
 const Onboarding4Screen = ({ navigation }) => {
   const { showToast } = useToast();
+  const dispatch = useDispatch();
   const [properties, setProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,6 +38,20 @@ const Onboarding4Screen = ({ navigation }) => {
   const [checkOutSelected, setCheckOutSelected] = useState(false);
   const [showCheckInPicker, setShowCheckInPicker] = useState(false);
   const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
+
+  // Refresh user profile in Redux before navigating to MainApp
+  const refreshAndNavigate = async () => {
+    try {
+      const response = await api.get(PROFILE.GET_PROFILE);
+      if (response.data?.success && response.data?.user) {
+        dispatch(setUser(response.data.user));
+        await saveUserData(response.data.user);
+      }
+    } catch (error) {
+      console.log('Profile refresh error:', error);
+    }
+    navigation.replace('MainApp');
+  };
 
   useEffect(() => {
     fetchProperties();
@@ -125,7 +143,7 @@ const Onboarding4Screen = ({ navigation }) => {
           ),
         );
         showToast('success', response.data.message || 'Booking request sent!');
-        setTimeout(() => navigation.replace('MainApp'), 1000);
+        setTimeout(() => refreshAndNavigate(), 1000);
       }
     } catch (error) {
       const errorMsg =
@@ -153,7 +171,7 @@ const Onboarding4Screen = ({ navigation }) => {
   };
 
   const handleSkip = () => {
-    navigation.replace('MainApp');
+    refreshAndNavigate();
   };
 
   return (

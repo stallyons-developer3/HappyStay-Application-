@@ -15,7 +15,6 @@ import { Colors, Fonts } from '../../constants/Constants';
 import Button from '../../components/common/Button';
 import api from '../../api/axiosInstance';
 import { PROFILE } from '../../api/endpoints';
-import { setUser } from '../../store/slices/authSlice';
 import { resetOnboarding } from '../../store/slices/onboardingSlice';
 import { useToast } from '../../context/ToastContext';
 
@@ -75,12 +74,10 @@ const Onboarding3Screen = ({ navigation }) => {
         },
       });
 
-      // Navigate FIRST before dispatching state changes
+      // Navigate to Onboarding4 — do NOT dispatch setUser here
+      // because LoginScreen may still be in the navigation stack
+      // and its auth watcher would redirect to MainApp
       navigation.replace('Onboarding4');
-
-      if (response.data?.user) {
-        dispatch(setUser(response.data.user));
-      }
       dispatch(resetOnboarding());
     } catch (error) {
       const errors = error.response?.data?.errors;

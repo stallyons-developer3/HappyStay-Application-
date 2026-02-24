@@ -10,10 +10,7 @@ import { useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../api/axiosInstance';
 import { NOTIFICATION, SUPPORT } from '../api/endpoints';
-import {
-  subscribeToChannel,
-  unsubscribeFromChannel,
-} from '../services/pusherService';
+import { subscribeToChannel } from '../services/pusherService';
 
 const STORAGE_KEY = 'chat_unreads';
 
@@ -40,6 +37,9 @@ export const BadgeProvider = ({ children }) => {
   const subscribedChannelsRef = useRef(new Set());
   // Track which chat is currently open so we don't increment it
   const activeChatRef = useRef(null);
+  // Track cleanup functions to prevent duplicate subscriptions
+  const notifCleanupRef = useRef(null);
+  const supportCleanupRef = useRef(null);
 
   // Load persisted unreads from AsyncStorage
   useEffect(() => {
@@ -120,25 +120,47 @@ export const BadgeProvider = ({ children }) => {
   // Real-time: notification channel
   useEffect(() => {
     if (!user?.id) return;
+    // Always clean up previous subscription first to prevent duplicates
+    if (typeof notifCleanupRef.current === 'function') {
+      notifCleanupRef.current();
+      notifCleanupRef.current = null;
+    }
     const ch = `user-notifications.${user.id}`;
-    subscribeToChannel(ch, 'new-notification', () => {
+    const result = subscribeToChannel(ch, 'new-notification', () => {
       setNotificationCount(prev => prev + 1);
     });
-    return () => unsubscribeFromChannel(ch);
+    notifCleanupRef.current = typeof result === 'function' ? result : null;
+    return () => {
+      if (typeof notifCleanupRef.current === 'function') {
+        notifCleanupRef.current();
+        notifCleanupRef.current = null;
+      }
+    };
   }, [user?.id]);
 
   // Real-time: support chat channel
   useEffect(() => {
     if (!user?.id) return;
+    // Always clean up previous subscription first to prevent duplicates
+    if (typeof supportCleanupRef.current === 'function') {
+      supportCleanupRef.current();
+      supportCleanupRef.current = null;
+    }
     const ch = `support-chat.${user.id}`;
-    subscribeToChannel(ch, 'new-message', data => {
+    const result = subscribeToChannel(ch, 'new-message', data => {
       if (data?.sender_id !== user.id) {
         // Don't increment if user is currently viewing support chat
         if (activeChatRef.current === 'support') return;
         setChatUnreads(prev => ({ ...prev, support: (prev.support || 0) + 1 }));
       }
     });
-    return () => unsubscribeFromChannel(ch);
+    supportCleanupRef.current = typeof result === 'function' ? result : null;
+    return () => {
+      if (typeof supportCleanupRef.current === 'function') {
+        supportCleanupRef.current();
+        supportCleanupRef.current = null;
+      }
+    };
   }, [user?.id]);
 
   // Subscribe to a group chat channel for real-time unread tracking

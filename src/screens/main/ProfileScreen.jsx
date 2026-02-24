@@ -13,11 +13,12 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import { STORAGE_URL } from '../../api/endpoints';
-import { logoutUser } from '../../store/slices/authSlice';
+import { logoutUser, setUser } from '../../store/slices/authSlice';
+import { saveUserData } from '../../utils/storage';
 import Button from '../../components/common/Button';
 import TripCard from '../../components/TripCard';
 import api from '../../api/axiosInstance';
-import { PROPERTY } from '../../api/endpoints';
+import { PROPERTY, PROFILE } from '../../api/endpoints';
 
 const formatDate = dateStr => {
   if (!dateStr) return '';
@@ -37,6 +38,18 @@ const ProfileScreen = ({ navigation }) => {
   const [tripsLoading, setTripsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const fetchProfile = useCallback(async () => {
+    try {
+      const response = await api.get(PROFILE.GET_PROFILE);
+      if (response.data?.success && response.data?.user) {
+        dispatch(setUser(response.data.user));
+        await saveUserData(response.data.user);
+      }
+    } catch (error) {
+      console.log('Fetch profile error:', error);
+    }
+  }, [dispatch]);
+
   const fetchMyTrips = useCallback(async () => {
     try {
       const response = await api.get(PROPERTY.MY_TRIPS);
@@ -53,21 +66,24 @@ const ProfileScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
+    fetchProfile();
     fetchMyTrips();
-  }, [fetchMyTrips]);
+  }, [fetchProfile, fetchMyTrips]);
 
   // Re-fetch when screen comes back into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
+      fetchProfile();
       fetchMyTrips();
     });
     return unsubscribe;
-  }, [navigation, fetchMyTrips]);
+  }, [navigation, fetchProfile, fetchMyTrips]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    fetchProfile();
     fetchMyTrips();
-  }, [fetchMyTrips]);
+  }, [fetchProfile, fetchMyTrips]);
 
   const getProfileImage = () => {
     if (user?.profile_picture) {

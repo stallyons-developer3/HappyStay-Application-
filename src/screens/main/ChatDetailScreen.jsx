@@ -18,10 +18,7 @@ import { Shadow } from 'react-native-shadow-2';
 import { Colors, Fonts } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { SUPPORT, ACTIVITY, HANGOUT } from '../../api/endpoints';
-import {
-  subscribeToChannel,
-  unsubscribeFromChannel,
-} from '../../services/pusherService';
+import { subscribeToChannel } from '../../services/pusherService';
 import ChatBubble from '../../components/ChatBubble';
 import { useBadgeCounts } from '../../context/BadgeContext';
 import { useToast } from '../../context/ToastContext';
@@ -168,11 +165,11 @@ const ChatDetailScreen = ({ navigation, route }) => {
   }, []);
 
   useEffect(() => {
-    subscribeToChannel(channelName, 'new-message', data => {
+    const cleanup = subscribeToChannel(channelName, 'new-message', data => {
       handlePusherMessage(data);
     });
     return () => {
-      unsubscribeFromChannel(channelName);
+      if (typeof cleanup === 'function') cleanup();
     };
   }, [channelName]);
 
