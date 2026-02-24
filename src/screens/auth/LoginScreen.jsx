@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useIsFocused } from '@react-navigation/native';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
 import {
@@ -35,6 +36,7 @@ const LoginScreen = ({ navigation }) => {
   const { showToast } = useToast();
   const { isLoading, isGoogleLoading, error, isAuthenticated, user } =
     useSelector(state => state.auth);
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     configureGoogleSignIn();
@@ -68,14 +70,14 @@ const LoginScreen = ({ navigation }) => {
   }, [error, dispatch]);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && isFocused) {
       if (user.is_profile_complete) {
         navigation.replace(Screens.MainApp);
       } else {
         navigation.replace(Screens.Onboarding1);
       }
     }
-  }, [isAuthenticated, user, navigation]);
+  }, [isAuthenticated, user, navigation, isFocused]);
 
   const handleLogin = () => {
     const errors = {};
