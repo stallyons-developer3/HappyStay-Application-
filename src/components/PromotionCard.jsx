@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { Colors, Fonts } from '../constants/Constants';
+import React, {useState} from 'react';
+import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
+import {WebView} from 'react-native-webview';
+import {Colors, Fonts} from '../constants/Constants';
 
 const defaultIcon = require('../assets/images/icons/promo-icon.png');
 
-const HtmlDescription = ({ html }) => {
+const HtmlDescription = ({html}) => {
   const [webViewHeight, setWebViewHeight] = useState(40);
 
   const wrappedHtml = `
@@ -18,9 +18,9 @@ const HtmlDescription = ({ html }) => {
         html, body { background: transparent; overflow: hidden; height: auto; }
         #content {
           font-family: -apple-system, sans-serif;
-          font-size: 12px;
+          font-size: 13px;
           color: #333;
-          line-height: 1.6;
+          line-height: 1.5;
           display: block;
           overflow: hidden;
         }
@@ -70,8 +70,8 @@ const HtmlDescription = ({ html }) => {
 
   return (
     <WebView
-      source={{ html: wrappedHtml }}
-      style={{ height: webViewHeight, opacity: 0.99 }}
+      source={{html: wrappedHtml}}
+      style={{height: webViewHeight, opacity: 0.99}}
       scrollEnabled={false}
       nestedScrollEnabled={false}
       showsVerticalScrollIndicator={false}
@@ -86,9 +86,18 @@ const HtmlDescription = ({ html }) => {
   );
 };
 
-const PromotionCard = ({ icon, title, description, link, onPress }) => {
+const PromotionCard = ({
+  propertyIcon,
+  propertyName,
+  marketingTag,
+  description,
+  image,
+  onPress,
+}) => {
   const iconSource =
-    typeof icon === 'string' ? { uri: icon } : icon || defaultIcon;
+    typeof propertyIcon === 'string' && propertyIcon
+      ? {uri: propertyIcon}
+      : propertyIcon || defaultIcon;
 
   const hasHtml = description && /<[a-z][\s\S]*>/i.test(description);
 
@@ -96,27 +105,49 @@ const PromotionCard = ({ icon, title, description, link, onPress }) => {
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
-      activeOpacity={0.9}
-    >
-      <View style={styles.iconContainer}>
-        <Image source={iconSource} style={styles.icon} resizeMode="contain" />
-        <Text style={styles.title}>{title}</Text>
+      activeOpacity={0.9}>
+      {/* Header row: icon + property name + marketing tag */}
+      <View style={styles.header}>
+        <View style={styles.propertyInfo}>
+          <Image
+            source={iconSource}
+            style={styles.propertyIcon}
+            resizeMode="cover"
+          />
+          <Text style={styles.propertyName} numberOfLines={1}>
+            {propertyName}
+          </Text>
+        </View>
+        {marketingTag ? (
+          <View style={styles.tagContainer}>
+            <Text style={styles.tagText} numberOfLines={1}>
+              {marketingTag}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
-      <View style={styles.content}>
-        {description ? (
-          hasHtml ? (
-            <View style={styles.htmlContainer}>
-              <HtmlDescription html={description} />
-            </View>
-          ) : (
-            <Text style={styles.description} numberOfLines={3}>
-              {description}
-            </Text>
-          )
-        ) : null}
-        {link && <Text style={styles.link}>{link}</Text>}
-      </View>
+      {/* Description */}
+      {description ? (
+        hasHtml ? (
+          <View style={styles.htmlContainer}>
+            <HtmlDescription html={description} />
+          </View>
+        ) : (
+          <Text style={styles.description} numberOfLines={4}>
+            {description}
+          </Text>
+        )
+      ) : null}
+
+      {/* Post image */}
+      {image ? (
+        <Image
+          source={{uri: image}}
+          style={styles.postImage}
+          resizeMode="cover"
+        />
+      ) : null}
     </TouchableOpacity>
   );
 };
@@ -127,50 +158,66 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginHorizontal: 20,
     marginBottom: 16,
-    padding: 16,
+    padding: 14,
     shadowColor: Colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
   },
-  iconContainer: {
-    borderRadius: 25,
-    alignItems: 'center',
+  header: {
     flexDirection: 'row',
-    gap: 12,
-    marginRight: 14,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  icon: {
-    width: 50,
-    height: 50,
+  propertyInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
-  content: {
+  propertyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.backgroundGray,
+  },
+  propertyName: {
+    fontFamily: Fonts.poppinsSemiBold,
+    fontSize: 14,
+    color: Colors.textDark,
+    marginLeft: 10,
     flex: 1,
   },
-  title: {
-    fontFamily: Fonts.RobotoBold,
-    fontSize: 14,
-    color: Colors.primary,
-    marginBottom: 4,
+  tagContainer: {
+    backgroundColor: Colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  tagText: {
+    fontFamily: Fonts.poppinsSemiBold,
+    fontSize: 10,
+    color: Colors.white,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   htmlContainer: {
-    marginVertical: 8,
+    marginBottom: 10,
     minHeight: 30,
   },
   description: {
     fontFamily: Fonts.RobotoRegular,
-    fontSize: 12,
-    color: Colors.textBlack,
-    lineHeight: 18,
-    marginVertical: 8,
+    fontSize: 13,
+    color: Colors.textDark,
+    lineHeight: 19,
+    marginBottom: 10,
   },
-  link: {
-    fontFamily: Fonts.poppinsRegular,
-    fontSize: 12,
-    color: Colors.textBlack,
-    textDecorationLine: 'underline',
-    textTransform: 'lowercase',
+  postImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
   },
 });
 

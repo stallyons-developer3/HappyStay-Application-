@@ -357,10 +357,11 @@ const HomeScreen = ({ navigation }) => {
               return (
                 <PromotionCard
                   key={`post-${p.id}`}
-                  icon={p.thumbnail}
-                  title={p.name}
+                  propertyIcon={p.property_icon}
+                  propertyName={p.property_name}
+                  marketingTag={p.marketing_tag}
                   description={p.description}
-                  link={p.marketing_tag}
+                  image={p.thumbnail}
                   onPress={() => console.log('Post pressed', p.id)}
                 />
               );

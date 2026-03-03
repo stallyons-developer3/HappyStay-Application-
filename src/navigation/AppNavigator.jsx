@@ -98,7 +98,7 @@ const AppNavigator = () => {
             component={withSafeArea(Onboarding4Screen, ['top', 'bottom'])}
           />
 
-          <Stack.Screen name={Screens.MainApp} component={BottomTabNavigator} />
+          <Stack.Screen name={Screens.MainApp} component={withSafeArea(BottomTabNavigator, ['top'])} />
 
           <Stack.Screen
             name={Screens.ActivityDetail}

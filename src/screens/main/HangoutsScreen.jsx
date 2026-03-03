@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Text,
+  Image,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
@@ -65,7 +66,11 @@ const HangoutsScreen = ({ navigation }) => {
 
       const response = await api.get(url);
       if (response.data?.hangouts) {
-        setHangouts(response.data.hangouts);
+        const list = response.data.hangouts;
+        setHangouts(list);
+        list.forEach(h => {
+          if (h.user?.profile_picture) Image.prefetch(h.user.profile_picture).catch(() => {});
+        });
       }
     } catch (error) {
       console.log('Fetch hangouts error:', error);

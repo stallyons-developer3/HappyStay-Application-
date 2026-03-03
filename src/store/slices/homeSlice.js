@@ -1,6 +1,24 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { Image } from 'react-native';
 import api from '../../api/axiosInstance';
 import { ACTIVITY, HANGOUT, POST } from '../../api/endpoints';
+
+const prefetchImages = (activities, hangouts, posts) => {
+  const urls = [];
+  activities.forEach(a => {
+    if (a.thumbnail) urls.push(a.thumbnail);
+  });
+  hangouts.forEach(h => {
+    if (h.user?.profile_picture) urls.push(h.user.profile_picture);
+  });
+  posts.forEach(p => {
+    if (p.thumbnail) urls.push(p.thumbnail);
+    if (p.property_icon) urls.push(p.property_icon);
+  });
+  urls.forEach(url => {
+    Image.prefetch(url).catch(() => {});
+  });
+};
 
 export const fetchHomeData = createAsyncThunk(
   'home/fetchHomeData',
@@ -22,11 +40,14 @@ export const fetchHomeData = createAsyncThunk(
         api.get(POST.GET_ALL),
       ]);
 
-      return {
-        activities: activitiesRes.data?.activities || [],
-        hangouts: hangoutsRes.data?.hangouts || [],
-        posts: postsRes.data?.posts || [],
-      };
+      const activities = activitiesRes.data?.activities || [];
+      const hangouts = hangoutsRes.data?.hangouts || [];
+      const posts = postsRes.data?.posts || [];
+
+      // Prefetch feed images so they load faster
+      prefetchImages(activities, hangouts, posts);
+
+      return { activities, hangouts, posts };
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || 'Failed to load home data',

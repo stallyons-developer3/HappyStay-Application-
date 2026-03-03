@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Text,
+  Image,
   Linking,
 } from 'react-native';
 import { useSelector } from 'react-redux';
@@ -94,7 +95,11 @@ const ActivitiesScreen = ({ navigation }) => {
 
       const response = await api.get(url);
       if (response.data?.activities) {
-        setActivities(response.data.activities);
+        const list = response.data.activities;
+        setActivities(list);
+        list.forEach(a => {
+          if (a.thumbnail) Image.prefetch(a.thumbnail).catch(() => {});
+        });
       }
     } catch (error) {
       console.log('Fetch activities error:', error);
