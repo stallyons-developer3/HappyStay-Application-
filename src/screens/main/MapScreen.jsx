@@ -59,29 +59,37 @@ const MapScreen = ({ navigation }) => {
 
   // Send markers to WebView once map is ready and activities are loaded
   useEffect(() => {
-    if (mapReady && activities.length > 0 && webViewRef.current) {
-      const markersJSON = JSON.stringify(
-        activities.map(a => ({
-          id: a.id,
-          lat: parseFloat(a.latitude),
-          lng: parseFloat(a.longitude),
-          title: a.title || 'Activity',
-          location: a.location || '',
-          typology: a.typology || '',
-          date: a.start_date || '',
-          time: a.start_time || '',
-          price: a.price || '0.00',
-        })),
-      );
+    if (mapReady && !loading && webViewRef.current) {
+      if (activities.length > 0) {
+        const markersJSON = JSON.stringify(
+          activities.map(a => ({
+            id: a.id,
+            lat: parseFloat(a.latitude),
+            lng: parseFloat(a.longitude),
+            title: a.title || 'Activity',
+            location: a.location || '',
+            typology: a.typology || '',
+            date: a.start_date || '',
+            time: a.start_time || '',
+            price: a.price || '0.00',
+          })),
+        );
 
-      webViewRef.current.injectJavaScript(`
-        if (typeof addMarkers === 'function') {
-          addMarkers(${markersJSON});
-        }
-        true;
-      `);
+        webViewRef.current.injectJavaScript(`
+          if (typeof addMarkers === 'function') {
+            addMarkers(${markersJSON});
+          }
+          true;
+        `);
+      } else {
+        // No activities — hide the HTML loading overlay
+        webViewRef.current.injectJavaScript(`
+          document.getElementById('loading').style.display = 'none';
+          true;
+        `);
+      }
     }
-  }, [mapReady, activities]);
+  }, [mapReady, activities, loading]);
 
   // Leaflet map HTML
   const mapHTML = `
@@ -300,6 +308,14 @@ const MapScreen = ({ navigation }) => {
             <Text style={styles.loadingText}>Loading activities...</Text>
           </View>
         )}
+        {!loading && activities.length === 0 && (
+          <View style={styles.emptyOverlay}>
+            <Text style={styles.emptyTitle}>No Activities Found</Text>
+            <Text style={styles.emptySubtitle}>
+              There are no public activities available for your property right now.
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -371,6 +387,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textGray,
     marginTop: 12,
+  },
+  emptyOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.poppinsSemiBold,
+    fontSize: 18,
+    color: Colors.textDark,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 
