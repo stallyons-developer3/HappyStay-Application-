@@ -29,6 +29,7 @@ import PropertyDetailScreen from '../screens/main/PropertyDetailScreen';
 import NotificationScreen from '../screens/main/NotificationScreen';
 import MapScreen from '../screens/main/MapScreen';
 import LocationMapScreen from '../screens/main/LocationMapScreen';
+import JoinedScreen from '../screens/main/JoinedScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -144,6 +145,10 @@ const AppNavigator = () => {
             name={Screens.LocationMap}
             component={LocationMapScreen}
             options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name={Screens.Joined}
+            component={withSafeArea(JoinedScreen, ['top', 'bottom'])}
           />
         </Stack.Navigator>
       </NavigationContainer>

@@ -33,6 +33,7 @@ const ProfileScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
 
+  const [currentTrips, setCurrentTrips] = useState([]);
   const [pastTrips, setPastTrips] = useState([]);
   const [nextTrips, setNextTrips] = useState([]);
   const [tripsLoading, setTripsLoading] = useState(true);
@@ -54,6 +55,7 @@ const ProfileScreen = ({ navigation }) => {
     try {
       const response = await api.get(PROPERTY.MY_TRIPS);
       if (response.data?.success) {
+        setCurrentTrips(response.data.current_trips || []);
         setPastTrips(response.data.past_trips || []);
         setNextTrips(response.data.next_trips || []);
       }
@@ -222,13 +224,15 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {renderTripSection('Past Trips', pastTrips)}
+        {renderTripSection('Current Trips', currentTrips)}
         {renderTripSection('Next Trips', nextTrips)}
+        {renderTripSection('Past Trips', pastTrips)}
 
         <View style={styles.spacer} />
 
         <View style={styles.buttonsContainer}>
           <Button title="Trips" onPress={handleTrips} size="full" />
+          <Button title="Joined Events" onPress={() => navigation.navigate(Screens.Joined)} size="full" />
           <Button title="Logout" onPress={handleLogout} size="full" />
         </View>
       </ScrollView>

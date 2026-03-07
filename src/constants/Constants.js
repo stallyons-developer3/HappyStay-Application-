@@ -27,6 +27,7 @@ export const Fonts = {
   poppinsBold: 'Poppins-Bold',
 
   RobotoRegular: 'Roboto-Regular',
+  RobotoMedium: 'Roboto-Medium',
   RobotoBold: 'Roboto-Bold',
 };
 
@@ -59,6 +60,7 @@ export const Screens = {
   PropertyDetail: 'PropertyDetail',
 
   CreateHangout: 'CreateHangout',
+  Joined: 'Joined',
 
   Notification: 'Notification',
   Map: 'Map',

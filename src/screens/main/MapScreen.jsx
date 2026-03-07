@@ -69,6 +69,7 @@ const MapScreen = ({ navigation }) => {
             title: a.title || 'Activity',
             location: a.location || '',
             typology: a.typology || '',
+            typology_color: a.typology_color || '#27AE60',
             date: a.start_date || '',
             time: a.start_time || '',
             price: a.price || '0.00',
@@ -105,7 +106,6 @@ const MapScreen = ({ navigation }) => {
         #map { width: 100%; height: 100%; }
         
         .custom-marker {
-          background: #27AE60;
           border: 3px solid #fff;
           border-radius: 50%;
           width: 20px;
@@ -194,12 +194,6 @@ const MapScreen = ({ navigation }) => {
         
         L.control.zoom({ position: 'bottomright' }).addTo(map);
         
-        var customIcon = L.divIcon({
-          className: 'custom-marker',
-          iconSize: [20, 20],
-          iconAnchor: [10, 10]
-        });
-
         var markersGroup = L.featureGroup();
 
         function addMarkers(locations) {
@@ -208,20 +202,29 @@ const MapScreen = ({ navigation }) => {
           locations.forEach(function(loc) {
             if (!loc.lat || !loc.lng) return;
 
+            var markerColor = loc.typology_color || '#27AE60';
+            var markerIcon = L.divIcon({
+              className: 'custom-marker',
+              html: '<div style="background:' + markerColor + ';width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
+              iconSize: [20, 20],
+              iconAnchor: [10, 10]
+            });
+
+            var badgeColor = markerColor;
             var meta = '';
             if (loc.date) meta += loc.date;
             if (loc.time) meta += (meta ? ' • ' : '') + loc.time;
 
-            var popupHTML = 
+            var popupHTML =
               '<div class="popup-card" onclick="onMarkerTap(' + loc.id + ')">' +
                 '<div class="popup-title">' + loc.title + '</div>' +
                 (loc.location ? '<div class="popup-location">📍 ' + loc.location + '</div>' : '') +
                 (meta ? '<div class="popup-meta">' + meta + '</div>' : '') +
-                (loc.typology ? '<span class="popup-badge">' + loc.typology + '</span>' : '') +
+                (loc.typology ? '<span class="popup-badge" style="background:' + badgeColor + '20;color:' + badgeColor + ';">' + loc.typology + '</span>' : '') +
                 '<div class="popup-tap">Tap to view →</div>' +
               '</div>';
 
-            var marker = L.marker([loc.lat, loc.lng], { icon: customIcon });
+            var marker = L.marker([loc.lat, loc.lng], { icon: markerIcon });
             marker.bindPopup(popupHTML, { closeButton: false });
             markersGroup.addLayer(marker);
           });

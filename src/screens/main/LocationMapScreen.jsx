@@ -14,7 +14,7 @@ import { WebView } from 'react-native-webview';
 import { Colors, Fonts } from '../../constants/Constants';
 
 const LocationMapScreen = ({ navigation, route }) => {
-  const { latitude, longitude, title, location } = route.params || {};
+  const { latitude, longitude, title, location, markerColor } = route.params || {};
   const webViewRef = useRef(null);
   const [loading, setLoading] = useState(true);
 
@@ -22,6 +22,7 @@ const LocationMapScreen = ({ navigation, route }) => {
   const lng = parseFloat(longitude) || 67.0011;
   const locTitle = title || 'Location';
   const locAddress = location || '';
+  const pinColor = markerColor || '#27AE60';
 
   const openInExternalMap = () => {
     const label = encodeURIComponent(locTitle);
@@ -50,7 +51,7 @@ const LocationMapScreen = ({ navigation, route }) => {
         #map { width: 100%; height: 100%; }
         
         .custom-marker {
-          background: #27AE60;
+          background: ${pinColor};
           border: 3px solid #fff;
           border-radius: 50%;
           width: 24px;
@@ -88,8 +89,8 @@ const LocationMapScreen = ({ navigation, route }) => {
 
         .popup-directions {
           display: block;
-          background: #27AE60;
-          color: #fff;
+          background: ${pinColor};
+          color: #fff !important;
           text-align: center;
           padding: 8px;
           font-size: 13px;

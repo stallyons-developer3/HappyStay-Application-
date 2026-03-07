@@ -35,10 +35,10 @@ const interestOptions = [
 const priceOptions = [
   { id: 'all', name: 'All', min: null, max: null },
   { id: 'free', name: 'Free', min: 0, max: 0 },
-  { id: '1-20', name: '$1 - $20', min: 1, max: 20 },
-  { id: '21-50', name: '$21 - $50', min: 21, max: 50 },
-  { id: '51-100', name: '$51 - $100', min: 51, max: 100 },
-  { id: '100+', name: '$100+', min: 100, max: null },
+  { id: '1-20', name: '€1 - €20', min: 1, max: 20 },
+  { id: '21-50', name: '€21 - €50', min: 21, max: 50 },
+  { id: '51-100', name: '€51 - €100', min: 51, max: 100 },
+  { id: '100+', name: '€100+', min: 100, max: null },
 ];
 
 const activitySortOptions = [

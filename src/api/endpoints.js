@@ -26,6 +26,7 @@ export const PROPERTY = {
 
 export const ACTIVITY = {
   GET_ALL: '/activities',
+  PARTICIPATING: '/activities/participating',
   GET_DETAIL: id => `/activities/${id}`,
   SEND_REQUEST: id => `/activities/${id}/request`,
   GET_COMMENTS: id => `/activities/${id}/comments`,
@@ -36,6 +37,7 @@ export const ACTIVITY = {
 
 export const HANGOUT = {
   GET_ALL: '/hangouts',
+  PARTICIPATING: '/hangouts/participating',
   CREATE: '/hangouts',
   GET_DETAIL: id => `/hangouts/${id}`,
   UPDATE: id => `/hangouts/${id}/update`,

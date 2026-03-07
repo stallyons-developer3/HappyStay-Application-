@@ -19,6 +19,7 @@ import { Colors, Fonts, Screens } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { ACTIVITY } from '../../api/endpoints';
 import { useToast } from '../../context/ToastContext';
+import JoinActivityModal from '../../components/JoinActivityModal';
 
 const { width } = Dimensions.get('window');
 const INPUT_WIDTH = width - 40 - 48 - 12;
@@ -69,6 +70,8 @@ const ActivityDetailScreen = ({ navigation, route }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [selectedSeats, setSelectedSeats] = useState(1);
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   const scrollViewRef = React.useRef(null);
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
@@ -140,10 +143,13 @@ const ActivityDetailScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleJoinRequest = async () => {
+  const handleJoinRequest = async (seats) => {
+    const seatCount = seats || selectedSeats;
     setIsJoining(true);
     try {
-      const response = await api.post(ACTIVITY.SEND_REQUEST(activityId));
+      const response = await api.post(ACTIVITY.SEND_REQUEST(activityId), {
+        seats: seatCount,
+      });
       const newStatus = response.data?.request_status || 'pending';
       showToast('success', response.data?.message || 'Request sent!');
       setActivity(prev => ({
@@ -151,7 +157,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
         user_request_status: newStatus,
         joined_count:
           newStatus === 'accepted'
-            ? (prev.joined_count || 0) + 1
+            ? (prev.joined_count || 0) + seatCount
             : prev.joined_count,
       }));
     } catch (error) {
@@ -170,10 +176,11 @@ const ActivityDetailScreen = ({ navigation, route }) => {
       return { canJoin: false, message: 'No active booking' };
     }
     if (activity?.start_date) {
-      const actDate = new Date(activity.start_date);
-      const checkIn = new Date(user.check_in);
-      const checkOut = new Date(user.check_out);
-      if (actDate < checkIn || actDate > checkOut) {
+      const actStart = activity.start_date.slice(0, 10);
+      const actEnd = (activity.end_date || activity.start_date).slice(0, 10);
+      const checkIn = user.check_in.slice(0, 10);
+      const checkOut = user.check_out.slice(0, 10);
+      if (actEnd < checkIn || actStart > checkOut) {
         return { canJoin: false, message: 'Outside trip dates' };
       }
     }
@@ -189,8 +196,6 @@ const ActivityDetailScreen = ({ navigation, route }) => {
         return 'Request Pending';
       case 'accepted':
         return 'Joined';
-      case 'declined':
-        return 'Declined';
       default:
         return activity.is_private ? 'Request to Join' : 'Join';
     }
@@ -223,17 +228,20 @@ const ActivityDetailScreen = ({ navigation, route }) => {
     ? { uri: activity.thumbnail }
     : require('../../assets/images/bonfire.png');
 
-  const ageRange =
-    activity.min_age && activity.max_age
-      ? `${activity.min_age}-${activity.max_age}`
-      : null;
+  const ageRange = activity.min_age ? `+${activity.min_age}` : null;
 
-  const timeDisplay = [
-    formatTime(activity.start_time),
-    formatTime(activity.end_time),
-  ]
-    .filter(Boolean)
-    .join(' - ');
+  const timeDisplay = activity.all_day
+    ? 'All Day'
+    : [formatTime(activity.start_time), formatTime(activity.end_time)]
+        .filter(Boolean)
+        .join(' - ');
+
+  const dateDisplay = (() => {
+    const start = formatDate(activity.start_date);
+    const end = formatDate(activity.end_date);
+    if (start && end && start !== end) return `${start}  —  ${end}`;
+    return start || '';
+  })();
 
   return (
     <View style={styles.container}>
@@ -267,7 +275,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
             <Text style={styles.title}>{activity.title}</Text>
 
             {activity.typology && (
-              <View style={styles.categoryTag}>
+              <View style={[styles.categoryTag, activity.typology_color && { backgroundColor: activity.typology_color }]}>
                 <Text style={styles.categoryText}>
                   {formatTypology(activity.typology)}
                 </Text>
@@ -279,7 +287,9 @@ const ActivityDetailScreen = ({ navigation, route }) => {
             <View style={styles.providedByRow}>
               <View style={styles.providedByTag}>
                 <Text style={styles.providedByText}>
-                  {activity.provided_by === 'partner'
+                  {activity.provided_by === 'partner' && activity.partner_name
+                    ? `Organized by ${activity.partner_name}`
+                    : activity.provided_by === 'partner'
                     ? 'By a hostel partner'
                     : 'By the hostel'}
                 </Text>
@@ -300,6 +310,19 @@ const ActivityDetailScreen = ({ navigation, route }) => {
             </View>
           )}
 
+          {activity.meeting_point && (
+            <View style={styles.locationRow}>
+              <Image
+                source={require('../../assets/images/icons/map-pin.png')}
+                style={[styles.infoIcon, { marginTop: 2, tintColor: '#3B82F6' }]}
+                resizeMode="contain"
+              />
+              <Text style={[styles.locationText, { color: '#3B82F6' }]} numberOfLines={2}>
+                Meeting: {activity.meeting_point}
+              </Text>
+            </View>
+          )}
+
           {ageRange && (
             <View style={[styles.infoItem, { marginBottom: 12 }]}>
               <Image
@@ -308,6 +331,23 @@ const ActivityDetailScreen = ({ navigation, route }) => {
                 resizeMode="contain"
               />
               <Text style={styles.infoText}>{ageRange}</Text>
+            </View>
+          )}
+
+          {(activity.min_guests || activity.max_guests) && (
+            <View style={[styles.infoItem, { marginBottom: 12 }]}>
+              <Image
+                source={require('../../assets/images/icons/users.png')}
+                style={styles.infoIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.infoText}>
+                {activity.min_guests && activity.max_guests
+                  ? `${activity.min_guests} - ${activity.max_guests} Guests`
+                  : activity.min_guests
+                  ? `Min ${activity.min_guests} Guests`
+                  : `Max ${activity.max_guests} Guests`}
+              </Text>
             </View>
           )}
 
@@ -323,7 +363,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
               </View>
             ) : null}
 
-            {activity.start_date && (
+            {dateDisplay ? (
               <View style={styles.infoItem}>
                 <Image
                   source={require('../../assets/images/icons/calendar-small.png')}
@@ -331,10 +371,10 @@ const ActivityDetailScreen = ({ navigation, route }) => {
                   resizeMode="contain"
                 />
                 <Text style={styles.infoText}>
-                  {formatDate(activity.start_date)}
+                  {dateDisplay}
                 </Text>
               </View>
-            )}
+            ) : null}
 
             {activity.map_url && (
               <TouchableOpacity
@@ -346,6 +386,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
                     longitude: activity.longitude,
                     title: activity.title,
                     location: activity.location,
+                    markerColor: activity.typology_color,
                   })
                 }
               >
@@ -365,7 +406,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
 
           <View style={styles.priceRow}>
             <Text style={styles.price}>
-              {activity.price ? `$${activity.price}` : 'Free'}
+              {activity.price ? `€${activity.price}` : 'Free'}
             </Text>
             <Text style={styles.peopleJoined}>
               {activity.joined_count || 0} People Joined
@@ -379,7 +420,10 @@ const ActivityDetailScreen = ({ navigation, route }) => {
                 isJoinDisabled && styles.disabledButton,
               ]}
               activeOpacity={0.8}
-              onPress={handleJoinRequest}
+              onPress={() => {
+                setSelectedSeats(1);
+                setShowJoinModal(true);
+              }}
               disabled={isJoinDisabled}
             >
               <Text style={styles.joinButtonText}>{getJoinButtonText()}</Text>
@@ -445,6 +489,21 @@ const ActivityDetailScreen = ({ navigation, route }) => {
           })}
         </View>
       </ScrollView>
+
+      <JoinActivityModal
+        visible={showJoinModal}
+        onClose={() => setShowJoinModal(false)}
+        onConfirm={seats => {
+          setSelectedSeats(seats);
+          setShowJoinModal(false);
+          handleJoinRequest(seats);
+        }}
+        price={activity?.price}
+        isPrivate={activity?.is_private}
+        loading={isJoining}
+        maxGuests={activity?.max_guests}
+        joinedCount={activity?.joined_count}
+      />
 
       <View
         style={[
@@ -646,6 +705,40 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.primary,
+  },
+  seatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  seatsLabel: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.textGray,
+    marginRight: 12,
+  },
+  seatsSelector: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  seatOption: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  seatOptionSelected: {
+    backgroundColor: Colors.primary,
+  },
+  seatOptionText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.textGray,
+  },
+  seatOptionTextSelected: {
+    color: Colors.white,
   },
   actionButtons: {
     flexDirection: 'row',

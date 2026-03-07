@@ -21,6 +21,7 @@ import SearchBar from '../../components/SearchBar';
 import ActivityCard from '../../components/ActivityCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
 import FilterModal from '../../components/FilterModal';
+import JoinActivityModal from '../../components/JoinActivityModal';
 import { useBadgeCounts } from '../../context/BadgeContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -66,16 +67,19 @@ const ActivitiesScreen = ({ navigation }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [activeFilters, setActiveFilters] = useState({});
   const [joiningId, setJoiningId] = useState(null);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinModalActivity, setJoinModalActivity] = useState(null);
 
   const canJoinActivity = activity => {
     if (!user?.property || !user?.check_in || !user?.check_out) {
       return { canJoin: false, message: 'No active booking' };
     }
     if (activity.start_date) {
-      const actDate = new Date(activity.start_date);
-      const checkIn = new Date(user.check_in);
-      const checkOut = new Date(user.check_out);
-      if (actDate < checkIn || actDate > checkOut) {
+      const actStart = activity.start_date.slice(0, 10);
+      const actEnd = (activity.end_date || activity.start_date).slice(0, 10);
+      const checkIn = user.check_in.slice(0, 10);
+      const checkOut = user.check_out.slice(0, 10);
+      if (actEnd < checkIn || actStart > checkOut) {
         return { canJoin: false, message: 'Outside trip dates' };
       }
     }
@@ -141,10 +145,16 @@ const ActivitiesScreen = ({ navigation }) => {
     fetchActivities(params);
   };
 
-  const handleJoinRequest = async activityId => {
+  const openJoinModal = activity => {
+    setJoinModalActivity(activity);
+    setShowJoinModal(true);
+  };
+
+  const handleJoinRequest = async (activityId, seats = 1) => {
+    setShowJoinModal(false);
     setJoiningId(activityId);
     try {
-      const response = await api.post(ACTIVITY.SEND_REQUEST(activityId));
+      const response = await api.post(ACTIVITY.SEND_REQUEST(activityId), { seats });
       const newStatus = response.data?.request_status || 'pending';
       showToast('success', response.data?.message || 'Request sent!');
       setActivities(prev =>
@@ -155,7 +165,7 @@ const ActivitiesScreen = ({ navigation }) => {
                 user_request_status: newStatus,
                 joined_count:
                   newStatus === 'accepted'
-                    ? (a.joined_count || 0) + 1
+                    ? (a.joined_count || 0) + seats
                     : a.joined_count,
               }
             : a,
@@ -167,6 +177,7 @@ const ActivitiesScreen = ({ navigation }) => {
       showToast('info', msg);
     } finally {
       setJoiningId(null);
+      setJoinModalActivity(null);
     }
   };
 
@@ -232,7 +243,7 @@ const ActivitiesScreen = ({ navigation }) => {
                   key={`activity-${activity.id}`}
                   image={activity.thumbnail}
                   title={activity.title}
-                  price={activity.price ? `$${activity.price}` : 'Free'}
+                  price={activity.price ? `€${activity.price}` : 'Free'}
                   description={activity.description}
                   time={
                     activity.all_day
@@ -242,7 +253,12 @@ const ActivitiesScreen = ({ navigation }) => {
                           ? ' - ' + formatTime(activity.end_time)
                           : '')
                   }
-                  date={formatDate(activity.start_date)}
+                  date={
+                    formatDate(activity.start_date) +
+                    (activity.end_date && activity.end_date !== activity.start_date
+                      ? ' - ' + formatDate(activity.end_date)
+                      : '')
+                  }
                   location={activity.location || ''}
                   onPress={() =>
                     navigation.navigate(Screens.ActivityDetail, {
@@ -256,6 +272,7 @@ const ActivitiesScreen = ({ navigation }) => {
                         longitude: activity.longitude,
                         title: activity.title,
                         location: activity.location,
+                        markerColor: activity.typology_color,
                       });
                     }
                   }}
@@ -263,7 +280,7 @@ const ActivitiesScreen = ({ navigation }) => {
                   isPrivate={activity.is_private}
                   requestStatus={activity.user_request_status}
                   joinLoading={joiningId === activity.id}
-                  onJoinPress={() => handleJoinRequest(activity.id)}
+                  onJoinPress={() => openJoinModal(activity)}
                   canJoin={joinCheck.canJoin}
                   canJoinMessage={joinCheck.message}
                 />
@@ -282,6 +299,20 @@ const ActivitiesScreen = ({ navigation }) => {
         onClose={() => setShowFilterModal(false)}
         onApply={handleFilterApply}
         type="activities"
+      />
+
+      <JoinActivityModal
+        visible={showJoinModal}
+        onClose={() => {
+          setShowJoinModal(false);
+          setJoinModalActivity(null);
+        }}
+        onConfirm={seats => handleJoinRequest(joinModalActivity?.id, seats)}
+        price={joinModalActivity?.price}
+        isPrivate={joinModalActivity?.is_private}
+        loading={joiningId === joinModalActivity?.id}
+        maxGuests={joinModalActivity?.max_guests}
+        joinedCount={joinModalActivity?.joined_count}
       />
     </View>
   );

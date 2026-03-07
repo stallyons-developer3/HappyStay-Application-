@@ -106,7 +106,18 @@ const PromotionCard = ({
       style={styles.container}
       onPress={onPress}
       activeOpacity={0.9}>
-      {/* Header row: icon + property name + marketing tag */}
+      {/* Marketing tag above header */}
+      {marketingTag ? (
+        <View style={styles.tagRow}>
+          <View style={styles.tagContainer}>
+            <Text style={styles.tagText} numberOfLines={1}>
+              {marketingTag}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {/* Header row: icon + property name */}
       <View style={styles.header}>
         <View style={styles.propertyInfo}>
           <Image
@@ -118,13 +129,6 @@ const PromotionCard = ({
             {propertyName}
           </Text>
         </View>
-        {marketingTag ? (
-          <View style={styles.tagContainer}>
-            <Text style={styles.tagText} numberOfLines={1}>
-              {marketingTag}
-            </Text>
-          </View>
-        ) : null}
       </View>
 
       {/* Description */}
@@ -189,6 +193,11 @@ const styles = StyleSheet.create({
     color: Colors.textDark,
     marginLeft: 10,
     flex: 1,
+  },
+  tagRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 8,
   },
   tagContainer: {
     backgroundColor: Colors.primary,

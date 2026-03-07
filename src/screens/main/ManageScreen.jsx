@@ -31,38 +31,38 @@ const ManageScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchMyHangouts();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      fetchMyHangouts();
-    });
-    return unsubscribe;
-  }, [navigation]);
-
-  const fetchMyHangouts = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const response = await api.get(HANGOUT.GET_ALL);
-      if (response.data?.hangouts) {
-        const filtered = response.data.hangouts.filter(
+      const hangoutsRes = await api.get(HANGOUT.GET_ALL);
+      if (hangoutsRes.data?.hangouts) {
+        const filtered = hangoutsRes.data.hangouts.filter(
           h => h.user?.id === user?.id,
         );
         setMyHangouts(filtered);
       }
     } catch (error) {
-      console.log('Fetch my hangouts error:', error);
+      console.log('Fetch manage data error:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchData();
+    });
+    return unsubscribe;
+  }, [navigation, fetchData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchMyHangouts();
+    await fetchData();
     setRefreshing(false);
-  }, []);
+  }, [fetchData]);
 
   const handleDelete = hangoutId => {
     Alert.alert(
@@ -182,60 +182,60 @@ const ManageScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.cardsContainer}>
-          {myHangouts.length === 0 && (
+          {myHangouts.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
                 You haven't created any hangouts yet
               </Text>
             </View>
+          ) : (
+            myHangouts.map(hangout => {
+              const peopleData = (hangout.people_images || []).map(p => ({
+                image: p.profile_picture || null,
+                name: p.name || null,
+              }));
+
+              return (
+                <HangoutCard
+                  key={`manage-${hangout.id}`}
+                  profileImage={hangout.user?.profile_picture}
+                  name={hangout.user?.name || 'You'}
+                  activityType={
+                    hangout.interests || hangout.typology || hangout.title
+                  }
+                  description={hangout.description}
+                  peopleCount={hangout.joined_count || 0}
+                  peopleImages={peopleData}
+                  showMenu={true}
+                  isOwner={true}
+                  isPublic={!hangout.is_private}
+                  onPress={() =>
+                    navigation.navigate(Screens.HangoutDetail, {
+                      hangoutId: hangout.id,
+                    })
+                  }
+                  onChatPress={() =>
+                    navigation.navigate(Screens.ChatDetail, {
+                      hangoutId: hangout.id,
+                      title: hangout.title,
+                    })
+                  }
+                  onJoinPress={() =>
+                    navigation.navigate(Screens.HangoutDetail, {
+                      hangoutId: hangout.id,
+                    })
+                  }
+                  onEditPress={() =>
+                    navigation.navigate(Screens.CreateHangout, {
+                      isEdit: true,
+                      hangoutId: hangout.id,
+                    })
+                  }
+                  onDeletePress={() => handleDelete(hangout.id)}
+                />
+              );
+            })
           )}
-
-          {myHangouts.map(hangout => {
-            const peopleData = (hangout.people_images || []).map(p => ({
-              image: p.profile_picture || null,
-              name: p.name || null,
-            }));
-
-            return (
-              <HangoutCard
-                key={`manage-${hangout.id}`}
-                profileImage={hangout.user?.profile_picture}
-                name={hangout.user?.name || 'You'}
-                activityType={
-                  hangout.interests || hangout.typology || hangout.title
-                }
-                description={hangout.description}
-                peopleCount={hangout.joined_count || 0}
-                peopleImages={peopleData}
-                showMenu={true}
-                isOwner={true}
-                isPublic={!hangout.is_private}
-                onPress={() =>
-                  navigation.navigate(Screens.HangoutDetail, {
-                    hangoutId: hangout.id,
-                  })
-                }
-                onChatPress={() =>
-                  navigation.navigate(Screens.ChatDetail, {
-                    hangoutId: hangout.id,
-                    title: hangout.title,
-                  })
-                }
-                onJoinPress={() =>
-                  navigation.navigate(Screens.HangoutDetail, {
-                    hangoutId: hangout.id,
-                  })
-                }
-                onEditPress={() =>
-                  navigation.navigate(Screens.CreateHangout, {
-                    isEdit: true,
-                    hangoutId: hangout.id,
-                  })
-                }
-                onDeletePress={() => handleDelete(hangout.id)}
-              />
-            );
-          })}
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     textTransform: 'lowercase',
   },
   cardsContainer: {
-    marginTop: 20,
+    marginTop: 16,
   },
   bottomSpacing: {
     height: 100,

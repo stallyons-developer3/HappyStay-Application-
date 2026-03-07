@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,9 @@ import {
   Modal,
   Platform,
   ActivityIndicator,
+  LayoutAnimation,
 } from 'react-native';
+
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
 import Button from '../../components/common/Button';
@@ -41,6 +43,11 @@ const PropertyDetailScreen = ({ navigation, route }) => {
   const [menuImages, setMenuImages] = useState([]);
   const [currentMenuIndex, setCurrentMenuIndex] = useState(0);
   const [showMenuModal, setShowMenuModal] = useState(false);
+
+  // Section toggles (all collapsed by default)
+  const [expandedSections, setExpandedSections] = useState({});
+  // Amenity subcategory toggles (all collapsed by default)
+  const [expandedAmenities, setExpandedAmenities] = useState({});
 
   // Fetch property (detailed = true)
   useEffect(() => {
@@ -199,7 +206,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
     );
   }
 
-  // Collect all menu images (public in web, only for accepted in API)
+  // Collect all menu images for fullscreen viewer
   const allMenuImages = property.opening_hours
     ? property.opening_hours.reduce((acc, hour) => {
         const menus = Array.isArray(hour.menu)
@@ -210,6 +217,41 @@ const PropertyDetailScreen = ({ navigation, route }) => {
         return [...acc, ...menus];
       }, [])
     : [];
+
+  const toggleSection = (key) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleAmenityCategory = (key) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedAmenities(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const isAccepted = property.user_request_status === 'accepted';
+
+  // Section helpers
+  const hasContactInfo = property.assistance_number || property.emergency_number || (isAccepted && property.location);
+  const hasAccessInfo = property.wifi_network || property.checkin_time || property.checkout_time || property.night_access_code || property.self_checkin_instructions;
+  const hasOperatingHours = property.opening_hours && property.opening_hours.length > 0;
+  const hasHouseRules = property.house_rules && property.house_rules.length > 0;
+  const hasMenus = allMenuImages.length > 0 || property.kitchen_usage_rules || property.laundry_instructions;
+
+  const SectionHeader = ({ title, sectionKey }) => {
+    const isOn = !!expandedSections[sectionKey];
+    return (
+      <TouchableOpacity
+        style={styles.sectionHeader}
+        onPress={() => toggleSection(sectionKey)}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={[styles.toggleTrack, isOn && styles.toggleTrackOn]}>
+          <View style={[styles.toggleThumb, isOn && styles.toggleThumbOn]} />
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -265,14 +307,14 @@ const PropertyDetailScreen = ({ navigation, route }) => {
           {/* PROPERTY NAME */}
           <Text style={styles.mainTitle}>{property.name}</Text>
 
-          {/* ==================== PROPERTY INFO (P13) ==================== */}
+          {/* ==================== PROPERTY INFO (P13 - PUBLIC, always visible) ==================== */}
           {(property.typology ||
             property.short_description ||
             (property.room_types && property.room_types.length > 0) ||
-            (property.age_limit_enabled && property.min_age)) && (
+            property.age_limit_enabled) && (
             <>
               <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Property Info</Text>
+              <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Property Info</Text>
               <View style={styles.propertyInfoContainer}>
                 {property.typology && (
                   <Text style={styles.infoText}>
@@ -286,216 +328,289 @@ const PropertyDetailScreen = ({ navigation, route }) => {
                     {formatRoomTypes(property.room_types)}
                   </Text>
                 )}
+                {property.age_limit_enabled && property.min_age && (
+                  <Text style={styles.infoText}>
+                    <Text style={styles.infoLabel}>Age Limit: </Text>
+                    {property.min_age}+
+                  </Text>
+                )}
                 {property.short_description && (
                   <Text style={styles.descriptionText}>
                     {property.short_description}
                   </Text>
                 )}
-                {property.age_limit_enabled && property.min_age && (
-                  <Text style={styles.infoText}>
-                    <Text style={styles.infoLabel}>Minimum Age: </Text>
-                    {property.min_age}+
-                  </Text>
-                )}
               </View>
             </>
           )}
 
-          {/* ==================== OPENING HOURS + RESTAURANT MENU ==================== */}
-          {property.opening_hours && property.opening_hours.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Opening Hours</Text>
-              {property.opening_hours.map((hour, index) => (
-                <View key={index} style={styles.hourRow}>
-                  <Text style={styles.hoursText}>
-                    {hour.title}: {hour.start_time} - {hour.end_time}
-                  </Text>
-                </View>
-              ))}
-
-              {allMenuImages.length > 0 && (
-                <>
-                  <View style={styles.divider} />
-                  <Text style={styles.sectionTitle}>Restaurant Menu</Text>
-                  <View style={styles.menuGrid}>
-                    {allMenuImages.map((img, idx) => (
-                      <TouchableOpacity
-                        key={idx}
-                        style={styles.menuGridItem}
-                        activeOpacity={0.9}
-                        onPress={() => {
-                          setMenuImages(allMenuImages);
-                          setCurrentMenuIndex(idx);
-                          setShowMenuModal(true);
-                        }}
-                      >
-                        <Image
-                          source={{ uri: img }}
-                          style={styles.menuGridImage}
-                          resizeMode="cover"
-                        />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </>
-              )}
-            </>
-          )}
-
-          {/* ==================== AMENITIES (FULL GROUPED - exact web match) ==================== */}
+          {/* ==================== AMENITIES (PUBLIC, always visible with +/- subcategories) ==================== */}
           {property.amenities && Object.keys(property.amenities).length > 0 && (
             <>
               <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Amenities</Text>
-              {Object.entries(property.amenities).map(([category, items]) => (
-                <View key={category} style={styles.amenityCategory}>
-                  <Text style={styles.categorySubtitle}>{category}</Text>
-                  <View style={styles.amenitiesGrid}>
-                    {items.map((label, idx) => (
-                      <View key={idx} style={styles.amenityItem}>
+              <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Amenities</Text>
+              {Object.entries(property.amenities).map(([category, items]) => {
+                const isExpanded = !!expandedAmenities[category];
+                return (
+                  <View key={category} style={styles.amenityCategory}>
+                    <TouchableOpacity
+                      style={styles.amenityCategoryHeader}
+                      onPress={() => toggleAmenityCategory(category)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.categorySubtitle}>{category}</Text>
+                      <Text style={styles.plusMinusIcon}>{isExpanded ? '−' : '+'}</Text>
+                    </TouchableOpacity>
+                    {isExpanded && (
+                      <View style={styles.amenitiesGrid}>
+                        {items.map((label, idx) => (
+                          <View key={idx} style={styles.amenityItem}>
+                            <Image
+                              source={require('../../assets/images/icons/check-circle.png')}
+                              style={styles.amenityIcon}
+                              resizeMode="contain"
+                            />
+                            <Text style={styles.amenityText}>{label}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </>
+          )}
+
+          {/* ==================== SECTION 1: CONTACT & EMERGENCIES (ACCEPTED ONLY) ==================== */}
+          {isAccepted && hasContactInfo && (
+            <>
+              <View style={styles.divider} />
+              <SectionHeader title="Contact & Emergencies" sectionKey="contact" />
+              {expandedSections.contact && (
+                <View style={styles.sectionContent}>
+                  {property.assistance_number && (
+                    <View style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>24h Assistance: </Text>
+                        {property.assistance_number}
+                      </Text>
+                    </View>
+                  )}
+                  {property.emergency_number && (
+                    <View style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>Emergency Number: </Text>
+                        {property.emergency_number}
+                      </Text>
+                    </View>
+                  )}
+                  {property.location && (
+                    <View style={styles.directionsRow}>
+                      <View style={styles.addressRow}>
                         <Image
-                          source={require('../../assets/images/icons/check-circle.png')}
-                          style={styles.amenityIcon}
+                          source={require('../../assets/images/icons/map-pin.png')}
+                          style={styles.directionIcon}
                           resizeMode="contain"
                         />
-                        <Text style={styles.amenityText}>{label}</Text>
+                        <Text style={styles.addressText}>{property.location}</Text>
                       </View>
-                    ))}
-                  </View>
+                      <TouchableOpacity
+                        style={styles.getDirectionButton}
+                        onPress={handleGetDirection}
+                        activeOpacity={0.7}
+                      >
+                        <Image
+                          source={require('../../assets/images/icons/direction.png')}
+                          style={styles.directionButtonIcon}
+                          resizeMode="contain"
+                        />
+                        <Text style={styles.getDirectionText}>get direction</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
-              ))}
-            </>
-          )}
-
-          {/* ==================== DIRECTIONS ==================== */}
-          {property.location && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Directions</Text>
-              <View style={styles.directionsRow}>
-                <View style={styles.addressRow}>
-                  <Image
-                    source={require('../../assets/images/icons/map-pin.png')}
-                    style={styles.directionIcon}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.addressText}>{property.location}</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.getDirectionButton}
-                  onPress={handleGetDirection}
-                  activeOpacity={0.7}
-                >
-                  <Image
-                    source={require('../../assets/images/icons/direction.png')}
-                    style={styles.directionButtonIcon}
-                    resizeMode="contain"
-                  />
-                  <Text style={styles.getDirectionText}>Get Direction</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-
-          {/* ==================== HOUSE RULES ==================== */}
-          {property.house_rules && property.house_rules.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>House Rules</Text>
-              <View style={styles.rulesContainer}>
-                {property.house_rules.map((item, index) => (
-                  <View key={index} style={styles.ruleItem}>
-                    <Image
-                      source={require('../../assets/images/icons/check-circle.png')}
-                      style={styles.checkIcon}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.ruleText}>
-                      {item.title
-                        ? `${item.title}${item.rule ? ` - ${item.rule}` : ''}`
-                        : item.rule || ''}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          )}
-
-          {/* ==================== WI-FI DETAILS (only for accepted guests) ==================== */}
-          {property.wifi_network && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Wi-Fi Details</Text>
-              <Text style={styles.wifiText}>
-                Network: {property.wifi_network}
-              </Text>
-              {property.wifi_password && (
-                <Text style={styles.wifiText}>
-                  Password: {property.wifi_password}
-                </Text>
               )}
             </>
           )}
 
-          {/* ==================== GUEST INFORMATION (PRIVATE - exact web match) ==================== */}
-          {property.user_request_status === 'accepted' && (
+          {/* ==================== SECTION 2: ACCESS & ENTRY (ACCEPTED ONLY) ==================== */}
+          {isAccepted && hasAccessInfo && (
             <>
               <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Guest Information</Text>
-              <Text style={styles.privateNote}>
-                Visible only to accepted guests in the app
-              </Text>
-              <View style={styles.guestInfoContainer}>
-                {property.assistance_number && (
-                  <Text style={styles.guestInfoText}>
-                    <Text style={styles.infoLabel}>24h Assistance: </Text>
-                    {property.assistance_number}
-                  </Text>
-                )}
-                {property.emergency_number && (
-                  <Text style={styles.guestInfoText}>
-                    <Text style={styles.infoLabel}>Emergency Number: </Text>
-                    {property.emergency_number}
-                  </Text>
-                )}
-                {property.checkin_time && (
-                  <Text style={styles.guestInfoText}>
-                    <Text style={styles.infoLabel}>Check-in Time: </Text>
-                    {property.checkin_time}
-                  </Text>
-                )}
-                {property.checkout_time && (
-                  <Text style={styles.guestInfoText}>
-                    <Text style={styles.infoLabel}>Check-out Time: </Text>
-                    {property.checkout_time}
-                  </Text>
-                )}
-                {property.night_access_code && (
-                  <Text style={styles.guestInfoText}>
-                    <Text style={styles.infoLabel}>Night Access: </Text>
-                    {property.night_access_code}
-                  </Text>
-                )}
-                {property.self_checkin_instructions && (
-                  <Text style={styles.guestInfoText}>
-                    <Text style={styles.infoLabel}>Self Check-in: </Text>
-                    {property.self_checkin_instructions}
-                  </Text>
-                )}
-                {property.kitchen_usage_rules && (
-                  <Text style={styles.guestInfoText}>
-                    <Text style={styles.infoLabel}>Kitchen Rules: </Text>
-                    {property.kitchen_usage_rules}
-                  </Text>
-                )}
-                {property.laundry_instructions && (
-                  <Text style={styles.guestInfoText}>
-                    <Text style={styles.infoLabel}>Laundry: </Text>
-                    {property.laundry_instructions}
-                  </Text>
-                )}
-              </View>
+              <SectionHeader title="Access & Entry" sectionKey="access" />
+              {expandedSections.access && (
+                <View style={styles.sectionContent}>
+                  {property.wifi_network && (
+                    <View style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>WiFi Network: </Text>
+                        {property.wifi_network}
+                      </Text>
+                    </View>
+                  )}
+                  {property.wifi_password && (
+                    <View style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>WiFi Password: </Text>
+                        {property.wifi_password}
+                      </Text>
+                    </View>
+                  )}
+                  {property.checkin_time && (
+                    <View style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>Check-in Time: </Text>
+                        {property.checkin_time}
+                      </Text>
+                    </View>
+                  )}
+                  {property.checkout_time && (
+                    <View style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>Check-out Time: </Text>
+                        {property.checkout_time}
+                      </Text>
+                    </View>
+                  )}
+                  {property.night_access_code && (
+                    <View style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>Night Access: </Text>
+                        {property.night_access_code}
+                      </Text>
+                    </View>
+                  )}
+                  {property.self_checkin_instructions && (
+                    <View style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>Self Check-in: </Text>
+                        {property.self_checkin_instructions}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </>
+          )}
+
+          {/* ==================== SECTION 3: OPERATING HOURS (ACCEPTED ONLY) ==================== */}
+          {isAccepted && hasOperatingHours && (
+            <>
+              <View style={styles.divider} />
+              <SectionHeader title="Operating Hours" sectionKey="hours" />
+              {expandedSections.hours && (
+                <View style={styles.sectionContent}>
+                  {property.opening_hours.map((hour, index) => (
+                    <View key={index} style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>{hour.title}: </Text>
+                        From: {hour.start_time || '-'}  To: {hour.end_time || '-'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+
+          {/* ==================== SECTION 4: HOUSE RULES (ACCEPTED ONLY) ==================== */}
+          {isAccepted && hasHouseRules && (
+            <>
+              <View style={styles.divider} />
+              <SectionHeader title="House Rules" sectionKey="rules" />
+              {expandedSections.rules && (
+                <View style={styles.sectionContent}>
+                  {property.house_rules.map((item, index) => (
+                    <View key={index} style={styles.bulletItem}>
+                      <Image
+                        source={require('../../assets/images/icons/check-circle.png')}
+                        style={styles.bulletIcon}
+                        resizeMode="contain"
+                      />
+                      <Text style={styles.bulletText}>
+                        {item.title ? (
+                          <>
+                            <Text style={styles.infoLabel}>{item.title}: </Text>
+                            {item.rule || ''}
+                          </>
+                        ) : (
+                          item.rule || ''
+                        )}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+
+          {/* ==================== SECTION 5: MENUS / FOOD & SERVICES (ACCEPTED ONLY) ==================== */}
+          {isAccepted && hasMenus && (
+            <>
+              <View style={styles.divider} />
+              <SectionHeader title="Food & Services" sectionKey="menus" />
+              {expandedSections.menus && (
+                <View style={styles.sectionContent}>
+                  {property.opening_hours && property.opening_hours.map((hour, index) => {
+                    const menus = Array.isArray(hour.menu) ? hour.menu : hour.menu ? [hour.menu] : [];
+                    if (menus.length === 0) return null;
+                    return (
+                      <View key={index} style={styles.menuSection}>
+                        <Text style={styles.menuSectionTitle}>{hour.title}</Text>
+                        <View style={styles.menuGrid}>
+                          {menus.map((img, idx) => {
+                            const globalIdx = allMenuImages.indexOf(img);
+                            return (
+                              <TouchableOpacity
+                                key={idx}
+                                style={styles.menuGridItem}
+                                activeOpacity={0.9}
+                                onPress={() => {
+                                  setMenuImages(allMenuImages);
+                                  setCurrentMenuIndex(globalIdx >= 0 ? globalIdx : idx);
+                                  setShowMenuModal(true);
+                                }}
+                              >
+                                <Image
+                                  source={{ uri: img }}
+                                  style={styles.menuGridImage}
+                                  resizeMode="cover"
+                                />
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    );
+                  })}
+                  {property.kitchen_usage_rules && (
+                    <View style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>Kitchen Usage Rules: </Text>
+                        {property.kitchen_usage_rules}
+                      </Text>
+                    </View>
+                  )}
+                  {property.laundry_instructions && (
+                    <View style={styles.bulletItem}>
+                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                      <Text style={styles.bulletText}>
+                        <Text style={styles.infoLabel}>Laundry Instructions: </Text>
+                        {property.laundry_instructions}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
             </>
           )}
         </View>
@@ -722,17 +837,71 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     marginBottom: 6,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 16,
     color: Colors.textBlack,
-    marginBottom: 12,
+  },
+  toggleTrack: {
+    width: 34,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#D1D5DB',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleTrackOn: {
+    backgroundColor: Colors.primary,
+  },
+  toggleThumb: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: Colors.white,
+  },
+  toggleThumbOn: {
+    alignSelf: 'flex-end',
   },
   divider: {
     height: 1,
     backgroundColor: Colors.borderLight,
     marginTop: 20,
     marginBottom: 12,
+  },
+  sectionContent: {
+    gap: 10,
+  },
+  bulletItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  bulletIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 8,
+    marginTop: 1,
+  },
+  bulletText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textBlack,
+    flex: 1,
+    lineHeight: 22,
+  },
+  menuSection: {
+    marginBottom: 12,
+  },
+  menuSectionTitle: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.textBlack,
+    marginBottom: 8,
   },
 
   // Property Info
@@ -743,7 +912,7 @@ const styles = StyleSheet.create({
     color: Colors.textBlack,
     marginBottom: 6,
   },
-  infoLabel: { fontFamily: Fonts.RobotoBold },
+  infoLabel: { fontFamily: Fonts.RobotoMedium },
   descriptionText: {
     fontFamily: Fonts.RobotoRegular,
     fontSize: 13,
@@ -752,14 +921,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // Opening Hours
-  hourRow: { marginBottom: 6 },
-  hoursText: {
-    fontFamily: Fonts.RobotoRegular,
-    fontSize: 16,
-    color: Colors.textBlack,
-    lineHeight: 22,
-  },
 
   // Menu Grid
   menuGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
@@ -774,13 +935,24 @@ const styles = StyleSheet.create({
 
   // Amenities (grouped)
   amenityCategory: { marginBottom: 20 },
+  amenityCategoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   categorySubtitle: {
     fontFamily: Fonts.RobotoMedium,
     fontSize: 12,
+    fontWeight: '500',
     color: Colors.textGray,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 8,
+  },
+  plusMinusIcon: {
+    fontSize: 20,
+    color: Colors.textGray,
+    fontWeight: '700',
   },
   amenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   amenityItem: {
@@ -795,7 +967,7 @@ const styles = StyleSheet.create({
   amenityIcon: { width: 28, height: 28, marginRight: 10 },
   amenityText: {
     fontFamily: Fonts.RobotoRegular,
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textDark,
     flex: 1,
   },
@@ -830,39 +1002,6 @@ const styles = StyleSheet.create({
     textTransform: 'lowercase',
   },
 
-  // House Rules
-  rulesContainer: { gap: 10 },
-  ruleItem: { flexDirection: 'row', alignItems: 'flex-start' },
-  checkIcon: { width: 20, height: 20, marginRight: 8 },
-  ruleText: {
-    fontFamily: Fonts.RobotoRegular,
-    fontSize: 12,
-    color: Colors.textBlack,
-    flex: 1,
-    lineHeight: 22,
-  },
-
-  // Wi-Fi
-  wifiText: {
-    fontFamily: Fonts.RobotoRegular,
-    fontSize: 12,
-    color: Colors.textBlack,
-    lineHeight: 22,
-  },
-
-  // Guest Information
-  privateNote: {
-    fontFamily: Fonts.RobotoRegular,
-    fontSize: 11,
-    color: Colors.textGray,
-    marginBottom: 12,
-  },
-  guestInfoContainer: { gap: 6 },
-  guestInfoText: {
-    fontFamily: Fonts.RobotoRegular,
-    fontSize: 13,
-    color: Colors.textBlack,
-  },
 
   // Bottom spacing & button
   bottomSpacing: { height: 100 },

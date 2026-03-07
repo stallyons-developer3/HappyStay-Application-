@@ -21,6 +21,7 @@ import HangoutCard from '../../components/HangoutCard';
 import PromotionCard from '../../components/PromotionCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
 import FilterModal from '../../components/FilterModal';
+import JoinActivityModal from '../../components/JoinActivityModal';
 
 import { fetchHomeData } from '../../store/slices/homeSlice';
 import { useBadgeCounts } from '../../context/BadgeContext';
@@ -73,16 +74,19 @@ const HomeScreen = ({ navigation }) => {
   const { showToast } = useToast();
   const [joiningId, setJoiningId] = useState(null);
   const [joiningActivityId, setJoiningActivityId] = useState(null);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinModalActivity, setJoinModalActivity] = useState(null);
 
   const canJoinActivity = activity => {
     if (!user?.property || !user?.check_in || !user?.check_out) {
       return { canJoin: false, message: 'No active booking' };
     }
     if (activity.start_date) {
-      const actDate = new Date(activity.start_date);
-      const checkIn = new Date(user.check_in);
-      const checkOut = new Date(user.check_out);
-      if (actDate < checkIn || actDate > checkOut) {
+      const actStart = activity.start_date.slice(0, 10);
+      const actEnd = (activity.end_date || activity.start_date).slice(0, 10);
+      const checkIn = user.check_in.slice(0, 10);
+      const checkOut = user.check_out.slice(0, 10);
+      if (actEnd < checkIn || actStart > checkOut) {
         return { canJoin: false, message: 'Outside trip dates' };
       }
     }
@@ -94,9 +98,9 @@ const HomeScreen = ({ navigation }) => {
       return { canJoin: false, message: 'No active booking' };
     }
     if (hangout.date) {
-      const hDate = new Date(hangout.date);
-      const checkIn = new Date(user.check_in);
-      const checkOut = new Date(user.check_out);
+      const hDate = hangout.date.slice(0, 10);
+      const checkIn = user.check_in.slice(0, 10);
+      const checkOut = user.check_out.slice(0, 10);
       if (hDate < checkIn || hDate > checkOut) {
         return { canJoin: false, message: 'Outside trip dates' };
       }
@@ -191,10 +195,16 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  const handleActivityJoin = async activityId => {
+  const openJoinModal = activity => {
+    setJoinModalActivity(activity);
+    setShowJoinModal(true);
+  };
+
+  const handleActivityJoin = async (activityId, seats = 1) => {
+    setShowJoinModal(false);
     setJoiningActivityId(activityId);
     try {
-      const response = await api.post(ACTIVITY.SEND_REQUEST(activityId));
+      const response = await api.post(ACTIVITY.SEND_REQUEST(activityId), { seats });
       showToast('success', response.data?.message || 'Request sent!');
       dispatch(fetchHomeData());
     } catch (error) {
@@ -203,6 +213,7 @@ const HomeScreen = ({ navigation }) => {
       showToast('info', msg);
     } finally {
       setJoiningActivityId(null);
+      setJoinModalActivity(null);
     }
   };
 
@@ -276,7 +287,7 @@ const HomeScreen = ({ navigation }) => {
                   <ActivityCard
                     image={a.thumbnail}
                     title={a.title}
-                    price={a.price ? `$${a.price}` : 'Free'}
+                    price={a.price ? `€${a.price}` : 'Free'}
                     description={a.description}
                     time={
                       a.all_day
@@ -284,7 +295,12 @@ const HomeScreen = ({ navigation }) => {
                         : formatTime(a.start_time) +
                           (a.end_time ? ' - ' + formatTime(a.end_time) : '')
                     }
-                    date={formatDate(a.start_date)}
+                    date={
+                      formatDate(a.start_date) +
+                      (a.end_date && a.end_date !== a.start_date
+                        ? ' - ' + formatDate(a.end_date)
+                        : '')
+                    }
                     location={a.location || ''}
                     onPress={() =>
                       navigation.navigate(Screens.ActivityDetail, {
@@ -305,7 +321,7 @@ const HomeScreen = ({ navigation }) => {
                     isPrivate={a.is_private}
                     requestStatus={a.user_request_status}
                     joinLoading={joiningActivityId === a.id}
-                    onJoinPress={() => handleActivityJoin(a.id)}
+                    onJoinPress={() => openJoinModal(a)}
                     canJoin={joinCheck.canJoin}
                     canJoinMessage={joinCheck.message}
                   />
@@ -380,6 +396,20 @@ const HomeScreen = ({ navigation }) => {
         onClose={() => setShowFilterModal(false)}
         onApply={handleFilterApply}
         type="activities"
+      />
+
+      <JoinActivityModal
+        visible={showJoinModal}
+        onClose={() => {
+          setShowJoinModal(false);
+          setJoinModalActivity(null);
+        }}
+        onConfirm={seats => handleActivityJoin(joinModalActivity?.id, seats)}
+        price={joinModalActivity?.price}
+        isPrivate={joinModalActivity?.is_private}
+        loading={joiningActivityId === joinModalActivity?.id}
+        maxGuests={joinModalActivity?.max_guests}
+        joinedCount={joinModalActivity?.joined_count}
       />
     </View>
   );

@@ -210,9 +210,9 @@ const HangoutDetailScreen = ({ navigation, route }) => {
       return { canJoin: false, message: 'No active booking' };
     }
     if (hangout?.date) {
-      const hDate = new Date(hangout.date);
-      const checkIn = new Date(user.check_in);
-      const checkOut = new Date(user.check_out);
+      const hDate = hangout.date.slice(0, 10);
+      const checkIn = user.check_in.slice(0, 10);
+      const checkOut = user.check_out.slice(0, 10);
       if (hDate < checkIn || hDate > checkOut) {
         return { canJoin: false, message: 'Outside trip dates' };
       }
@@ -230,8 +230,6 @@ const HangoutDetailScreen = ({ navigation, route }) => {
         return 'Request Pending';
       case 'accepted':
         return 'Joined';
-      case 'declined':
-        return 'Declined';
       default:
         return 'Request to Join';
     }

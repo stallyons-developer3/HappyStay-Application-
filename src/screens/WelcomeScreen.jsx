@@ -2,6 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
+  ImageBackground,
   Image,
   StyleSheet,
   StatusBar,
@@ -9,38 +10,55 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Colors, Fonts, Screens } from '../constants/Constants';
-import Button from '../components/common/Button';
 
 const { width, height } = Dimensions.get('window');
 
 const WelcomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      {/* Background Image */}
-      <View style={styles.imageContainer}>
-        <Image
-          source={require('../assets/images/welcome-bg.png')}
-          style={styles.backgroundImage}
-          resizeMode="cover"
-        />
-      </View>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <ImageBackground
+        source={require('../assets/images/welcome_bg.jpg')}
+        style={styles.background}
+        resizeMode="cover"
+      >
 
-      {/* Bottom White Section */}
-      <View style={styles.bottomContainer}>
-        <Text style={styles.title}>Welcome</Text>
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Top section: tagline + logo */}
+          <View style={styles.topSection}>
+            <Text style={styles.tagline}>discover more, stay connected with</Text>
+            <Image
+              source={require('../assets/images/appystay_logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
 
-        <Text style={styles.description}>
-          Find your dream vacation with My Holiday.{'\n'}
-          Travel the world easily safely and quickly{'\n'}
-          without fear of rising ticket prices.
-        </Text>
+          {/* Bottom section: buttons */}
+          <View style={styles.bottomSection}>
+            {/* Create Account button */}
+            <TouchableOpacity
+              style={styles.createButton}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate(Screens.Register)}
+            >
+              <Text style={styles.createButtonText}>create your account</Text>
+            </TouchableOpacity>
 
-        <Button
-          title="Get Started"
-          onPress={() => navigation.navigate(Screens.Login)}
-          size="full"
-        />
-      </View>
+            {/* Already have an account? login */}
+            <View style={styles.loginRow}>
+              <Text style={styles.loginLabel}>already have an account? </Text>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate(Screens.Login)}
+              >
+                <Text style={styles.loginLink}>login</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </ImageBackground>
     </View>
   );
 };
@@ -48,49 +66,62 @@ const WelcomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.white,
   },
-  imageContainer: {
-    height: height * 0.65,
-  },
-  backgroundImage: {
+  background: {
+    flex: 1,
     width: '100%',
     height: '100%',
-    borderBottomRightRadius: 50,
-    borderBottomLeftRadius: 50,
   },
-  bottomContainer: {
-    backgroundColor: Colors.white,
+
+  content: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingTop: height * 0.12,
+    paddingBottom: height * 0.08,
     paddingHorizontal: 30,
-    paddingTop: 20,
-    paddingBottom: 40,
+  },
+  topSection: {
     alignItems: 'center',
   },
-  title: {
-    fontFamily: Fonts.RobotoBold,
-    fontSize: 34,
-    color: Colors.primary,
-    marginBottom: 10,
-  },
-  description: {
+  tagline: {
     fontFamily: Fonts.RobotoRegular,
     fontSize: 14,
-    color: Colors.textGray,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 30,
+    color: '#FFFFFF',
+    marginBottom: 8,
   },
-  button: {
-    backgroundColor: Colors.primary,
-    width: '100%',
-    paddingVertical: 15,
-    borderRadius: 50,
+  logo: {
+    width: width,
+    height: width * 0.45,
+  },
+  bottomSection: {
     alignItems: 'center',
   },
-  buttonText: {
+  createButton: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 30,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  createButtonText: {
     fontFamily: Fonts.poppinsBold,
+    fontSize: 16,
     color: Colors.white,
-    fontSize: 20,
+  },
+  loginRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loginLabel: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  loginLink: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.primary,
   },
 });
 
