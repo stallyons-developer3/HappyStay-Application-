@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   LayoutAnimation,
+  Linking,
 } from 'react-native';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -392,7 +393,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
                       <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
                       <Text style={styles.bulletText}>
                         <Text style={styles.infoLabel}>24h Assistance: </Text>
-                        {property.assistance_number}
+                        <Text style={styles.phoneLink} onPress={() => Linking.openURL(`tel:${property.assistance_number}`)}>{property.assistance_number}</Text>
                       </Text>
                     </View>
                   )}
@@ -401,7 +402,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
                       <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
                       <Text style={styles.bulletText}>
                         <Text style={styles.infoLabel}>Emergency Number: </Text>
-                        {property.emergency_number}
+                        <Text style={styles.phoneLink} onPress={() => Linking.openURL(`tel:${property.emergency_number}`)}>{property.emergency_number}</Text>
                       </Text>
                     </View>
                   )}
@@ -893,6 +894,9 @@ const styles = StyleSheet.create({
     color: Colors.textBlack,
     flex: 1,
     lineHeight: 22,
+  },
+  phoneLink: {
+    textDecorationLine: 'underline',
   },
   menuSection: {
     marginBottom: 12,

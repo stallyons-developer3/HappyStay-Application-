@@ -33,6 +33,8 @@ export const ACTIVITY = {
   ADD_COMMENT: id => `/activities/${id}/comment`,
   GET_CHAT: id => `/activities/${id}/chat`,
   SEND_CHAT: id => `/activities/${id}/chat`,
+  WHATSAPP_CLICK: id => `/activities/${id}/whatsapp-click`,
+  TOGGLE_LIKE: id => `/activities/${id}/like`,
 };
 
 export const HANGOUT = {
@@ -49,6 +51,7 @@ export const HANGOUT = {
   SEND_CHAT: id => `/hangouts/${id}/chat`,
   GET_REQUESTS: id => `/hangouts/${id}/requests`,
   RESPOND_REQUEST: requestId => `/hangout-requests/${requestId}/respond`,
+  TOGGLE_LIKE: id => `/hangouts/${id}/like`,
 };
 
 export const CHAT = {

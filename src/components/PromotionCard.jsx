@@ -89,6 +89,7 @@ const HtmlDescription = ({html}) => {
 const PromotionCard = ({
   propertyIcon,
   propertyName,
+  title,
   marketingTag,
   description,
   image,
@@ -130,6 +131,11 @@ const PromotionCard = ({
           </Text>
         </View>
       </View>
+
+      {/* Title */}
+      {title ? (
+        <Text style={styles.postTitle} numberOfLines={2}>{title}</Text>
+      ) : null}
 
       {/* Description */}
       {description ? (
@@ -211,6 +217,12 @@ const styles = StyleSheet.create({
     color: Colors.white,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  postTitle: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 15,
+    color: Colors.textBlack,
+    marginBottom: 6,
   },
   htmlContainer: {
     marginBottom: 10,

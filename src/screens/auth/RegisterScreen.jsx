@@ -7,8 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
   ActivityIndicator,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -108,14 +107,23 @@ const RegisterScreen = ({ navigation }) => {
     dispatch(googleLogin());
   };
 
+  const scrollViewRef = React.useRef(null);
+  const [keyboardHeight, setKeyboardHeight] = React.useState(0);
+
+  React.useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => { setKeyboardHeight(0); });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={styles.container}>
       <ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 100 }]}
         keyboardShouldPersistTaps="handled"
       >
         <TouchableOpacity
@@ -129,10 +137,16 @@ const RegisterScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
 
-        <Text style={styles.title}>Hello !</Text>
-        <Text style={styles.subtitle}>Sign up to Continue</Text>
+        <Text style={styles.title}>Join AppyStay!</Text>
+        <Text style={styles.subtitle}>
+          Create your account to meet fellow travelers, join hangouts, and make
+          the most of your stay
+        </Text>
 
         <Text style={styles.inputLabel}>Username</Text>
+        <Text style={styles.inputHint}>
+          Pick a good one! Your username is unique and permanent.
+        </Text>
         <View
           style={[
             styles.inputContainer,
@@ -340,7 +354,7 @@ const RegisterScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -352,7 +366,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   backButton: {
     marginTop: 50,
@@ -382,6 +396,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textLight,
     marginBottom: 8,
+  },
+  inputHint: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 11,
+    color: Colors.textLight,
+    marginBottom: 8,
+    marginLeft: 4,
+    fontStyle: 'italic',
   },
   inputContainer: {
     flexDirection: 'row',

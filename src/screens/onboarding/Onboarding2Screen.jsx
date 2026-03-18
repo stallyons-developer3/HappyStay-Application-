@@ -6,8 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  Platform,
-  StatusBar,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
@@ -133,15 +131,12 @@ const Onboarding2Screen = ({ navigation }) => {
   );
 };
 
-const SAFE_TOP =
-  Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 5 : 5;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
     paddingHorizontal: 24,
-    paddingTop: SAFE_TOP,
+    paddingTop: 50,
   },
   backButton: {
     marginBottom: 10,

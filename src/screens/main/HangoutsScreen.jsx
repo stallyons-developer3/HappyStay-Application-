@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -8,14 +8,15 @@ import {
   ActivityIndicator,
   Text,
   Image,
+  TouchableOpacity,
 } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
-import { STORAGE_URL } from '../../api/endpoints';
+import { STORAGE_URL, HANGOUT, PROFILE } from '../../api/endpoints';
 import api from '../../api/axiosInstance';
-import { HANGOUT } from '../../api/endpoints';
+import { setUser } from '../../store/slices/authSlice';
+import { saveUserData } from '../../utils/storage';
 
-import Header from '../../components/Header';
 import SearchBar from '../../components/SearchBar';
 import HangoutCard from '../../components/HangoutCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
@@ -24,6 +25,7 @@ import { useBadgeCounts } from '../../context/BadgeContext';
 import { useToast } from '../../context/ToastContext';
 
 const HangoutsScreen = ({ navigation }) => {
+  const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
   const { notificationCount } = useBadgeCounts();
   const { showToast } = useToast();
@@ -35,6 +37,12 @@ const HangoutsScreen = ({ navigation }) => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [activeFilters, setActiveFilters] = useState({});
   const [joiningId, setJoiningId] = useState(null);
+
+  const addDays = (dateStr, days) => {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
 
   const canJoinHangout = hangout => {
     if (!user?.property || !user?.check_in || !user?.check_out) {
@@ -50,8 +58,6 @@ const HangoutsScreen = ({ navigation }) => {
     }
     return { canJoin: true, message: '' };
   };
-
-  const hasActiveBooking = user?.property && user?.check_in && user?.check_out;
 
   const fetchHangouts = async (params = {}) => {
     try {
@@ -89,9 +95,17 @@ const HangoutsScreen = ({ navigation }) => {
     setRefreshing(true);
     const params = { ...activeFilters };
     if (searchText.trim()) params.search = searchText.trim();
-    await fetchHangouts(params);
+    await Promise.all([
+      fetchHangouts(params),
+      api.get(PROFILE.GET_PROFILE).then(res => {
+        if (res.data?.success && res.data?.user) {
+          dispatch(setUser(res.data.user));
+          saveUserData(res.data.user);
+        }
+      }).catch(() => {}),
+    ]);
     setRefreshing(false);
-  }, [activeFilters, searchText]);
+  }, [dispatch, activeFilters, searchText]);
 
   const handleSearch = () => {
     const params = { ...activeFilters };
@@ -141,6 +155,47 @@ const HangoutsScreen = ({ navigation }) => {
     }
   };
 
+  const handleLikePress = async hangoutId => {
+    setHangouts(prev =>
+      prev.map(h => {
+        if (h.id !== hangoutId) return h;
+        const newLiked = !h.is_liked;
+        return {
+          ...h,
+          is_liked: newLiked,
+          likes_count: newLiked
+            ? (h.likes_count || 0) + 1
+            : Math.max(0, (h.likes_count || 0) - 1),
+        };
+      }),
+    );
+    try {
+      await api.post(HANGOUT.TOGGLE_LIKE(hangoutId));
+    } catch (e) {
+      setHangouts(prev =>
+        prev.map(h => {
+          if (h.id !== hangoutId) return h;
+          const revert = !h.is_liked;
+          return {
+            ...h,
+            is_liked: revert,
+            likes_count: revert
+              ? (h.likes_count || 0) + 1
+              : Math.max(0, (h.likes_count || 0) - 1),
+          };
+        }),
+      );
+    }
+  };
+
+  const handleCreatePress = () => {
+    if (!user?.property || !user?.check_in || !user?.check_out) {
+      showToast('info', 'You must be assigned to a property to create hangouts.');
+      return;
+    }
+    navigation.navigate('CreateHangout');
+  };
+
   const profileImage = user?.profile_picture
     ? {
         uri: user.profile_picture.startsWith('http')
@@ -161,20 +216,66 @@ const HangoutsScreen = ({ navigation }) => {
             onRefresh={onRefresh}
             colors={[Colors.primary]}
             tintColor={Colors.primary}
+            progressViewOffset={30}
           />
         }
       >
-        <Header
-          title="Hangouts"
-          greeting="Enjoy Your Day"
-          showGreeting={true}
-          showProfile={true}
-          showNotification={true}
-          notificationCount={notificationCount}
-          profileImage={profileImage}
-          onProfilePress={() => navigation.navigate(Screens.Profile)}
-          onNotificationPress={() => navigation.navigate(Screens.Notification)}
-        />
+        {/* Custom Header with Create button */}
+        <View style={styles.headerContainer}>
+          <View style={styles.topRow}>
+            <View style={styles.leftSection}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.profileContainer}
+                onPress={() => navigation.navigate(Screens.Profile)}
+              >
+                <Image
+                  source={profileImage || require('../../assets/images/profile.png')}
+                  style={styles.profileImg}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Hangouts</Text>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.notificationContainer}
+              onPress={() => navigation.navigate(Screens.Notification)}
+            >
+              <View style={styles.notificationIconWrapper}>
+                <Image
+                  source={require('../../assets/images/icons/notification.png')}
+                  style={styles.notificationIcon}
+                  resizeMode="contain"
+                />
+              </View>
+              {notificationCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {notificationCount > 9 ? '9+' : notificationCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.greetingRow}>
+            <Text style={styles.greeting}>Hangouts</Text>
+            <TouchableOpacity
+              style={[styles.createButton, !user?.property && { opacity: 0.5 }]}
+              activeOpacity={0.8}
+              onPress={handleCreatePress}
+            >
+              <Text style={styles.createButtonText}>Create</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.subtitleText}>
+            Share your plans or join a group! From hikes to drinks, create your
+            own Hangout or see what fellow guests are organizing.
+          </Text>
+        </View>
 
         <SearchBar
           placeholder="Find your hangout"
@@ -208,9 +309,8 @@ const HangoutsScreen = ({ navigation }) => {
                   key={`hangout-${hangout.id}`}
                   profileImage={hangout.user?.profile_picture}
                   name={hangout.user?.name || 'User'}
-                  activityType={
-                    hangout.interests || hangout.typology || hangout.title
-                  }
+                  title={hangout.title}
+                  typology={hangout.typology}
                   description={hangout.description}
                   peopleCount={hangout.joined_count || 0}
                   peopleImages={peopleData}
@@ -220,6 +320,9 @@ const HangoutsScreen = ({ navigation }) => {
                   joinLoading={joiningId === hangout.id}
                   canJoin={joinCheck.canJoin}
                   canJoinMessage={joinCheck.message}
+                  isLiked={hangout.is_liked || false}
+                  likesCount={hangout.likes_count || 0}
+                  onLikePress={() => handleLikePress(hangout.id)}
                   onPress={() =>
                     navigation.navigate(Screens.HangoutDetail, {
                       hangoutId: hangout.id,
@@ -264,8 +367,107 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
+  headerContainer: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  profileImg: {
+    width: '100%',
+    height: '100%',
+  },
+  headerTitle: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 16,
+    color: Colors.white,
+  },
+  notificationContainer: {
+    position: 'relative',
+  },
+  notificationIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 32,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationIcon: {
+    width: 22,
+    height: 22,
+    tintColor: Colors.primary,
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: Colors.red,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 10,
+    color: Colors.white,
+  },
+  greetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  greeting: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 28,
+    color: Colors.white,
+    lineHeight: 38,
+  },
+  createButton: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  createButtonText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 14,
+    color: Colors.primary,
+    textTransform: 'lowercase',
+  },
+  subtitleText: {
+    fontFamily: Fonts.poppinsRegular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 18,
+    fontWeight: '500',
+    marginBottom: 10,
+  },
   cardsContainer: {
-    marginTop: 16,
+    marginTop: 8,
   },
   bottomSpacing: {
     height: 100,

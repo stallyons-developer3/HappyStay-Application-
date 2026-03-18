@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, Fonts } from '../constants/Constants';
 import AvatarStack from './common/AvatarStack';
-import Button from './common/Button';
+import HeartIcon from './common/HeartIcon';
 
 const formatTypology = value => {
   if (!value) return '';
@@ -15,13 +15,15 @@ const formatTypology = value => {
 const HangoutCard = ({
   profileImage,
   name,
-  activityType,
+  title,
+  typology,
   description,
   peopleCount,
   peopleImages = [],
   onPress,
   onJoinPress,
   onChatPress,
+  onLikePress,
   isOwner = false,
   isPublic = false,
   requestStatus = null,
@@ -31,6 +33,8 @@ const HangoutCard = ({
   showMenu = false,
   onEditPress,
   onDeletePress,
+  isLiked = false,
+  likesCount = 0,
 }) => {
   const [menuVisible, setMenuVisible] = useState(false);
 
@@ -47,12 +51,38 @@ const HangoutCard = ({
     return n.charAt(0).toUpperCase();
   };
 
+  const getJoinButtonText = () => {
+    if (joinLoading) return 'Sending...';
+    if (isOwner || requestStatus === 'accepted') return 'Joined';
+    if (requestStatus === 'pending') return 'Pending';
+    if (!canJoin) return canJoinMessage || 'Cannot Join';
+    return isPublic ? 'Join' : 'Request to Join';
+  };
+
+  const isJoinDisabled =
+    isOwner ||
+    requestStatus === 'accepted' ||
+    requestStatus === 'pending' ||
+    !canJoin ||
+    joinLoading;
+
+  const showChatButton =
+    isOwner || requestStatus === 'accepted';
+
   return (
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
       activeOpacity={0.9}
     >
+      {/* HANGOUTS badge top-right */}
+      <View style={styles.badgeRow}>
+        <View style={styles.hangoutBadge}>
+          <Text style={styles.hangoutBadgeText}>HANGOUTS</Text>
+        </View>
+      </View>
+
+      {/* Profile row */}
       <View style={styles.headerRow}>
         <View style={styles.profileSection}>
           {hasImage ? (
@@ -120,44 +150,79 @@ const HangoutCard = ({
         )}
       </View>
 
-      <Text style={styles.activityType}>{formatTypology(activityType)}</Text>
+      {/* Typology tag */}
+      {typology ? (
+        <View style={styles.typologyRow}>
+          <View style={styles.typologyTag}>
+            <Text style={styles.typologyText}>{formatTypology(typology)}</Text>
+          </View>
+        </View>
+      ) : null}
 
+      {/* Title */}
+      {title ? (
+        <Text style={styles.title} numberOfLines={2}>{title}</Text>
+      ) : null}
+
+      {/* Description */}
       <Text style={styles.description} numberOfLines={3}>
         {description}
       </Text>
 
-      <Text style={styles.peopleCount}>
-        {peopleCount} {peopleCount === 1 ? 'person' : 'people'}
-      </Text>
-
-      <View style={styles.avatarSection}>
-        <AvatarStack
-          images={peopleImages}
-          maxDisplay={4}
-          size={40}
-          overlap={12}
-        />
+      {/* People joined + Like */}
+      <View style={styles.peopleRow}>
+        <View style={styles.avatarSection}>
+          <AvatarStack
+            images={peopleImages}
+            maxDisplay={3}
+            size={32}
+            overlap={10}
+          />
+        </View>
+        <View style={styles.peopleRight}>
+          <Text style={styles.peopleCount}>
+            {peopleCount} {peopleCount === 1 ? 'person' : 'people'} joined
+          </Text>
+          {onLikePress ? (
+            <TouchableOpacity
+              style={styles.likeButton}
+              onPress={onLikePress}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <HeartIcon size={18} filled={isLiked} />
+              {likesCount > 0 ? (
+                <Text style={styles.likeCount}>{likesCount}</Text>
+              ) : null}
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
-      {isOwner || requestStatus === 'accepted' ? (
-        <Button title="Chat" size="full" onPress={onChatPress} />
-      ) : requestStatus === 'pending' ? (
-        <Button title="Pending" size="full" disabled={true} />
-      ) : !canJoin ? (
-        <Button
-          title={canJoinMessage || 'Cannot Join'}
-          size="full"
-          disabled={true}
-        />
-      ) : (
-        <Button
-          title={isPublic ? 'Join' : 'Request to Join'}
-          size="full"
-          onPress={onJoinPress}
-          loading={joinLoading}
+      {/* Action buttons */}
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={[styles.joinButton, isJoinDisabled && styles.disabledButton]}
+          activeOpacity={0.8}
+          onPress={isJoinDisabled ? (showChatButton ? onChatPress : undefined) : onJoinPress}
           disabled={joinLoading}
-        />
-      )}
+        >
+          <Text style={styles.joinButtonText}>
+            {showChatButton ? 'Joined' : getJoinButtonText()}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.chatButton, !showChatButton && styles.chatButtonDisabled]}
+          activeOpacity={0.8}
+          onPress={showChatButton ? onChatPress : undefined}
+          disabled={!showChatButton}
+        >
+          <Text style={[styles.chatButtonText, !showChatButton && styles.chatButtonTextDisabled]}>
+            Chat
+          </Text>
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 };
@@ -174,6 +239,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 8,
+  },
+  hangoutBadge: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  hangoutBadgeText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 10,
+    color: Colors.white,
+    letterSpacing: 0.5,
   },
   headerRow: {
     flexDirection: 'row',
@@ -268,11 +350,29 @@ const styles = StyleSheet.create({
     height: 16,
     marginRight: 10,
   },
-  activityType: {
+  typologyRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  typologyTag: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  typologyText: {
+    fontFamily: Fonts.poppinsSemiBold,
+    fontSize: 10,
+    color: Colors.white,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  title: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.primary,
-    marginBottom: 8,
+    marginBottom: 6,
+    lineHeight: 20,
   },
   description: {
     fontFamily: Fonts.RobotoRegular,
@@ -281,14 +381,73 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 12,
   },
-  peopleCount: {
-    fontFamily: Fonts.RobotoBold,
-    fontSize: 16,
-    color: Colors.textBlack,
-    marginBottom: 8,
+  peopleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
   avatarSection: {
-    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  peopleRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  peopleCount: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.textGray,
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  likeCount: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 12,
+    color: Colors.textGray,
+  },
+  actionRow: {
+    gap: 10,
+  },
+  joinButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 50,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  joinButtonText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 14,
+    color: Colors.white,
+    textTransform: 'uppercase',
+  },
+  chatButton: {
+    backgroundColor: Colors.white,
+    paddingVertical: 14,
+    borderRadius: 50,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  chatButtonDisabled: {
+    borderColor: '#ccc',
+  },
+  chatButtonText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 14,
+    color: Colors.primary,
+    textTransform: 'uppercase',
+  },
+  chatButtonTextDisabled: {
+    color: '#ccc',
   },
 });
 

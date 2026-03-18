@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Text,
+  Image,
   Linking,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -24,6 +25,9 @@ import FilterModal from '../../components/FilterModal';
 import JoinActivityModal from '../../components/JoinActivityModal';
 
 import { fetchHomeData } from '../../store/slices/homeSlice';
+import { setUser } from '../../store/slices/authSlice';
+import { PROFILE } from '../../api/endpoints';
+import { saveUserData } from '../../utils/storage';
 import { useBadgeCounts } from '../../context/BadgeContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -77,6 +81,12 @@ const HomeScreen = ({ navigation }) => {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinModalActivity, setJoinModalActivity] = useState(null);
 
+  const addDays = (dateStr, days) => {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
+
   const canJoinActivity = activity => {
     if (!user?.property || !user?.check_in || !user?.check_out) {
       return { canJoin: false, message: 'No active booking' };
@@ -117,6 +127,13 @@ const HomeScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       dispatch(fetchHomeData());
+      // Refresh user profile to pick up property assignment changes
+      api.get(PROFILE.GET_PROFILE).then(res => {
+        if (res.data?.success && res.data?.user) {
+          dispatch(setUser(res.data.user));
+          saveUserData(res.data.user);
+        }
+      }).catch(() => {});
     }, [dispatch]),
   );
 
@@ -124,7 +141,15 @@ const HomeScreen = ({ navigation }) => {
     setRefreshing(true);
     const params = { ...activeFilters };
     if (searchText.trim()) params.search = searchText.trim();
-    await dispatch(fetchHomeData(params));
+    await Promise.all([
+      dispatch(fetchHomeData(params)),
+      api.get(PROFILE.GET_PROFILE).then(res => {
+        if (res.data?.success && res.data?.user) {
+          dispatch(setUser(res.data.user));
+          saveUserData(res.data.user);
+        }
+      }).catch(() => {}),
+    ]);
     setRefreshing(false);
   }, [dispatch, activeFilters, searchText]);
 
@@ -195,6 +220,24 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const handleWhatsAppPress = async (activity) => {
+    if (!activity.partner_whatsapp) return;
+    try {
+      await api.post(ACTIVITY.WHATSAPP_CLICK(activity.id));
+    } catch (e) {}
+    const phone = activity.partner_whatsapp.replace(/[^0-9]/g, '');
+    const propertyName = user?.property?.name || 'the hostel';
+    const activityName = activity.title || 'an activity';
+    const dateInfo = activity.activity_type === 'open' && activity.schedule_text
+      ? activity.schedule_text
+      : activity.start_date
+        ? activity.start_date + (activity.end_date && activity.end_date !== activity.start_date ? ' to ' + activity.end_date : '')
+        : '';
+    const datePart = dateInfo ? ` on ${dateInfo}` : '';
+    const message = encodeURIComponent(`Hi! I'm a guest at ${propertyName} and I'd like to join the activity "${activityName}"${datePart}.`);
+    Linking.openURL(`https://wa.me/${phone}?text=${message}`);
+  };
+
   const openJoinModal = activity => {
     setJoinModalActivity(activity);
     setShowJoinModal(true);
@@ -239,6 +282,7 @@ const HomeScreen = ({ navigation }) => {
             onRefresh={onRefresh}
             colors={[Colors.primary]}
             tintColor={Colors.primary}
+            progressViewOffset={30}
           />
         }
       >
@@ -268,6 +312,15 @@ const HomeScreen = ({ navigation }) => {
             color={Colors.primary}
             style={{ marginTop: 50 }}
           />
+        ) : !user?.property && user?.has_pending_trip ? (
+          <View style={styles.pendingContainer}>
+            <Text style={styles.pendingTitle}>Almost there!</Text>
+            <Text style={styles.pendingText}>
+              We're verifying your access to this community. You'll get full
+              access to Hangouts and events as soon as the hostel confirms your
+              stay.
+            </Text>
+          </View>
         ) : feed.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No content available</Text>
@@ -324,6 +377,10 @@ const HomeScreen = ({ navigation }) => {
                     onJoinPress={() => openJoinModal(a)}
                     canJoin={joinCheck.canJoin}
                     canJoinMessage={joinCheck.message}
+                    activityType={a.activity_type}
+                    scheduleText={a.schedule_text}
+                    partnerWhatsapp={a.partner_whatsapp}
+                    onWhatsAppPress={() => handleWhatsAppPress(a)}
                   />
                 </View>
               );
@@ -342,7 +399,8 @@ const HomeScreen = ({ navigation }) => {
                   key={`hangout-${h.id}`}
                   profileImage={h.user?.profile_picture}
                   name={h.user?.name || 'User'}
-                  activityType={h.interests || h.typology || h.title}
+                  title={h.title}
+                  typology={h.typology}
                   description={h.description}
                   peopleCount={h.joined_count || 0}
                   peopleImages={peopleData}
@@ -375,6 +433,7 @@ const HomeScreen = ({ navigation }) => {
                   key={`post-${p.id}`}
                   propertyIcon={p.property_icon}
                   propertyName={p.property_name}
+                  title={p.name}
                   marketingTag={p.marketing_tag}
                   description={p.description}
                   image={p.thumbnail}
@@ -446,6 +505,24 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoRegular,
     fontSize: 16,
     color: Colors.textGray,
+  },
+  pendingContainer: {
+    alignItems: 'center',
+    marginTop: 40,
+    paddingHorizontal: 30,
+  },
+  pendingTitle: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 18,
+    color: Colors.primary,
+    marginBottom: 10,
+  },
+  pendingText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });
 

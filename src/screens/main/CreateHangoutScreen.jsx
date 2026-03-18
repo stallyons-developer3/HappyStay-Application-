@@ -12,6 +12,7 @@ import {
   Switch,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { WebView } from 'react-native-webview';
@@ -29,16 +30,6 @@ const typologyOptions = [
   { id: '6', name: 'Transport' },
 ];
 
-const interestOptions = [
-  { id: '1', name: 'Hiking' },
-  { id: '2', name: 'Swimming' },
-  { id: '3', name: 'Camping' },
-  { id: '4', name: 'Beach Party' },
-  { id: '5', name: 'Bonfire' },
-  { id: '6', name: 'City Tour' },
-  { id: '7', name: 'Food Tasting' },
-  { id: '8', name: 'Night Club' },
-];
 
 const CreateHangoutScreen = ({ navigation, route }) => {
   const { showToast } = useToast();
@@ -56,7 +47,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
 
-  const [interest, setInterest] = useState(null);
+  const [meetingPoint, setMeetingPoint] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -67,7 +58,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
   });
 
   const [showTypologyModal, setShowTypologyModal] = useState(false);
-  const [showInterestModal, setShowInterestModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -90,7 +80,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         setLocation(h.location || '');
         setIsPrivate(!!h.is_private);
         setMinAge(h.min_age ? String(h.min_age) : '');
-        setMaxAge(h.max_age ? String(h.max_age) : '');
+        setMeetingPoint(h.meeting_point || '');
 
         if (h.typology) {
           const found = typologyOptions.find(
@@ -98,14 +88,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
           );
           if (found) setTypology(found);
           else setTypology({ id: '0', name: h.typology });
-        }
-
-        if (h.interests) {
-          const found = interestOptions.find(
-            i => i.name.toLowerCase() === h.interests.toLowerCase(),
-          );
-          if (found) setInterest(found);
-          else setInterest({ id: '0', name: h.interests });
         }
 
         if (h.date) {
@@ -290,14 +272,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       showToast('error', 'Please select a typology');
       return false;
     }
-    if (!minAge.trim() || !maxAge.trim()) {
-      showToast('error', 'Min age and max age are required');
-      return false;
-    }
-    if (parseInt(maxAge) < parseInt(minAge)) {
-      showToast('error', 'Max age must be greater than min age');
-      return false;
-    }
     if (isToday(date)) {
       const now = new Date();
       const selectedMinutes = time.getHours() * 60 + time.getMinutes();
@@ -317,14 +291,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
   };
 
   const handleCreate = async () => {
-    if (!interest) {
-      showToast('error', 'Please select an interest');
-      return;
-    }
-    if (!location.trim()) {
-      showToast('error', 'Location is required. Please tap on the map to select a location.');
-      return;
-    }
     if (!description.trim()) {
       showToast('error', 'Description is required');
       return;
@@ -335,14 +301,13 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       const payload = {
         title: title.trim(),
         typology: typology.name,
-        min_age: parseInt(minAge),
-        max_age: parseInt(maxAge),
+        min_age: minAge.trim() ? parseInt(minAge) : null,
         date: formatDateForAPI(date),
         time: formatTimeDisplay(time),
-        interests: interest.name,
-        location: location.trim(),
-        latitude: markerPosition.latitude,
-        longitude: markerPosition.longitude,
+        location: location.trim() || null,
+        latitude: markerPosition.latitude || null,
+        longitude: markerPosition.longitude || null,
+        meeting_point: meetingPoint.trim() || null,
         description: description.trim(),
         is_private: isPrivate,
       };
@@ -409,16 +374,16 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       <Text style={styles.subtitle}>
         {isEdit
           ? 'Update the details for your hangout'
-          : 'Set up the details for your hangout and\ninvite others to join'}
+          : 'Got a plan? Share it! Add the details below to find your squad and get the group together.'}
       </Text>
 
-      <Text style={styles.inputLabel}>Title</Text>
+      <Text style={styles.inputLabel}>Give your Hangout a catchy name</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           value={title}
           onChangeText={setTitle}
-          placeholder="Enter"
+          placeholder="Title"
           placeholderTextColor={Colors.textLight}
         />
       </View>
@@ -439,38 +404,22 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         />
       </TouchableOpacity>
 
-      <View style={styles.ageRow}>
-        <View style={styles.ageItem}>
-          <Text style={styles.inputLabel}>Min Age</Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              value={minAge}
-              onChangeText={setMinAge}
-              placeholder="18"
-              placeholderTextColor={Colors.textLight}
-              keyboardType="numeric"
-            />
-          </View>
-        </View>
-        <View style={styles.ageItem}>
-          <Text style={styles.inputLabel}>Max Age</Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              value={maxAge}
-              onChangeText={setMaxAge}
-              placeholder="60"
-              placeholderTextColor={Colors.textLight}
-              keyboardType="numeric"
-            />
-          </View>
-        </View>
+      <Text style={styles.inputLabel}>Min Age</Text>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          value={minAge}
+          onChangeText={setMinAge}
+          placeholder="e.g. 18"
+          placeholderTextColor={Colors.textLight}
+          keyboardType="numeric"
+        />
       </View>
+      <Text style={styles.inputHint}>Leave empty if no age restriction. Displayed as "18+" in app.</Text>
 
       <View style={styles.dateTimeRow}>
         <View style={styles.dateTimeItemLeft}>
-          <Text style={styles.inputLabel}>Date</Text>
+          <Text style={styles.inputLabel}>When?</Text>
           <TouchableOpacity
             style={styles.dateTimeInput}
             activeOpacity={0.7}
@@ -486,7 +435,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.dateTimeItemRight}>
-          <Text style={styles.inputLabel}>Time</Text>
+          <Text style={styles.inputLabel}>At What time?</Text>
           <TouchableOpacity
             style={styles.dateTimeInput}
             activeOpacity={0.7}
@@ -538,23 +487,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         </Text>
       </View>
 
-      <Text style={styles.inputLabel}>Interest</Text>
-      <TouchableOpacity
-        style={styles.inputContainer}
-        activeOpacity={0.7}
-        onPress={() => setShowInterestModal(true)}
-      >
-        <Text style={interest ? styles.inputText : styles.placeholderText}>
-          {interest ? interest.name : 'Select'}
-        </Text>
-        <Image
-          source={require('../../assets/images/arrow-down.png')}
-          style={styles.dropdownIcon}
-          resizeMode="contain"
-        />
-      </TouchableOpacity>
-
-      <Text style={styles.inputLabel}>Location</Text>
+      <Text style={styles.inputLabel}>Location (optional)</Text>
       <View style={[styles.inputContainer, styles.disabledInput]}>
         <TextInput
           style={styles.input}
@@ -576,7 +509,18 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         />
       </View>
 
-      <Text style={styles.inputLabel}>Description</Text>
+      <Text style={styles.inputLabel}>Meeting Point</Text>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          value={meetingPoint}
+          onChangeText={setMeetingPoint}
+          placeholder="e.g. Hotel lobby, Main entrance..."
+          placeholderTextColor={Colors.textLight}
+        />
+      </View>
+
+      <Text style={styles.inputLabel}>Brief Description – Tell them more</Text>
       <View style={styles.textAreaContainer}>
         <TextInput
           style={styles.textArea}
@@ -585,7 +529,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
           multiline
           numberOfLines={4}
           textAlignVertical="top"
-          placeholder="Enter"
+          placeholder="What's the plan?"
           placeholderTextColor={Colors.textLight}
         />
       </View>
@@ -628,7 +572,10 @@ const CreateHangoutScreen = ({ navigation, route }) => {
   );
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       {currentStep === 1 ? renderStep1() : renderStep2()}
 
       {showDatePicker && (
@@ -679,34 +626,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         </View>
       </Modal>
 
-      <Modal
-        visible={showInterestModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowInterestModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Interest</Text>
-              <TouchableOpacity onPress={() => setShowInterestModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={interestOptions}
-              keyExtractor={item => item.id}
-              renderItem={({ item }) =>
-                renderDropdownItem(item, setInterest, () =>
-                  setShowInterestModal(false),
-                )
-              }
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        </View>
-      </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -767,6 +687,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textBlack,
     marginBottom: 8,
+  },
+  inputHint: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 11,
+    color: Colors.textLight,
+    marginTop: -8,
+    marginBottom: 12,
+    fontStyle: 'italic',
   },
   inputContainer: {
     flexDirection: 'row',

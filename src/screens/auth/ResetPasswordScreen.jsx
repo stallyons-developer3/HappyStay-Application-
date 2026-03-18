@@ -7,8 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
   ActivityIndicator,
 } from 'react-native';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
@@ -115,14 +114,23 @@ const ResetPasswordScreen = ({ navigation, route }) => {
     }
   };
 
+  const scrollViewRef = React.useRef(null);
+  const [keyboardHeight, setKeyboardHeight] = React.useState(0);
+
+  React.useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => { setKeyboardHeight(0); });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={styles.container}>
       <ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 100 }]}
         keyboardShouldPersistTaps="handled"
       >
         <TouchableOpacity
@@ -289,7 +297,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
           />
         )}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -301,7 +309,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   backButton: {
     marginTop: 50,

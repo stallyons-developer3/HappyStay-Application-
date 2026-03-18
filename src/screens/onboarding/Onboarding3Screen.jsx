@@ -6,8 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
-  StatusBar,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import ImagePicker from 'react-native-image-crop-picker';
@@ -154,15 +152,12 @@ const Onboarding3Screen = ({ navigation }) => {
   );
 };
 
-const SAFE_TOP =
-  Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 5 : 5;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
     paddingHorizontal: 24,
-    paddingTop: SAFE_TOP,
+    paddingTop: 50,
   },
   backButton: {
     marginBottom: 10,

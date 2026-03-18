@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Text,
   Image,
-  Linking,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
@@ -18,41 +17,19 @@ import { ACTIVITY } from '../../api/endpoints';
 
 import Header from '../../components/Header';
 import SearchBar from '../../components/SearchBar';
-import ActivityCard from '../../components/ActivityCard';
 import FloatingMapButton from '../../components/FloatingMapButton';
 import FilterModal from '../../components/FilterModal';
-import JoinActivityModal from '../../components/JoinActivityModal';
+import ActivityCarousel from '../../components/ActivityCarousel';
 import { useBadgeCounts } from '../../context/BadgeContext';
 import { useToast } from '../../context/ToastContext';
 
-const formatDate = dateStr => {
-  if (!dateStr) return '';
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  const d = new Date(dateStr);
-  return `${d.getDate()} ${months[d.getMonth()]}`;
-};
-
-const formatTime = timeStr => {
-  if (!timeStr) return '';
-  const parts = timeStr.split(':');
-  let hours = parseInt(parts[0], 10);
-  const mins = parts[1] || '00';
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12 || 12;
-  return `${hours}:${mins} ${ampm}`;
+const typologyLabels = {
+  nature_active: 'Nature & Active',
+  sightseeing: 'Sightseeing',
+  party: 'Party',
+  event: 'Event',
+  food_drink: 'Food & Drink',
+  transport: 'Transport',
 };
 
 const ActivitiesScreen = ({ navigation }) => {
@@ -66,25 +43,6 @@ const ActivitiesScreen = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [activeFilters, setActiveFilters] = useState({});
-  const [joiningId, setJoiningId] = useState(null);
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [joinModalActivity, setJoinModalActivity] = useState(null);
-
-  const canJoinActivity = activity => {
-    if (!user?.property || !user?.check_in || !user?.check_out) {
-      return { canJoin: false, message: 'No active booking' };
-    }
-    if (activity.start_date) {
-      const actStart = activity.start_date.slice(0, 10);
-      const actEnd = (activity.end_date || activity.start_date).slice(0, 10);
-      const checkIn = user.check_in.slice(0, 10);
-      const checkOut = user.check_out.slice(0, 10);
-      if (actEnd < checkIn || actStart > checkOut) {
-        return { canJoin: false, message: 'Outside trip dates' };
-      }
-    }
-    return { canJoin: true, message: '' };
-  };
 
   const fetchActivities = async (params = {}) => {
     try {
@@ -94,6 +52,8 @@ const ActivitiesScreen = ({ navigation }) => {
           queryParams.append(key, String(val));
         }
       });
+      // Fetch all activities (no pagination limit for carousels)
+      queryParams.append('per_page', '100');
       const qs = queryParams.toString();
       const url = qs ? `${ACTIVITY.GET_ALL}?${qs}` : ACTIVITY.GET_ALL;
 
@@ -145,40 +105,119 @@ const ActivitiesScreen = ({ navigation }) => {
     fetchActivities(params);
   };
 
-  const openJoinModal = activity => {
-    setJoinModalActivity(activity);
-    setShowJoinModal(true);
+  const handleActivityPress = activity => {
+    navigation.navigate(Screens.ActivityDetail, { activityId: activity.id });
   };
 
-  const handleJoinRequest = async (activityId, seats = 1) => {
-    setShowJoinModal(false);
-    setJoiningId(activityId);
+  const handleLikePress = async (activityId) => {
+    // Optimistic update — toggle like on ALL instances of this activity
+    setActivities(prev =>
+      prev.map(a => {
+        if (a.id !== activityId) return a;
+        const newLiked = !a.is_liked;
+        return {
+          ...a,
+          is_liked: newLiked,
+          likes_count: newLiked
+            ? (a.likes_count || 0) + 1
+            : Math.max(0, (a.likes_count || 0) - 1),
+        };
+      }),
+    );
     try {
-      const response = await api.post(ACTIVITY.SEND_REQUEST(activityId), { seats });
-      const newStatus = response.data?.request_status || 'pending';
-      showToast('success', response.data?.message || 'Request sent!');
+      await api.post(ACTIVITY.TOGGLE_LIKE(activityId));
+    } catch (e) {
+      // Revert on error
       setActivities(prev =>
-        prev.map(a =>
-          a.id === activityId
-            ? {
-                ...a,
-                user_request_status: newStatus,
-                joined_count:
-                  newStatus === 'accepted'
-                    ? (a.joined_count || 0) + seats
-                    : a.joined_count,
-              }
-            : a,
-        ),
+        prev.map(a => {
+          if (a.id !== activityId) return a;
+          const revertLiked = !a.is_liked;
+          return {
+            ...a,
+            is_liked: revertLiked,
+            likes_count: revertLiked
+              ? (a.likes_count || 0) + 1
+              : Math.max(0, (a.likes_count || 0) - 1),
+          };
+        }),
       );
-    } catch (error) {
-      const msg =
-        error.response?.data?.message || 'Failed to send join request';
-      showToast('info', msg);
-    } finally {
-      setJoiningId(null);
-      setJoinModalActivity(null);
     }
+  };
+
+  // Build carousels from activities
+  const buildCarousels = () => {
+    const carousels = [];
+
+    // 1. "During Your Stay" — event-type activities within user's trip dates (±3 days)
+    const addDays = (dateStr, days) => {
+      const d = new Date(dateStr);
+      d.setDate(d.getDate() + days);
+      return d.toISOString().slice(0, 10);
+    };
+
+    if (user?.check_in && user?.check_out) {
+      const checkIn = addDays(user.check_in.slice(0, 10), -3);
+      const checkOut = addDays(user.check_out.slice(0, 10), 3);
+      const duringStay = activities.filter(a => {
+        if (a.activity_type !== 'event' || !a.start_date) return false;
+        const actStart = a.start_date.slice(0, 10);
+        const actEnd = (a.end_date || a.start_date).slice(0, 10);
+        return actEnd >= checkIn && actStart <= checkOut;
+      });
+      if (duringStay.length > 0) {
+        carousels.push({
+          key: 'during_stay',
+          title: 'During Your Stay',
+          subtitle: 'Activities available while you\'re here',
+          activities: duringStay,
+        });
+      }
+    }
+
+    // 2. Carousels by typology
+    const typologyGroups = {};
+    activities.forEach(a => {
+      const typ = a.typology;
+      if (!typ) return;
+      if (!typologyGroups[typ]) typologyGroups[typ] = [];
+      typologyGroups[typ].push(a);
+    });
+
+    Object.entries(typologyGroups).forEach(([typ, items]) => {
+      carousels.push({
+        key: `typology_${typ}`,
+        title: typologyLabels[typ] || typ,
+        activities: items,
+      });
+    });
+
+    // 3. "Free Activities" — price = 0 or null
+    const freeActivities = activities.filter(
+      a => !a.price || parseFloat(a.price) === 0,
+    );
+    if (freeActivities.length > 0) {
+      carousels.push({
+        key: 'free',
+        title: 'Free Activities',
+        subtitle: 'No cost, just fun',
+        activities: freeActivities,
+      });
+    }
+
+    // 4. "Favourites" — most liked (at least 1 like)
+    const liked = [...activities]
+      .filter(a => (a.likes_count || 0) > 0)
+      .sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+    if (liked.length > 0) {
+      carousels.push({
+        key: 'favourites',
+        title: 'Favourites',
+        subtitle: 'Most loved by guests',
+        activities: liked,
+      });
+    }
+
+    return carousels;
   };
 
   const profileImage = user?.profile_picture
@@ -188,6 +227,10 @@ const ActivitiesScreen = ({ navigation }) => {
           : `${STORAGE_URL}/storage/${user.profile_picture}`,
       }
     : undefined;
+
+  const carousels = buildCarousels();
+  const hasSearchOrFilter =
+    searchText.trim() !== '' || Object.keys(activeFilters).length > 0;
 
   return (
     <View style={styles.container}>
@@ -201,6 +244,7 @@ const ActivitiesScreen = ({ navigation }) => {
             onRefresh={onRefresh}
             colors={[Colors.primary]}
             tintColor={Colors.primary}
+            progressViewOffset={30}
           />
         }
       >
@@ -224,70 +268,42 @@ const ActivitiesScreen = ({ navigation }) => {
           onActionPress={() => setShowFilterModal(true)}
         />
 
-        <View style={styles.cardsContainer}>
-          {isLoading && !refreshing ? (
-            <ActivityIndicator
-              size="large"
-              color={Colors.primary}
-              style={{ marginTop: 50 }}
+        {isLoading && !refreshing ? (
+          <ActivityIndicator
+            size="large"
+            color={Colors.primary}
+            style={{ marginTop: 50 }}
+          />
+        ) : activities.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No activities found</Text>
+          </View>
+        ) : hasSearchOrFilter ? (
+          // When searching/filtering, show all results in a single carousel
+          <View style={styles.carouselSection}>
+            <ActivityCarousel
+              title="Search Results"
+              subtitle={`${activities.length} activities found`}
+              activities={activities}
+              onActivityPress={handleActivityPress}
+              onLikePress={handleLikePress}
             />
-          ) : activities.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No activities found</Text>
-            </View>
-          ) : (
-            activities.map(activity => {
-              const joinCheck = canJoinActivity(activity);
-              return (
-                <ActivityCard
-                  key={`activity-${activity.id}`}
-                  image={activity.thumbnail}
-                  title={activity.title}
-                  price={activity.price ? `€${activity.price}` : 'Free'}
-                  description={activity.description}
-                  time={
-                    activity.all_day
-                      ? 'All Day'
-                      : formatTime(activity.start_time) +
-                        (activity.end_time
-                          ? ' - ' + formatTime(activity.end_time)
-                          : '')
-                  }
-                  date={
-                    formatDate(activity.start_date) +
-                    (activity.end_date && activity.end_date !== activity.start_date
-                      ? ' - ' + formatDate(activity.end_date)
-                      : '')
-                  }
-                  location={activity.location || ''}
-                  onPress={() =>
-                    navigation.navigate(Screens.ActivityDetail, {
-                      activityId: activity.id,
-                    })
-                  }
-                  onMapPress={() => {
-                    if (activity.latitude && activity.longitude) {
-                      navigation.navigate(Screens.LocationMap, {
-                        latitude: activity.latitude,
-                        longitude: activity.longitude,
-                        title: activity.title,
-                        location: activity.location,
-                        markerColor: activity.typology_color,
-                      });
-                    }
-                  }}
-                  isOwner={activity.created_by === user?.id}
-                  isPrivate={activity.is_private}
-                  requestStatus={activity.user_request_status}
-                  joinLoading={joiningId === activity.id}
-                  onJoinPress={() => openJoinModal(activity)}
-                  canJoin={joinCheck.canJoin}
-                  canJoinMessage={joinCheck.message}
-                />
-              );
-            })
-          )}
-        </View>
+          </View>
+        ) : (
+          // Default view: multiple carousels
+          <View style={styles.carouselSection}>
+            {carousels.map(carousel => (
+              <ActivityCarousel
+                key={carousel.key}
+                title={carousel.title}
+                subtitle={carousel.subtitle}
+                activities={carousel.activities}
+                onActivityPress={handleActivityPress}
+                onLikePress={handleLikePress}
+              />
+            ))}
+          </View>
+        )}
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
@@ -299,20 +315,6 @@ const ActivitiesScreen = ({ navigation }) => {
         onClose={() => setShowFilterModal(false)}
         onApply={handleFilterApply}
         type="activities"
-      />
-
-      <JoinActivityModal
-        visible={showJoinModal}
-        onClose={() => {
-          setShowJoinModal(false);
-          setJoinModalActivity(null);
-        }}
-        onConfirm={seats => handleJoinRequest(joinModalActivity?.id, seats)}
-        price={joinModalActivity?.price}
-        isPrivate={joinModalActivity?.is_private}
-        loading={joiningId === joinModalActivity?.id}
-        maxGuests={joinModalActivity?.max_guests}
-        joinedCount={joinModalActivity?.joined_count}
       />
     </View>
   );
@@ -329,7 +331,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  cardsContainer: {
+  carouselSection: {
     marginTop: 16,
   },
   bottomSpacing: {

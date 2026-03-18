@@ -20,6 +20,7 @@ import api from '../../api/axiosInstance';
 import { ACTIVITY } from '../../api/endpoints';
 import { useToast } from '../../context/ToastContext';
 import JoinActivityModal from '../../components/JoinActivityModal';
+import HeartIcon from '../../components/common/HeartIcon';
 
 const { width } = Dimensions.get('window');
 const INPUT_WIDTH = width - 40 - 48 - 12;
@@ -72,6 +73,8 @@ const ActivityDetailScreen = ({ navigation, route }) => {
   const [isJoining, setIsJoining] = useState(false);
   const [selectedSeats, setSelectedSeats] = useState(1);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
 
   const scrollViewRef = React.useRef(null);
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
@@ -106,6 +109,8 @@ const ActivityDetailScreen = ({ navigation, route }) => {
       const response = await api.get(ACTIVITY.GET_DETAIL(activityId));
       if (response.data?.activity) {
         setActivity(response.data.activity);
+        setIsLiked(response.data.activity.is_liked || false);
+        setLikesCount(response.data.activity.likes_count || 0);
       }
     } catch (error) {
       showToast('error', 'Failed to load activity details');
@@ -186,6 +191,37 @@ const ActivityDetailScreen = ({ navigation, route }) => {
     }
     return { canJoin: true, message: '' };
   })();
+
+  const handleLikePress = async () => {
+    const newLiked = !isLiked;
+    setIsLiked(newLiked);
+    setLikesCount(prev => (newLiked ? prev + 1 : Math.max(0, prev - 1)));
+    try {
+      await api.post(ACTIVITY.TOGGLE_LIKE(activity.id));
+    } catch (e) {
+      // Revert on error
+      setIsLiked(!newLiked);
+      setLikesCount(prev => (newLiked ? Math.max(0, prev - 1) : prev + 1));
+    }
+  };
+
+  const handleWhatsAppPress = async () => {
+    if (!activity?.partner_whatsapp) return;
+    try {
+      await api.post(ACTIVITY.WHATSAPP_CLICK(activity.id));
+    } catch (e) {}
+    const phone = activity.partner_whatsapp.replace(/[^0-9]/g, '');
+    const propertyName = user?.property?.name || 'the hostel';
+    const activityName = activity.title || 'an activity';
+    const dateInfo = activity.activity_type === 'open' && activity.schedule_text
+      ? activity.schedule_text
+      : activity.start_date
+        ? activity.start_date + (activity.end_date && activity.end_date !== activity.start_date ? ' to ' + activity.end_date : '')
+        : '';
+    const datePart = dateInfo ? ` on ${dateInfo}` : '';
+    const message = encodeURIComponent(`Hi! I'm a guest at ${propertyName} and I'd like to join the activity "${activityName}"${datePart}.`);
+    Linking.openURL(`https://wa.me/${phone}?text=${message}`);
+  };
 
   const getJoinButtonText = () => {
     if (isJoining) return 'Sending...';
@@ -294,6 +330,16 @@ const ActivityDetailScreen = ({ navigation, route }) => {
                     : 'By the hostel'}
                 </Text>
               </View>
+              <TouchableOpacity
+                style={styles.likeButton}
+                onPress={handleLikePress}
+                activeOpacity={0.7}
+              >
+                <HeartIcon size={22} filled={isLiked} />
+                {likesCount > 0 ? (
+                  <Text style={styles.likeCount}>{likesCount}</Text>
+                ) : null}
+              </TouchableOpacity>
             </View>
           )}
 
@@ -352,29 +398,42 @@ const ActivityDetailScreen = ({ navigation, route }) => {
           )}
 
           <View style={styles.timeRow}>
-            {timeDisplay ? (
-              <View style={styles.infoItem}>
-                <Image
-                  source={require('../../assets/images/icons/clock.png')}
-                  style={styles.infoIcon}
-                  resizeMode="contain"
-                />
-                <Text style={styles.infoText}>{timeDisplay}</Text>
-              </View>
-            ) : null}
-
-            {dateDisplay ? (
+            {activity.activity_type === 'open' && activity.schedule_text ? (
               <View style={styles.infoItem}>
                 <Image
                   source={require('../../assets/images/icons/calendar-small.png')}
                   style={styles.infoIcon}
                   resizeMode="contain"
                 />
-                <Text style={styles.infoText}>
-                  {dateDisplay}
-                </Text>
+                <Text style={styles.infoText}>{activity.schedule_text}</Text>
               </View>
-            ) : null}
+            ) : (
+              <>
+                {timeDisplay ? (
+                  <View style={styles.infoItem}>
+                    <Image
+                      source={require('../../assets/images/icons/clock.png')}
+                      style={styles.infoIcon}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.infoText}>{timeDisplay}</Text>
+                  </View>
+                ) : null}
+
+                {dateDisplay ? (
+                  <View style={styles.infoItem}>
+                    <Image
+                      source={require('../../assets/images/icons/calendar-small.png')}
+                      style={styles.infoIcon}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.infoText}>
+                      {dateDisplay}
+                    </Text>
+                  </View>
+                ) : null}
+              </>
+            )}
 
             {activity.map_url && (
               <TouchableOpacity
@@ -414,23 +473,24 @@ const ActivityDetailScreen = ({ navigation, route }) => {
           </View>
 
           <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[
-                styles.joinButton,
-                isJoinDisabled && styles.disabledButton,
-              ]}
-              activeOpacity={0.8}
-              onPress={() => {
-                setSelectedSeats(1);
-                setShowJoinModal(true);
-              }}
-              disabled={isJoinDisabled}
-            >
-              <Text style={styles.joinButtonText}>{getJoinButtonText()}</Text>
-            </TouchableOpacity>
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={[
+                  styles.joinButton,
+                  isJoinDisabled && styles.disabledButton,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setSelectedSeats(1);
+                  setShowJoinModal(true);
+                }}
+                disabled={isJoinDisabled}
+              >
+                <Text style={styles.joinButtonText}>{getJoinButtonText()}</Text>
+              </TouchableOpacity>
 
-            {(() => {
-              const chatAllowed =
+              {(() => {
+                const chatAllowed =
                 isOwner ||
                 activity?.user_request_status === 'accepted' ||
                 canJoinActivity.canJoin;
@@ -453,6 +513,17 @@ const ActivityDetailScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
               );
             })()}
+            </View>
+
+            {activity?.partner_whatsapp ? (
+              <TouchableOpacity
+                style={styles.whatsappButton}
+                activeOpacity={0.8}
+                onPress={handleWhatsAppPress}
+              >
+                <Text style={styles.whatsappButtonText}>Book via WhatsApp</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           <Text style={styles.commentsTitle}>Comments</Text>
@@ -648,6 +719,8 @@ const styles = StyleSheet.create({
   },
   providedByRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
   providedByTag: {
@@ -706,6 +779,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.primary,
   },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  likeCount: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.textGray,
+  },
   seatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -741,8 +826,12 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   actionButtons: {
-    flexDirection: 'row',
     marginBottom: 24,
+    gap: 10,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
   joinButton: {
     flex: 1,
@@ -750,7 +839,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 25,
     alignItems: 'center',
-    marginRight: 12,
+  },
+  whatsappButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  whatsappButtonText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 12,
+    color: '#fff',
+    textTransform: 'lowercase',
   },
   disabledButton: {
     opacity: 0.6,

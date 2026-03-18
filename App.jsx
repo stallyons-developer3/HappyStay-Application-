@@ -11,7 +11,8 @@ const App = () => {
   useEffect(() => {
     if (Platform.OS === 'android') {
       StatusBar.setBackgroundColor(Colors.primary);
-      StatusBar.setBarStyle('dark-content');
+      StatusBar.setBarStyle('light-content');
+      StatusBar.setTranslucent(false);
     }
     getPusher();
   }, []);

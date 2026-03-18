@@ -232,7 +232,7 @@ const ProfileScreen = ({ navigation }) => {
 
         <View style={styles.buttonsContainer}>
           <Button title="Trips" onPress={handleTrips} size="full" />
-          <Button title="Joined Events" onPress={() => navigation.navigate(Screens.Joined)} size="full" />
+          {/* <Button title="Joined Events" onPress={() => navigation.navigate(Screens.Joined)} size="full" /> */}
           <Button title="Logout" onPress={handleLogout} size="full" />
         </View>
       </ScrollView>

@@ -7,11 +7,10 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Modal,
   Animated,
-  StatusBar,
   BackHandler,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -22,21 +21,202 @@ import { setOnboardingData } from '../../store/slices/onboardingSlice';
 import { useToast } from '../../context/ToastContext';
 
 const countries = [
-  { id: '1', name: 'Indonesia', flag: '🇮🇩' },
-  { id: '2', name: 'Pakistan', flag: '🇵🇰' },
-  { id: '3', name: 'India', flag: '🇮🇳' },
-  { id: '4', name: 'United States', flag: '🇺🇸' },
-  { id: '5', name: 'United Kingdom', flag: '🇬🇧' },
-  { id: '6', name: 'Canada', flag: '🇨🇦' },
-  { id: '7', name: 'Australia', flag: '🇦🇺' },
-  { id: '8', name: 'Germany', flag: '🇩🇪' },
-  { id: '9', name: 'France', flag: '🇫🇷' },
-  { id: '10', name: 'Japan', flag: '🇯🇵' },
-  { id: '11', name: 'China', flag: '🇨🇳' },
-  { id: '12', name: 'Brazil', flag: '🇧🇷' },
-  { id: '13', name: 'Saudi Arabia', flag: '🇸🇦' },
-  { id: '14', name: 'UAE', flag: '🇦🇪' },
-  { id: '15', name: 'Turkey', flag: '🇹🇷' },
+  { name: 'Afghanistan', flag: '🇦🇫' },
+  { name: 'Albania', flag: '🇦🇱' },
+  { name: 'Algeria', flag: '🇩🇿' },
+  { name: 'Andorra', flag: '🇦🇩' },
+  { name: 'Angola', flag: '🇦🇴' },
+  { name: 'Antigua and Barbuda', flag: '🇦🇬' },
+  { name: 'Argentina', flag: '🇦🇷' },
+  { name: 'Armenia', flag: '🇦🇲' },
+  { name: 'Australia', flag: '🇦🇺' },
+  { name: 'Austria', flag: '🇦🇹' },
+  { name: 'Azerbaijan', flag: '🇦🇿' },
+  { name: 'Bahamas', flag: '🇧🇸' },
+  { name: 'Bahrain', flag: '🇧🇭' },
+  { name: 'Bangladesh', flag: '🇧🇩' },
+  { name: 'Barbados', flag: '🇧🇧' },
+  { name: 'Belarus', flag: '🇧🇾' },
+  { name: 'Belgium', flag: '🇧🇪' },
+  { name: 'Belize', flag: '🇧🇿' },
+  { name: 'Benin', flag: '🇧🇯' },
+  { name: 'Bhutan', flag: '🇧🇹' },
+  { name: 'Bolivia', flag: '🇧🇴' },
+  { name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
+  { name: 'Botswana', flag: '🇧🇼' },
+  { name: 'Brazil', flag: '🇧🇷' },
+  { name: 'Brunei', flag: '🇧🇳' },
+  { name: 'Bulgaria', flag: '🇧🇬' },
+  { name: 'Burkina Faso', flag: '🇧🇫' },
+  { name: 'Burundi', flag: '🇧🇮' },
+  { name: 'Cabo Verde', flag: '🇨🇻' },
+  { name: 'Cambodia', flag: '🇰🇭' },
+  { name: 'Cameroon', flag: '🇨🇲' },
+  { name: 'Canada', flag: '🇨🇦' },
+  { name: 'Central African Republic', flag: '🇨🇫' },
+  { name: 'Chad', flag: '🇹🇩' },
+  { name: 'Chile', flag: '🇨🇱' },
+  { name: 'China', flag: '🇨🇳' },
+  { name: 'Colombia', flag: '🇨🇴' },
+  { name: 'Comoros', flag: '🇰🇲' },
+  { name: 'Congo', flag: '🇨🇬' },
+  { name: 'Costa Rica', flag: '🇨🇷' },
+  { name: 'Croatia', flag: '🇭🇷' },
+  { name: 'Cuba', flag: '🇨🇺' },
+  { name: 'Cyprus', flag: '🇨🇾' },
+  { name: 'Czech Republic', flag: '🇨🇿' },
+  { name: 'Denmark', flag: '🇩🇰' },
+  { name: 'Djibouti', flag: '🇩🇯' },
+  { name: 'Dominica', flag: '🇩🇲' },
+  { name: 'Dominican Republic', flag: '🇩🇴' },
+  { name: 'Ecuador', flag: '🇪🇨' },
+  { name: 'Egypt', flag: '🇪🇬' },
+  { name: 'El Salvador', flag: '🇸🇻' },
+  { name: 'Equatorial Guinea', flag: '🇬🇶' },
+  { name: 'Eritrea', flag: '🇪🇷' },
+  { name: 'Estonia', flag: '🇪🇪' },
+  { name: 'Eswatini', flag: '🇸🇿' },
+  { name: 'Ethiopia', flag: '🇪🇹' },
+  { name: 'Fiji', flag: '🇫🇯' },
+  { name: 'Finland', flag: '🇫🇮' },
+  { name: 'France', flag: '🇫🇷' },
+  { name: 'Gabon', flag: '🇬🇦' },
+  { name: 'Gambia', flag: '🇬🇲' },
+  { name: 'Georgia', flag: '🇬🇪' },
+  { name: 'Germany', flag: '🇩🇪' },
+  { name: 'Ghana', flag: '🇬🇭' },
+  { name: 'Greece', flag: '🇬🇷' },
+  { name: 'Grenada', flag: '🇬🇩' },
+  { name: 'Guatemala', flag: '🇬🇹' },
+  { name: 'Guinea', flag: '🇬🇳' },
+  { name: 'Guinea-Bissau', flag: '🇬🇼' },
+  { name: 'Guyana', flag: '🇬🇾' },
+  { name: 'Haiti', flag: '🇭🇹' },
+  { name: 'Honduras', flag: '🇭🇳' },
+  { name: 'Hungary', flag: '🇭🇺' },
+  { name: 'Iceland', flag: '🇮🇸' },
+  { name: 'India', flag: '🇮🇳' },
+  { name: 'Indonesia', flag: '🇮🇩' },
+  { name: 'Iran', flag: '🇮🇷' },
+  { name: 'Iraq', flag: '🇮🇶' },
+  { name: 'Ireland', flag: '🇮🇪' },
+  { name: 'Israel', flag: '🇮🇱' },
+  { name: 'Italy', flag: '🇮🇹' },
+  { name: 'Ivory Coast', flag: '🇨🇮' },
+  { name: 'Jamaica', flag: '🇯🇲' },
+  { name: 'Japan', flag: '🇯🇵' },
+  { name: 'Jordan', flag: '🇯🇴' },
+  { name: 'Kazakhstan', flag: '🇰🇿' },
+  { name: 'Kenya', flag: '🇰🇪' },
+  { name: 'Kiribati', flag: '🇰🇮' },
+  { name: 'Kosovo', flag: '🇽🇰' },
+  { name: 'Kuwait', flag: '🇰🇼' },
+  { name: 'Kyrgyzstan', flag: '🇰🇬' },
+  { name: 'Laos', flag: '🇱🇦' },
+  { name: 'Latvia', flag: '🇱🇻' },
+  { name: 'Lebanon', flag: '🇱🇧' },
+  { name: 'Lesotho', flag: '🇱🇸' },
+  { name: 'Liberia', flag: '🇱🇷' },
+  { name: 'Libya', flag: '🇱🇾' },
+  { name: 'Liechtenstein', flag: '🇱🇮' },
+  { name: 'Lithuania', flag: '🇱🇹' },
+  { name: 'Luxembourg', flag: '🇱🇺' },
+  { name: 'Madagascar', flag: '🇲🇬' },
+  { name: 'Malawi', flag: '🇲🇼' },
+  { name: 'Malaysia', flag: '🇲🇾' },
+  { name: 'Maldives', flag: '🇲🇻' },
+  { name: 'Mali', flag: '🇲🇱' },
+  { name: 'Malta', flag: '🇲🇹' },
+  { name: 'Marshall Islands', flag: '🇲🇭' },
+  { name: 'Mauritania', flag: '🇲🇷' },
+  { name: 'Mauritius', flag: '🇲🇺' },
+  { name: 'Mexico', flag: '🇲🇽' },
+  { name: 'Micronesia', flag: '🇫🇲' },
+  { name: 'Moldova', flag: '🇲🇩' },
+  { name: 'Monaco', flag: '🇲🇨' },
+  { name: 'Mongolia', flag: '🇲🇳' },
+  { name: 'Montenegro', flag: '🇲🇪' },
+  { name: 'Morocco', flag: '🇲🇦' },
+  { name: 'Mozambique', flag: '🇲🇿' },
+  { name: 'Myanmar', flag: '🇲🇲' },
+  { name: 'Namibia', flag: '🇳🇦' },
+  { name: 'Nauru', flag: '🇳🇷' },
+  { name: 'Nepal', flag: '🇳🇵' },
+  { name: 'Netherlands', flag: '🇳🇱' },
+  { name: 'New Zealand', flag: '🇳🇿' },
+  { name: 'Nicaragua', flag: '🇳🇮' },
+  { name: 'Niger', flag: '🇳🇪' },
+  { name: 'Nigeria', flag: '🇳🇬' },
+  { name: 'North Korea', flag: '🇰🇵' },
+  { name: 'North Macedonia', flag: '🇲🇰' },
+  { name: 'Norway', flag: '🇳🇴' },
+  { name: 'Oman', flag: '🇴🇲' },
+  { name: 'Pakistan', flag: '🇵🇰' },
+  { name: 'Palau', flag: '🇵🇼' },
+  { name: 'Palestine', flag: '🇵🇸' },
+  { name: 'Panama', flag: '🇵🇦' },
+  { name: 'Papua New Guinea', flag: '🇵🇬' },
+  { name: 'Paraguay', flag: '🇵🇾' },
+  { name: 'Peru', flag: '🇵🇪' },
+  { name: 'Philippines', flag: '🇵🇭' },
+  { name: 'Poland', flag: '🇵🇱' },
+  { name: 'Portugal', flag: '🇵🇹' },
+  { name: 'Qatar', flag: '🇶🇦' },
+  { name: 'Romania', flag: '🇷🇴' },
+  { name: 'Russia', flag: '🇷🇺' },
+  { name: 'Rwanda', flag: '🇷🇼' },
+  { name: 'Saint Kitts and Nevis', flag: '🇰🇳' },
+  { name: 'Saint Lucia', flag: '🇱🇨' },
+  { name: 'Saint Vincent and the Grenadines', flag: '🇻🇨' },
+  { name: 'Samoa', flag: '🇼🇸' },
+  { name: 'San Marino', flag: '🇸🇲' },
+  { name: 'Sao Tome and Principe', flag: '🇸🇹' },
+  { name: 'Saudi Arabia', flag: '🇸🇦' },
+  { name: 'Senegal', flag: '🇸🇳' },
+  { name: 'Serbia', flag: '🇷🇸' },
+  { name: 'Seychelles', flag: '🇸🇨' },
+  { name: 'Sierra Leone', flag: '🇸🇱' },
+  { name: 'Singapore', flag: '🇸🇬' },
+  { name: 'Slovakia', flag: '🇸🇰' },
+  { name: 'Slovenia', flag: '🇸🇮' },
+  { name: 'Solomon Islands', flag: '🇸🇧' },
+  { name: 'Somalia', flag: '🇸🇴' },
+  { name: 'South Africa', flag: '🇿🇦' },
+  { name: 'South Korea', flag: '🇰🇷' },
+  { name: 'South Sudan', flag: '🇸🇸' },
+  { name: 'Spain', flag: '🇪🇸' },
+  { name: 'Sri Lanka', flag: '🇱🇰' },
+  { name: 'Sudan', flag: '🇸🇩' },
+  { name: 'Suriname', flag: '🇸🇷' },
+  { name: 'Sweden', flag: '🇸🇪' },
+  { name: 'Switzerland', flag: '🇨🇭' },
+  { name: 'Syria', flag: '🇸🇾' },
+  { name: 'Taiwan', flag: '🇹🇼' },
+  { name: 'Tajikistan', flag: '🇹🇯' },
+  { name: 'Tanzania', flag: '🇹🇿' },
+  { name: 'Thailand', flag: '🇹🇭' },
+  { name: 'Timor-Leste', flag: '🇹🇱' },
+  { name: 'Togo', flag: '🇹🇬' },
+  { name: 'Tonga', flag: '🇹🇴' },
+  { name: 'Trinidad and Tobago', flag: '🇹🇹' },
+  { name: 'Tunisia', flag: '🇹🇳' },
+  { name: 'Turkey', flag: '🇹🇷' },
+  { name: 'Turkmenistan', flag: '🇹🇲' },
+  { name: 'Tuvalu', flag: '🇹🇻' },
+  { name: 'UAE', flag: '🇦🇪' },
+  { name: 'Uganda', flag: '🇺🇬' },
+  { name: 'Ukraine', flag: '🇺🇦' },
+  { name: 'United Kingdom', flag: '🇬🇧' },
+  { name: 'United States', flag: '🇺🇸' },
+  { name: 'Uruguay', flag: '🇺🇾' },
+  { name: 'Uzbekistan', flag: '🇺🇿' },
+  { name: 'Vanuatu', flag: '🇻🇺' },
+  { name: 'Vatican City', flag: '🇻🇦' },
+  { name: 'Venezuela', flag: '🇻🇪' },
+  { name: 'Vietnam', flag: '🇻🇳' },
+  { name: 'Yemen', flag: '🇾🇪' },
+  { name: 'Zambia', flag: '🇿🇲' },
+  { name: 'Zimbabwe', flag: '🇿🇼' },
 ];
 
 const genders = [
@@ -59,6 +239,7 @@ const Onboarding1Screen = ({ navigation, route }) => {
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [date, setDate] = useState(new Date(1999, 9, 18));
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
 
   // Block hardware back button
   useEffect(() => {
@@ -149,14 +330,24 @@ const Onboarding1Screen = ({ navigation, route }) => {
     navigation.navigate(Screens.Onboarding2);
   };
 
+  const scrollViewRef = React.useRef(null);
+  const [keyboardHeight, setKeyboardHeight] = React.useState(0);
+
+  React.useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => { setKeyboardHeight(0); });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={styles.container}>
       <ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 20 : 100 }]}
+        keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.title}>Welcome! Let's get started</Text>
         <Text style={styles.subtitle}>
@@ -282,9 +473,19 @@ const Onboarding1Screen = ({ navigation, route }) => {
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Nationality</Text>
-              <TouchableOpacity onPress={() => setShowCountryModal(false)}>
+              <TouchableOpacity onPress={() => { setShowCountryModal(false); setCountrySearch(''); }}>
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
+            </View>
+            <View style={styles.countrySearchContainer}>
+              <TextInput
+                style={styles.countrySearchInput}
+                placeholder="Search country..."
+                placeholderTextColor={Colors.textLight}
+                value={countrySearch}
+                onChangeText={setCountrySearch}
+                autoCapitalize="none"
+              />
             </View>
             <View style={styles.listContainer}>
               <ScrollView
@@ -297,17 +498,22 @@ const Onboarding1Screen = ({ navigation, route }) => {
                 scrollEventThrottle={16}
                 onContentSizeChange={(w, h) => setContentHeight(h)}
                 onLayout={e => setScrollViewHeight(e.nativeEvent.layout.height)}
+                keyboardShouldPersistTaps="handled"
               >
-                {countries.map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.countryItem}
-                    onPress={() => selectCountry(item)}
-                  >
-                    <Text style={styles.countryFlag}>{item.flag}</Text>
-                    <Text style={styles.countryName}>{item.name}</Text>
-                  </TouchableOpacity>
-                ))}
+                {countries
+                  .filter(item =>
+                    item.name.toLowerCase().includes(countrySearch.toLowerCase()),
+                  )
+                  .map(item => (
+                    <TouchableOpacity
+                      key={item.name}
+                      style={styles.countryItem}
+                      onPress={() => { selectCountry(item); setCountrySearch(''); }}
+                    >
+                      <Text style={styles.countryFlag}>{item.flag}</Text>
+                      <Text style={styles.countryName}>{item.name}</Text>
+                    </TouchableOpacity>
+                  ))}
               </ScrollView>
               <View style={styles.scrollbarTrack}>
                 <Animated.View
@@ -348,12 +554,9 @@ const Onboarding1Screen = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 };
-
-const SAFE_TOP =
-  Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 5 : 5;
 
 const styles = StyleSheet.create({
   container: {
@@ -363,8 +566,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: SAFE_TOP,
-    paddingBottom: 30,
+    paddingTop: 50,
+    paddingBottom: 100,
   },
   backButton: {
     marginBottom: 10,
@@ -496,6 +699,19 @@ const styles = StyleSheet.create({
   modalClose: {
     fontSize: 20,
     color: Colors.textGray,
+  },
+  countrySearchContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  countrySearchInput: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textDark,
+    backgroundColor: Colors.background,
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
   listContainer: {
     flex: 1,

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Colors, Fonts } from '../constants/Constants';
 import Button from './common/Button';
@@ -25,12 +26,16 @@ const ActivityCard = ({
   onPress,
   onMapPress,
   onJoinPress,
+  onWhatsAppPress,
   isOwner = false,
   isPrivate = false,
   requestStatus = null,
   joinLoading = false,
   canJoin = true,
   canJoinMessage = '',
+  activityType = 'event',
+  scheduleText = null,
+  partnerWhatsapp = null,
 }) => {
   const imageSource =
     typeof image === 'string' ? { uri: image } : image || defaultImage;
@@ -58,25 +63,38 @@ const ActivityCard = ({
         </Text>
 
         <View style={styles.infoSection}>
-          <View style={styles.infoTopRow}>
-            <View style={styles.infoItem}>
-              <Image
-                source={require('../assets/images/icons/clock.png')}
-                style={styles.infoIcon}
-                resizeMode="contain"
-              />
-              <Text style={styles.infoText}>{displayValue(time)}</Text>
+          {activityType === 'open' && scheduleText ? (
+            <View style={styles.infoTopRow}>
+              <View style={styles.infoItem}>
+                <Image
+                  source={require('../assets/images/icons/calendar-small.png')}
+                  style={styles.infoIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.infoText}>{scheduleText}</Text>
+              </View>
             </View>
+          ) : (
+            <View style={styles.infoTopRow}>
+              <View style={styles.infoItem}>
+                <Image
+                  source={require('../assets/images/icons/clock.png')}
+                  style={styles.infoIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.infoText}>{displayValue(time)}</Text>
+              </View>
 
-            <View style={styles.infoItem}>
-              <Image
-                source={require('../assets/images/icons/calendar-small.png')}
-                style={styles.infoIcon}
-                resizeMode="contain"
-              />
-              <Text style={styles.infoText}>{displayValue(date)}</Text>
+              <View style={styles.infoItem}>
+                <Image
+                  source={require('../assets/images/icons/calendar-small.png')}
+                  style={styles.infoIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.infoText}>{displayValue(date)}</Text>
+              </View>
             </View>
-          </View>
+          )}
 
           <View style={styles.infoLocationRow}>
             <Image
@@ -233,6 +251,7 @@ const styles = StyleSheet.create({
   },
   joinSection: {
     marginTop: 12,
+    gap: 8,
   },
 });
 

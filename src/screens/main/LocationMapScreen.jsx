@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
-  StatusBar,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Colors, Fonts } from '../../constants/Constants';
@@ -227,8 +226,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.white,
-    paddingTop:
-      Platform.OS === 'ios' ? 50 : (StatusBar.currentHeight || 24) + 10,
+    paddingTop: 50,
     paddingBottom: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,

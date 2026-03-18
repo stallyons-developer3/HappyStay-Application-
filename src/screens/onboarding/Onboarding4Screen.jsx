@@ -9,7 +9,6 @@ import {
   Modal,
   Platform,
   ActivityIndicator,
-  StatusBar,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
@@ -157,7 +156,7 @@ const Onboarding4Screen = ({ navigation }) => {
   };
 
   const getBookingButtonText = status => {
-    if (!status) return 'Request Booking';
+    if (!status) return 'Request to Join';
     switch (status) {
       case 'pending':
         return 'Pending...';
@@ -166,7 +165,7 @@ const Onboarding4Screen = ({ navigation }) => {
       case 'declined':
         return 'Declined ✕';
       default:
-        return 'Request Booking';
+        return 'Request to Join';
     }
   };
 
@@ -196,8 +195,8 @@ const Onboarding4Screen = ({ navigation }) => {
         <View style={styles.titleSection}>
           <Text style={styles.mainTitle}>Where are you going next?</Text>
           <Text style={styles.subtitle}>
-            Search for hostels/properties you will visit and{'\n'}
-            ask them to join their communities
+            Find your next stay! Search for hostels where you will stay and join
+            their communities to start planning your hangouts.
           </Text>
         </View>
 
@@ -339,9 +338,6 @@ const Onboarding4Screen = ({ navigation }) => {
   );
 };
 
-const SAFE_TOP =
-  Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 5 : 5;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -351,8 +347,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: SAFE_TOP,
-    paddingBottom: 30,
+    flexGrow: 1,
+    paddingTop: 50,
+    paddingBottom: 100,
     paddingHorizontal: 24,
   },
   backButton: {
