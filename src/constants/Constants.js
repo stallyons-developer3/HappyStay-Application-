@@ -67,6 +67,8 @@ export const Screens = {
   LocationMap: 'LocationMap',
 };
 
-export const GOOGLE_MAPS_API_KEY = 'AIzaSyARdb9P3ZrFq-oXt9CGDknAkO_r51SdhUo';
+// Imported from gitignored env.js — never hardcode secrets here
+export { ENV as ENV_KEYS } from './env';
+export const GOOGLE_MAPS_API_KEY = require('./env').ENV.GOOGLE_MAPS_API_KEY;
 
 export default Colors;
