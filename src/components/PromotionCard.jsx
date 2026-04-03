@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
 import {WebView} from 'react-native-webview';
 import {Colors, Fonts} from '../constants/Constants';
+import HeartIcon from './common/HeartIcon';
 
 const defaultIcon = require('../assets/images/icons/promo-icon.png');
 
@@ -94,6 +95,9 @@ const PromotionCard = ({
   description,
   image,
   onPress,
+  onLikePress,
+  isLiked = false,
+  likesCount = 0,
 }) => {
   const iconSource =
     typeof propertyIcon === 'string' && propertyIcon
@@ -118,7 +122,7 @@ const PromotionCard = ({
         </View>
       ) : null}
 
-      {/* Header row: icon + property name */}
+      {/* Header row: icon + property name + like */}
       <View style={styles.header}>
         <View style={styles.propertyInfo}>
           <Image
@@ -130,6 +134,19 @@ const PromotionCard = ({
             {propertyName}
           </Text>
         </View>
+        {onLikePress ? (
+          <TouchableOpacity
+            style={styles.likeButton}
+            onPress={onLikePress}
+            activeOpacity={0.7}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+          >
+            <HeartIcon size={18} filled={isLiked} />
+            {likesCount > 0 ? (
+              <Text style={styles.likeCount}>{likesCount}</Text>
+            ) : null}
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Title */}
@@ -186,6 +203,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     marginRight: 8,
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  likeCount: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 12,
+    color: Colors.textGray,
   },
   propertyIcon: {
     width: 40,

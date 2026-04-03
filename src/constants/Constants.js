@@ -67,4 +67,6 @@ export const Screens = {
   LocationMap: 'LocationMap',
 };
 
+export const GOOGLE_MAPS_API_KEY = 'AIzaSyARdb9P3ZrFq-oXt9CGDknAkO_r51SdhUo';
+
 export default Colors;

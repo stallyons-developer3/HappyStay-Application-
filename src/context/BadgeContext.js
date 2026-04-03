@@ -50,7 +50,6 @@ export const BadgeProvider = ({ children }) => {
           setChatUnreads(JSON.parse(stored));
         }
       } catch (e) {
-        console.log('Failed to load chat unreads:', e);
       }
     };
     loadUnreads();
@@ -62,7 +61,6 @@ export const BadgeProvider = ({ children }) => {
       try {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(chatUnreads));
       } catch (e) {
-        console.log('Failed to save chat unreads:', e);
       }
     };
     saveUnreads();
@@ -81,7 +79,6 @@ export const BadgeProvider = ({ children }) => {
         setNotificationCount(res.data.unread_count);
       }
     } catch (e) {
-      console.log('Notif count error:', e);
     }
   }, []);
 
@@ -95,7 +92,6 @@ export const BadgeProvider = ({ children }) => {
         setChatUnreads(prev => ({ ...prev, support: res.data.unread_count }));
       }
     } catch (e) {
-      console.log('Support unread error:', e);
     }
   }, []);
 

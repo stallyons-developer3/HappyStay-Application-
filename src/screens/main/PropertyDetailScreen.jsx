@@ -23,6 +23,16 @@ import { useToast } from '../../context/ToastContext';
 
 const { width } = Dimensions.get('window');
 
+const formatTimeTo12Hr = (timeStr) => {
+  if (!timeStr) return '';
+  const parts = timeStr.split(':');
+  let hours = parseInt(parts[0], 10);
+  const mins = parts[1] || '00';
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${hours}:${mins} ${ampm}`;
+};
+
 const PropertyDetailScreen = ({ navigation, route }) => {
   const { showToast } = useToast();
   const { propertyId } = route.params || {};
@@ -62,7 +72,6 @@ const PropertyDetailScreen = ({ navigation, route }) => {
         setProperty(response.data.property);
       }
     } catch (error) {
-      console.log('Fetch property detail error:', error);
       showToast('error', 'Failed to load property details.');
     } finally {
       setIsLoading(false);
@@ -465,7 +474,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
                       <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
                       <Text style={styles.bulletText}>
                         <Text style={styles.infoLabel}>Check-in Time: </Text>
-                        {property.checkin_time}
+                        {formatTimeTo12Hr(property.checkin_time)}
                       </Text>
                     </View>
                   )}
@@ -474,7 +483,7 @@ const PropertyDetailScreen = ({ navigation, route }) => {
                       <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
                       <Text style={styles.bulletText}>
                         <Text style={styles.infoLabel}>Check-out Time: </Text>
-                        {property.checkout_time}
+                        {formatTimeTo12Hr(property.checkout_time)}
                       </Text>
                     </View>
                   )}

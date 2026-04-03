@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Colors, Fonts } from '../constants/Constants';
+import HeartIcon from './common/HeartIcon';
 
 const TripCard = ({
   image,
@@ -13,6 +14,9 @@ const TripCard = ({
   bookingDisabled = false,
   onBookingPress,
   onPress,
+  onLikePress,
+  isLiked = false,
+  likesCount = 0,
 }) => {
   return (
     <TouchableOpacity
@@ -25,10 +29,25 @@ const TripCard = ({
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Title */}
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
+        {/* Title + Like */}
+        <View style={styles.titleRow}>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
+          {onLikePress ? (
+            <TouchableOpacity
+              style={styles.likeButton}
+              onPress={onLikePress}
+              activeOpacity={0.7}
+              hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+            >
+              <HeartIcon size={16} filled={isLiked} />
+              {likesCount > 0 ? (
+                <Text style={styles.likeCount}>{likesCount}</Text>
+              ) : null}
+            </TouchableOpacity>
+          ) : null}
+        </View>
 
         {/* Location */}
         <View style={styles.locationRow}>
@@ -96,11 +115,28 @@ const styles = StyleSheet.create({
     marginLeft: 14,
     paddingTop: 2,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   title: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.primary,
-    marginBottom: 4,
+    flex: 1,
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginLeft: 8,
+  },
+  likeCount: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 11,
+    color: Colors.textGray,
   },
   locationRow: {
     flexDirection: 'row',

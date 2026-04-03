@@ -126,7 +126,6 @@ const ActivityDetailScreen = ({ navigation, route }) => {
         setComments(response.data.comments);
       }
     } catch (error) {
-      console.log('Comments error:', error);
     }
   };
 
@@ -737,6 +736,8 @@ const styles = StyleSheet.create({
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 16,
   },
   mapButton: {

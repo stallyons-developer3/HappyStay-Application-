@@ -1,8 +1,11 @@
 import React from 'react';
+import { View, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screens, Colors } from '../constants/Constants';
+
+const needsBottomInset = Platform.OS === 'android' && Platform.Version >= 34;
 import { BadgeProvider } from '../context/BadgeContext';
 import { ToastProvider } from '../context/ToastContext';
 
@@ -33,15 +36,18 @@ import JoinedScreen from '../screens/main/JoinedScreen';
 
 const Stack = createNativeStackNavigator();
 
-const withSafeArea = (WrappedComponent, edges = ['bottom']) => {
-  return props => (
-    <SafeAreaView
-      style={{ flex: 1 }}
-      edges={edges}
-    >
+const WithSafeArea = ({ component: WrappedComponent, skipBottom = false, ...props }) => {
+  const insets = needsBottomInset ? useSafeAreaInsets() : { bottom: 0 };
+  const bottomPadding = skipBottom ? 0 : insets.bottom;
+  return (
+    <View style={{ flex: 1, paddingBottom: bottomPadding }}>
       <WrappedComponent {...props} />
-    </SafeAreaView>
+    </View>
   );
+};
+
+const withSafeArea = (WrappedComponent, skipBottom = false) => {
+  return props => <WithSafeArea component={WrappedComponent} skipBottom={skipBottom} {...props} />;
 };
 
 const AppNavigator = () => {
@@ -55,6 +61,9 @@ const AppNavigator = () => {
             headerShown: false,
             animation: 'slide_from_right',
             contentStyle: { backgroundColor: Colors.backgroundGray },
+            statusBarColor: Colors.primary,
+            statusBarStyle: 'light',
+            statusBarTranslucent: false,
           }}
         >
           <Stack.Screen
@@ -99,7 +108,7 @@ const AppNavigator = () => {
             component={withSafeArea(Onboarding4Screen)}
           />
 
-          <Stack.Screen name={Screens.MainApp} component={withSafeArea(BottomTabNavigator)} />
+          <Stack.Screen name={Screens.MainApp} component={withSafeArea(BottomTabNavigator, true)} />
 
           <Stack.Screen
             name={Screens.ActivityDetail}

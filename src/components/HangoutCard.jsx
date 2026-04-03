@@ -171,31 +171,29 @@ const HangoutCard = ({
 
       {/* People joined + Like */}
       <View style={styles.peopleRow}>
-        <View style={styles.avatarSection}>
+        {onLikePress ? (
+          <TouchableOpacity
+            style={styles.likeButton}
+            onPress={onLikePress}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <HeartIcon size={18} filled={isLiked} />
+            {likesCount > 0 ? (
+              <Text style={styles.likeCount}>{likesCount}</Text>
+            ) : null}
+          </TouchableOpacity>
+        ) : null}
+        <View style={styles.peopleRight}>
           <AvatarStack
             images={peopleImages}
             maxDisplay={3}
             size={32}
             overlap={10}
           />
-        </View>
-        <View style={styles.peopleRight}>
           <Text style={styles.peopleCount}>
             {peopleCount} {peopleCount === 1 ? 'person' : 'people'} joined
           </Text>
-          {onLikePress ? (
-            <TouchableOpacity
-              style={styles.likeButton}
-              onPress={onLikePress}
-              activeOpacity={0.7}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <HeartIcon size={18} filled={isLiked} />
-              {likesCount > 0 ? (
-                <Text style={styles.likeCount}>{likesCount}</Text>
-              ) : null}
-            </TouchableOpacity>
-          ) : null}
         </View>
       </View>
 
@@ -397,9 +395,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   peopleCount: {
-    fontFamily: Fonts.RobotoRegular,
+    fontFamily: Fonts.poppinsSemiBold,
     fontSize: 12,
-    color: Colors.textGray,
+    color: Colors.primary,
   },
   likeButton: {
     flexDirection: 'row',

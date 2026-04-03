@@ -47,7 +47,6 @@ const Onboarding4Screen = ({ navigation }) => {
         await saveUserData(response.data.user);
       }
     } catch (error) {
-      console.log('Profile refresh error:', error);
     }
     navigation.replace('MainApp');
   };
@@ -63,7 +62,6 @@ const Onboarding4Screen = ({ navigation }) => {
         setProperties(response.data.properties || []);
       }
     } catch (error) {
-      console.log('Fetch properties error:', error);
     } finally {
       setIsLoading(false);
     }

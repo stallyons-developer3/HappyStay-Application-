@@ -45,7 +45,6 @@ const ChatScreen = ({ navigation }) => {
         registerGroupChats(groups);
       }
     } catch (error) {
-      console.log('Fetch groups error:', error);
     } finally {
       setIsLoading(false);
     }

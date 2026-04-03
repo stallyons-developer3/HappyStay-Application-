@@ -22,6 +22,7 @@ export const PROPERTY = {
   GET_DETAIL: id => `/properties/${id}`,
   BOOK: id => `/properties/${id}/book`,
   MY_TRIPS: '/my-trips',
+  TOGGLE_LIKE: id => `/properties/${id}/like`,
 };
 
 export const ACTIVITY = {
@@ -76,4 +77,5 @@ export const NOTIFICATION = {
 export const POST = {
   GET_ALL: '/posts',
   GET_DETAIL: id => `/posts/${id}`,
+  TOGGLE_LIKE: id => `/posts/${id}/like`,
 };

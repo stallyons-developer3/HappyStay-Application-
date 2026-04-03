@@ -403,7 +403,6 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     marginBottom: 8,
     marginLeft: 4,
-    fontStyle: 'italic',
   },
   inputContainer: {
     flexDirection: 'row',

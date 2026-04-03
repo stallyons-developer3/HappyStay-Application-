@@ -9,18 +9,13 @@ import { getPusher } from './src/services/pusherService';
 
 const App = () => {
   useEffect(() => {
-    if (Platform.OS === 'android') {
-      StatusBar.setBackgroundColor(Colors.primary);
-      StatusBar.setBarStyle('light-content');
-      StatusBar.setTranslucent(false);
-    }
     getPusher();
   }, []);
 
   return (
     <Provider store={store}>
       <SafeAreaProvider>
-        <StatusBar backgroundColor={Colors.primary} barStyle="light-content" />
+        <StatusBar barStyle="light-content" />
         <AppNavigator />
       </SafeAreaProvider>
     </Provider>

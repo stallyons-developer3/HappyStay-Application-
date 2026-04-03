@@ -10,7 +10,7 @@ import {
   Linking,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Colors, Fonts } from '../../constants/Constants';
+import { Colors, Fonts, GOOGLE_MAPS_API_KEY } from '../../constants/Constants';
 
 const LocationMapScreen = ({ navigation, route }) => {
   const { latitude, longitude, title, location, markerColor } = route.params || {};
@@ -42,107 +42,48 @@ const LocationMapScreen = ({ navigation, route }) => {
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
       <style>
         * { margin: 0; padding: 0; }
         html, body { height: 100%; width: 100%; }
         #map { width: 100%; height: 100%; }
-        
-        .custom-marker {
-          background: ${pinColor};
-          border: 3px solid #fff;
-          border-radius: 50%;
-          width: 24px;
-          height: 24px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-        }
-
-        .leaflet-popup-content-wrapper {
-          border-radius: 12px;
-          padding: 0;
-          overflow: hidden;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .leaflet-popup-content {
-          margin: 0;
-          min-width: 200px;
-        }
-
-        .popup-card {
-          padding: 14px 16px;
-        }
-
-        .popup-title {
-          font-weight: bold;
-          font-size: 15px;
-          color: #333;
-          margin-bottom: 4px;
-        }
-
-        .popup-location {
-          font-size: 12px;
-          color: #666;
-        }
-
-        .popup-directions {
-          display: block;
-          background: ${pinColor};
-          color: #fff !important;
-          text-align: center;
-          padding: 8px;
-          font-size: 13px;
-          font-weight: 600;
-          text-decoration: none;
-          margin-top: 8px;
-          border-radius: 8px;
-        }
       </style>
     </head>
     <body>
       <div id="map"></div>
       <script>
-        var map = L.map('map', { zoomControl: false }).setView([${lat}, ${lng}], 16);
-        
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution: '© OpenStreetMap © CARTO',
-          subdomains: 'abcd',
-          maxZoom: 19
-        }).addTo(map);
-        
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        function initMap() {
+          var map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: ${lat}, lng: ${lng} },
+            zoom: 16,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+            zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
+          });
 
-        var customIcon = L.divIcon({
-          className: 'custom-marker',
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
-        });
+          var marker = new google.maps.Marker({
+            position: { lat: ${lat}, lng: ${lng} },
+            map: map,
+          });
 
-        var marker = L.marker([${lat}, ${lng}], { icon: customIcon }).addTo(map);
-        
-        var popupHTML = 
-          '<div class="popup-card">' +
-            '<div class="popup-title">${locTitle.replace(/'/g, "\\'")}</div>' +
-            ${
-              locAddress
-                ? `'<div class="popup-location">📍 ${locAddress.replace(
-                    /'/g,
-                    "\\'",
-                  )}</div>' +`
-                : ''
-            } 
-            '<a class="popup-directions" onclick="getDirections()">Get Directions</a>' +
-          '</div>';
+          var infoContent = '<div style="padding:10px 12px;min-width:180px;">' +
+            '<div style="font-weight:bold;font-size:14px;color:#333;margin-bottom:4px;">${locTitle.replace(/'/g, "\\'")}</div>' +
+            ${locAddress ? `'<div style="font-size:12px;color:#666;">📍 ${locAddress.replace(/'/g, "\\'")}</div>' +` : ''}
+            '<div onclick="getDirections()" style="display:block;background:${pinColor};color:#fff;text-align:center;padding:8px;font-size:13px;font-weight:600;margin-top:8px;border-radius:8px;cursor:pointer;">Get Directions</div>' +
+            '</div>';
 
-        marker.bindPopup(popupHTML, { closeButton: false }).openPopup();
+          var infoWindow = new google.maps.InfoWindow({ content: infoContent });
+          infoWindow.open(map, marker);
+          marker.addListener('click', function() { infoWindow.open(map, marker); });
+
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapReady' }));
+        }
 
         function getDirections() {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'directions' }));
         }
-
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapReady' }));
       </script>
+      <script src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap" async defer></script>
     </body>
     </html>
   `;
@@ -156,7 +97,6 @@ const LocationMapScreen = ({ navigation, route }) => {
         openInExternalMap();
       }
     } catch (error) {
-      console.log('Map message error:', error);
     }
   };
 

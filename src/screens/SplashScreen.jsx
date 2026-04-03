@@ -37,7 +37,7 @@ const SplashScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../assets/images/logo.png')}
+        source={require('../assets/images/appystay_logo.png')}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -53,8 +53,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: width * 0.6,
-    height: 100,
+    width: width * 0.8,
+    height: 160,
   },
 });
 

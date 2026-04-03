@@ -142,7 +142,6 @@ const HangoutDetailScreen = ({ navigation, route }) => {
         setComments(response.data.comments);
       }
     } catch (error) {
-      console.log('Comments error:', error);
     }
   };
 
@@ -153,7 +152,6 @@ const HangoutDetailScreen = ({ navigation, route }) => {
         setRequests(response.data.requests);
       }
     } catch (error) {
-      console.log('Requests error:', error);
     }
   };
 

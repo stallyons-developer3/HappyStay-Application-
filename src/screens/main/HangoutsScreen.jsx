@@ -79,7 +79,6 @@ const HangoutsScreen = ({ navigation }) => {
         });
       }
     } catch (error) {
-      console.log('Fetch hangouts error:', error);
     } finally {
       setIsLoading(false);
     }

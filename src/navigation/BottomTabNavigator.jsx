@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Image, Text, StyleSheet } from 'react-native';
+import { View, Image, Text, StyleSheet, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Fonts } from '../constants/Constants';
+
+const needsBottomInset = Platform.OS === 'android' && Platform.Version >= 34;
 import { useBadgeCounts } from '../context/BadgeContext';
 
 // Screens
@@ -38,8 +40,8 @@ const BottomTabNavigator = () => {
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: Colors.white,
-          height: 65 + insets.bottom,
-          paddingBottom: 10 + insets.bottom,
+          height: 65 + (needsBottomInset ? insets.bottom : 0),
+          paddingBottom: 10 + (needsBottomInset ? insets.bottom : 0),
           paddingTop: 10,
           borderTopWidth: 0,
           elevation: 10,

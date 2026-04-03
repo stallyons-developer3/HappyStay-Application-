@@ -131,7 +131,6 @@ const ChatDetailScreen = ({ navigation, route }) => {
       setIsBotActive(true);
       isBotActiveRef.current = true;
     } catch (error) {
-      console.log('End chat error:', error);
     }
   }, [clearInactivityTimer]);
 

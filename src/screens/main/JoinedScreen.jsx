@@ -64,7 +64,6 @@ const JoinedScreen = ({ navigation }) => {
         setParticipatingHangouts(hangoutsRes.data.hangouts);
       }
     } catch (error) {
-      console.log('Fetch joined data error:', error);
     } finally {
       setIsLoading(false);
     }

@@ -47,7 +47,6 @@ const ProfileScreen = ({ navigation }) => {
         await saveUserData(response.data.user);
       }
     } catch (error) {
-      console.log('Fetch profile error:', error);
     }
   }, [dispatch]);
 
@@ -60,7 +59,6 @@ const ProfileScreen = ({ navigation }) => {
         setNextTrips(response.data.next_trips || []);
       }
     } catch (error) {
-      console.log('Fetch trips error:', error);
     } finally {
       setTripsLoading(false);
       setRefreshing(false);

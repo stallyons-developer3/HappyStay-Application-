@@ -126,9 +126,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     left: 10,
+    right: 50,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+    alignSelf: 'flex-start',
   },
   typologyText: {
     fontFamily: Fonts.poppinsSemiBold,

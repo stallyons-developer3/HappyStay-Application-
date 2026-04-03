@@ -66,7 +66,6 @@ const ActivitiesScreen = ({ navigation }) => {
         });
       }
     } catch (error) {
-      console.log('Fetch activities error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -335,7 +334,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   bottomSpacing: {
-    height: 100,
+    height: 140,
   },
   emptyContainer: {
     alignItems: 'center',

@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { Colors, Fonts, Screens } from '../../constants/Constants';
+import { Colors, Fonts, Screens, GOOGLE_MAPS_API_KEY } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { ACTIVITY } from '../../api/endpoints';
 
@@ -47,7 +47,6 @@ const MapScreen = ({ navigation }) => {
 
       setActivities(publicWithCoords);
     } catch (error) {
-      console.log('Fetch activities for map error:', error);
     } finally {
       setLoading(false);
     }
@@ -92,80 +91,16 @@ const MapScreen = ({ navigation }) => {
     }
   }, [mapReady, activities, loading]);
 
-  // Leaflet map HTML
+  // Google Maps HTML
   const mapHTML = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
       <style>
         * { margin: 0; padding: 0; }
         html, body { height: 100%; width: 100%; }
         #map { width: 100%; height: 100%; }
-        
-        .custom-marker {
-          border: 3px solid #fff;
-          border-radius: 50%;
-          width: 20px;
-          height: 20px;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        }
-
-        .leaflet-popup-content-wrapper {
-          border-radius: 12px;
-          padding: 0;
-          overflow: hidden;
-        }
-        
-        .leaflet-popup-content {
-          margin: 0;
-          min-width: 180px;
-        }
-        
-        .popup-card {
-          padding: 12px 14px;
-          cursor: pointer;
-        }
-
-        .popup-title {
-          font-weight: bold;
-          font-size: 14px;
-          color: #333;
-          margin-bottom: 4px;
-        }
-        
-        .popup-location {
-          font-size: 12px;
-          color: #666;
-          margin-bottom: 3px;
-        }
-
-        .popup-meta {
-          font-size: 11px;
-          color: #888;
-          margin-bottom: 6px;
-        }
-
-        .popup-badge {
-          display: inline-block;
-          background: #E8F8F0;
-          color: #26B16D;
-          font-size: 11px;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 10px;
-        }
-
-        .popup-tap {
-          font-size: 10px;
-          color: #26B16D;
-          text-align: right;
-          margin-top: 6px;
-          font-weight: 600;
-        }
-
         .loading-overlay {
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;
@@ -184,56 +119,67 @@ const MapScreen = ({ navigation }) => {
       <div id="map"></div>
       <div id="loading" class="loading-overlay">Loading activities...</div>
       <script>
-        var map = L.map('map', { zoomControl: false }).setView([24.8607, 67.0011], 12);
-        
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution: '© OpenStreetMap © CARTO',
-          subdomains: 'abcd',
-          maxZoom: 19
-        }).addTo(map);
-        
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-        
-        var markersGroup = L.featureGroup();
+        var map, markers = [], bounds;
+
+        function initMap() {
+          map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: 24.8607, lng: 67.0011 },
+            zoom: 12,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+            zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
+          });
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapReady' }));
+        }
 
         function addMarkers(locations) {
-          markersGroup.clearLayers();
+          // Clear existing markers
+          markers.forEach(function(m) { m.setMap(null); });
+          markers = [];
+          bounds = new google.maps.LatLngBounds();
 
           locations.forEach(function(loc) {
             if (!loc.lat || !loc.lng) return;
 
             var markerColor = loc.typology_color || '#27AE60';
-            var markerIcon = L.divIcon({
-              className: 'custom-marker',
-              html: '<div style="background:' + markerColor + ';width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
-              iconSize: [20, 20],
-              iconAnchor: [10, 10]
+            var marker = new google.maps.Marker({
+              position: { lat: loc.lat, lng: loc.lng },
+              map: map,
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: markerColor,
+                fillOpacity: 1,
+                strokeColor: '#fff',
+                strokeWeight: 3,
+                scale: 10,
+              },
             });
 
-            var badgeColor = markerColor;
             var meta = '';
             if (loc.date) meta += loc.date;
             if (loc.time) meta += (meta ? ' • ' : '') + loc.time;
 
-            var popupHTML =
-              '<div class="popup-card" onclick="onMarkerTap(' + loc.id + ')">' +
-                '<div class="popup-title">' + loc.title + '</div>' +
-                (loc.location ? '<div class="popup-location">📍 ' + loc.location + '</div>' : '') +
-                (meta ? '<div class="popup-meta">' + meta + '</div>' : '') +
-                (loc.typology ? '<span class="popup-badge" style="background:' + badgeColor + '20;color:' + badgeColor + ';">' + loc.typology + '</span>' : '') +
-                '<div class="popup-tap">Tap to view →</div>' +
+            var infoContent =
+              '<div style="padding:10px 12px;min-width:180px;cursor:pointer;" onclick="onMarkerTap(' + loc.id + ')">' +
+                '<div style="font-weight:bold;font-size:14px;color:#333;margin-bottom:4px;">' + loc.title + '</div>' +
+                (loc.location ? '<div style="font-size:12px;color:#666;margin-bottom:3px;">📍 ' + loc.location + '</div>' : '') +
+                (meta ? '<div style="font-size:11px;color:#888;margin-bottom:6px;">' + meta + '</div>' : '') +
+                (loc.typology ? '<span style="display:inline-block;background:' + markerColor + '20;color:' + markerColor + ';font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;">' + loc.typology + '</span>' : '') +
+                '<div style="font-size:10px;color:#26B16D;text-align:right;margin-top:6px;font-weight:600;">Tap to view →</div>' +
               '</div>';
 
-            var marker = L.marker([loc.lat, loc.lng], { icon: markerIcon });
-            marker.bindPopup(popupHTML, { closeButton: false });
-            markersGroup.addLayer(marker);
+            var infoWindow = new google.maps.InfoWindow({ content: infoContent });
+            marker.addListener('click', function() {
+              infoWindow.open(map, marker);
+            });
+
+            markers.push(marker);
+            bounds.extend(marker.getPosition());
           });
 
-          markersGroup.addTo(map);
-
-          // Fit map to show all markers
-          if (markersGroup.getLayers().length > 0) {
-            map.fitBounds(markersGroup.getBounds().pad(0.15));
+          if (markers.length > 0) {
+            map.fitBounds(bounds, { top: 50, bottom: 50, left: 30, right: 30 });
           }
 
           document.getElementById('loading').style.display = 'none';
@@ -245,10 +191,8 @@ const MapScreen = ({ navigation }) => {
             activityId: activityId
           }));
         }
-
-        // Notify RN that map is ready
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapReady' }));
       </script>
+      <script src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&callback=initMap" async defer></script>
     </body>
     </html>
   `;
@@ -266,7 +210,6 @@ const MapScreen = ({ navigation }) => {
         });
       }
     } catch (error) {
-      console.log('Map message error:', error);
     }
   };
 

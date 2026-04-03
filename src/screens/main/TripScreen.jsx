@@ -87,7 +87,6 @@ const TripScreen = ({ navigation }) => {
         }
       }
     } catch (error) {
-      console.log('Fetch properties error:', error);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -223,7 +222,7 @@ const TripScreen = ({ navigation }) => {
 
   // Get booking button text based on status
   const getBookingButtonText = status => {
-    if (!status) return 'Request Booking';
+    if (!status) return 'Request to Join';
     switch (status) {
       case 'pending':
         return 'Pending...';
@@ -232,7 +231,7 @@ const TripScreen = ({ navigation }) => {
       case 'declined':
         return 'Declined';
       default:
-        return 'Request Booking';
+        return 'Request to Join';
     }
   };
 
@@ -302,6 +301,22 @@ const TripScreen = ({ navigation }) => {
                 )}
                 bookingDisabled={!!property.user_request_status}
                 onBookingPress={() => handleRequestBooking(property)}
+                isLiked={property.is_liked || false}
+                likesCount={property.likes_count || 0}
+                onLikePress={() => {
+                  setProperties(prev => prev.map(p => {
+                    if (p.id !== property.id) return p;
+                    const newLiked = !p.is_liked;
+                    return { ...p, is_liked: newLiked, likes_count: newLiked ? (p.likes_count || 0) + 1 : Math.max(0, (p.likes_count || 0) - 1) };
+                  }));
+                  api.post(PROPERTY.TOGGLE_LIKE(property.id)).catch(() => {
+                    setProperties(prev => prev.map(p => {
+                      if (p.id !== property.id) return p;
+                      const revert = !p.is_liked;
+                      return { ...p, is_liked: revert, likes_count: revert ? (p.likes_count || 0) + 1 : Math.max(0, (p.likes_count || 0) - 1) };
+                    }));
+                  });
+                }}
                 onPress={() =>
                   navigation.navigate(Screens.PropertyDetail, {
                     propertyId: property.id,

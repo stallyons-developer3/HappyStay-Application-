@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Colors, Fonts, Screens } from '../../constants/Constants';
-import { STORAGE_URL, HANGOUT, ACTIVITY } from '../../api/endpoints';
+import { STORAGE_URL, HANGOUT, ACTIVITY, POST as POST_API } from '../../api/endpoints';
 import api from '../../api/axiosInstance';
 
 import Header from '../../components/Header';
@@ -78,6 +78,7 @@ const HomeScreen = ({ navigation }) => {
   const { showToast } = useToast();
   const [joiningId, setJoiningId] = useState(null);
   const [joiningActivityId, setJoiningActivityId] = useState(null);
+  const [postLikeOverrides, setPostLikeOverrides] = useState({});
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinModalActivity, setJoinModalActivity] = useState(null);
 
@@ -236,6 +237,31 @@ const HomeScreen = ({ navigation }) => {
     const datePart = dateInfo ? ` on ${dateInfo}` : '';
     const message = encodeURIComponent(`Hi! I'm a guest at ${propertyName} and I'd like to join the activity "${activityName}"${datePart}.`);
     Linking.openURL(`https://wa.me/${phone}?text=${message}`);
+  };
+
+  const handlePostLike = (postId) => {
+    setPostLikeOverrides(prev => {
+      const current = prev[postId];
+      const post = posts.find(p => p.id === postId);
+      const wasLiked = current !== undefined ? current.is_liked : (post?.is_liked || false);
+      const wasCount = current !== undefined ? current.likes_count : (post?.likes_count || 0);
+      const newLiked = !wasLiked;
+      return {
+        ...prev,
+        [postId]: {
+          is_liked: newLiked,
+          likes_count: newLiked ? wasCount + 1 : Math.max(0, wasCount - 1),
+        },
+      };
+    });
+    api.post(POST_API.TOGGLE_LIKE(postId)).catch(() => {
+      // Revert on error
+      setPostLikeOverrides(prev => {
+        const updated = { ...prev };
+        delete updated[postId];
+        return updated;
+      });
+    });
   };
 
   const openJoinModal = activity => {
@@ -437,7 +463,10 @@ const HomeScreen = ({ navigation }) => {
                   marketingTag={p.marketing_tag}
                   description={p.description}
                   image={p.thumbnail}
-                  onPress={() => console.log('Post pressed', p.id)}
+                  isLiked={postLikeOverrides[p.id] !== undefined ? postLikeOverrides[p.id].is_liked : (p.is_liked || false)}
+                  likesCount={postLikeOverrides[p.id] !== undefined ? postLikeOverrides[p.id].likes_count : (p.likes_count || 0)}
+                  onLikePress={() => handlePostLike(p.id)}
+                  onPress={() => {}}
                 />
               );
             }

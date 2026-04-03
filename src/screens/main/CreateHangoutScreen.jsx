@@ -12,11 +12,12 @@ import {
   Switch,
   Platform,
   ActivityIndicator,
-  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { WebView } from 'react-native-webview';
-import { Colors, Fonts } from '../../constants/Constants';
+import { useSelector } from 'react-redux';
+import { Colors, Fonts, GOOGLE_MAPS_API_KEY } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { HANGOUT } from '../../api/endpoints';
 import { useToast } from '../../context/ToastContext';
@@ -33,6 +34,7 @@ const typologyOptions = [
 
 const CreateHangoutScreen = ({ navigation, route }) => {
   const { showToast } = useToast();
+  const { user } = useSelector(state => state.auth);
   const isEdit = route?.params?.isEdit || false;
   const hangoutId = route?.params?.hangoutId || null;
 
@@ -52,9 +54,12 @@ const CreateHangoutScreen = ({ navigation, route }) => {
   const [description, setDescription] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
 
+  const propertyLat = user?.property?.latitude ? parseFloat(user.property.latitude) : 46.1533;
+  const propertyLng = user?.property?.longitude ? parseFloat(user.property.longitude) : 9.3244;
+
   const [markerPosition, setMarkerPosition] = useState({
-    latitude: 24.8607,
-    longitude: 67.0011,
+    latitude: propertyLat,
+    longitude: propertyLng,
   });
 
   const [showTypologyModal, setShowTypologyModal] = useState(false);
@@ -130,18 +135,13 @@ const CreateHangoutScreen = ({ navigation, route }) => {
 
   const reverseGeocode = async (lat, lng) => {
     try {
-      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1&accept-language=en`;
-      const response = await fetch(url, {
-        headers: { 'User-Agent': 'HappyStay-App' },
-      });
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`;
+      const response = await fetch(url);
       const data = await response.json();
-      if (data?.display_name) {
-        const parts = data.display_name.split(',');
-        const shortName = parts.slice(0, 3).join(',').trim();
-        setLocation(shortName);
+      if (data?.results?.[0]?.formatted_address) {
+        setLocation(data.results[0].formatted_address);
       }
     } catch (error) {
-      console.log('Reverse geocode error:', error);
     }
   };
 
@@ -159,31 +159,76 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
       <style>
         body { margin: 0; padding: 0; }
         #map { width: 100%; height: 100vh; }
+        #searchBox {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          right: 10px;
+          z-index: 5;
+          background: #fff;
+          border-radius: 8px;
+          padding: 10px 14px;
+          font-size: 14px;
+          border: 1px solid #ddd;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+          outline: none;
+          font-family: sans-serif;
+        }
       </style>
     </head>
     <body>
+      <input id="searchBox" type="text" placeholder="Search location..." />
       <div id="map"></div>
       <script>
-        var map = L.map('map').setView([${markerPosition.latitude}, ${markerPosition.longitude}], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          attribution: '© OpenStreetMap © CARTO',
-          subdomains: 'abcd',
-          maxZoom: 19
-        }).addTo(map);
-        var marker = L.marker([${markerPosition.latitude}, ${markerPosition.longitude}]).addTo(map);
-        map.on('click', function(e) {
-          marker.setLatLng(e.latlng);
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            latitude: e.latlng.lat,
-            longitude: e.latlng.lng
-          }));
-        });
+        function initMap() {
+          var map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: ${markerPosition.latitude}, lng: ${markerPosition.longitude} },
+            zoom: 13,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false,
+          });
+          var marker = new google.maps.Marker({
+            position: { lat: ${markerPosition.latitude}, lng: ${markerPosition.longitude} },
+            map: map,
+            draggable: true,
+          });
+
+          // Search box
+          var input = document.getElementById('searchBox');
+          var autocomplete = new google.maps.places.Autocomplete(input, { types: ['geocode', 'establishment'] });
+          autocomplete.bindTo('bounds', map);
+          autocomplete.addListener('place_changed', function() {
+            var place = autocomplete.getPlace();
+            if (!place.geometry) return;
+            map.setCenter(place.geometry.location);
+            map.setZoom(15);
+            marker.setPosition(place.geometry.location);
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              latitude: place.geometry.location.lat(),
+              longitude: place.geometry.location.lng()
+            }));
+          });
+
+          map.addListener('click', function(e) {
+            marker.setPosition(e.latLng);
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              latitude: e.latLng.lat(),
+              longitude: e.latLng.lng()
+            }));
+          });
+          marker.addListener('dragend', function(e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              latitude: e.latLng.lat(),
+              longitude: e.latLng.lng()
+            }));
+          });
+        }
       </script>
+      <script src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initMap" async defer></script>
     </body>
     </html>
   `;
@@ -197,7 +242,6 @@ const CreateHangoutScreen = ({ navigation, route }) => {
       });
       reverseGeocode(data.latitude, data.longitude);
     } catch (error) {
-      console.log('Map message error:', error);
     }
   };
 
@@ -344,6 +388,16 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     </TouchableOpacity>
   );
 
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => { setKeyboardHeight(0); });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
   if (isFetching) {
     return (
       <View style={styles.loadingContainer}>
@@ -466,7 +520,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
   const renderStep2 = () => (
     <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 40 : 40 }]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
@@ -572,10 +626,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={styles.container}>
       {currentStep === 1 ? renderStep1() : renderStep2()}
 
       {showDatePicker && (
@@ -626,7 +677,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         </View>
       </Modal>
 
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 

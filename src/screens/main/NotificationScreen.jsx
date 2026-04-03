@@ -112,7 +112,6 @@ const NotificationScreen = ({ navigation }) => {
         setLastPage(response.data.pagination?.last_page || 1);
       }
     } catch (error) {
-      console.log('Fetch notifications error:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -174,7 +173,6 @@ const NotificationScreen = ({ navigation }) => {
         resetNotificationCount();
       }
     } catch (error) {
-      console.log('Mark all read error:', error);
     } finally {
       setMarkingRead(false);
     }
@@ -198,7 +196,6 @@ const NotificationScreen = ({ navigation }) => {
           updateNotificationCount(newUnreadCount);
         }
       } catch (error) {
-        console.log('Mark read error:', error);
       }
     }
 

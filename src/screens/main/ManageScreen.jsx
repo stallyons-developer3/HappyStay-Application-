@@ -65,7 +65,6 @@ const ManageScreen = ({ navigation }) => {
         );
       }
     } catch (error) {
-      console.log('Fetch manage data error:', error);
     } finally {
       setIsLoading(false);
     }
