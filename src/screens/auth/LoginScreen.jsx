@@ -71,9 +71,9 @@ const LoginScreen = ({ navigation }) => {
   useEffect(() => {
     if (isAuthenticated && user && isFocused) {
       if (user.is_profile_complete) {
-        navigation.replace(Screens.MainApp);
+        navigation.reset({ index: 0, routes: [{ name: Screens.MainApp }] });
       } else {
-        navigation.replace(Screens.Onboarding1);
+        navigation.reset({ index: 0, routes: [{ name: Screens.Onboarding1 }] });
       }
     }
   }, [isAuthenticated, user, navigation, isFocused]);

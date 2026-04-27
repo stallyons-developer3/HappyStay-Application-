@@ -70,9 +70,9 @@ const RegisterScreen = ({ navigation }) => {
   useEffect(() => {
     if (isAuthenticated && user && isFocused) {
       if (user.is_profile_complete) {
-        navigation.replace(Screens.MainApp);
+        navigation.reset({ index: 0, routes: [{ name: Screens.MainApp }] });
       } else {
-        navigation.replace(Screens.Onboarding1, { username: username.trim() });
+        navigation.reset({ index: 0, routes: [{ name: Screens.Onboarding1, params: { username: username.trim() } }] });
       }
     }
   }, [isAuthenticated, user, navigation, isFocused]);

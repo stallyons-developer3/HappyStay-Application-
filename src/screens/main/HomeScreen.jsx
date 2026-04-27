@@ -366,7 +366,7 @@ const HomeScreen = ({ navigation }) => {
                   <ActivityCard
                     image={a.thumbnail}
                     title={a.title}
-                    price={a.price ? `€${a.price}` : 'Free'}
+                    price={a.price && parseFloat(a.price) > 0 ? `€${a.price}${a.price_type === 'per_person' ? '/person' : a.price_type === 'per_hour' ? '/hour' : ''}` : 'FREE'}
                     description={a.description}
                     time={
                       a.all_day
@@ -406,6 +406,8 @@ const HomeScreen = ({ navigation }) => {
                     activityType={a.activity_type}
                     scheduleText={a.schedule_text}
                     partnerWhatsapp={a.partner_whatsapp}
+                    interestedCount={a.interested_count || 0}
+                    propertyName={a.property_name}
                     onWhatsAppPress={() => handleWhatsAppPress(a)}
                   />
                 </View>
@@ -425,27 +427,20 @@ const HomeScreen = ({ navigation }) => {
                   key={`hangout-${h.id}`}
                   profileImage={h.user?.profile_picture}
                   name={h.user?.name || 'User'}
+                  nationality={h.user?.nationality}
+                  propertyName={h.user?.property_name}
                   title={h.title}
                   typology={h.typology}
+                  hangoutPropertyName={h.property_name}
+                  linkedActivity={h.linked_activity}
                   description={h.description}
                   peopleCount={h.joined_count || 0}
                   peopleImages={peopleData}
-                  isOwner={h.user?.id === user?.id}
-                  isPublic={!h.is_private}
-                  requestStatus={h.user_request_status}
-                  joinLoading={joiningId === h.id}
-                  canJoin={joinCheck.canJoin}
-                  canJoinMessage={joinCheck.message}
+                  isLiked={h.is_liked || false}
+                  likesCount={h.likes_count || 0}
                   onPress={() =>
                     navigation.navigate(Screens.HangoutDetail, {
                       hangoutId: h.id,
-                    })
-                  }
-                  onJoinPress={() => handleJoinRequest(h.id)}
-                  onChatPress={() =>
-                    navigation.navigate(Screens.ChatDetail, {
-                      hangoutId: h.id,
-                      title: h.title,
                     })
                   }
                 />

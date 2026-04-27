@@ -178,17 +178,6 @@ const Onboarding4Screen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Image
-            source={require('../../assets/images/arrow-left.png')}
-            style={styles.backIcon}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
 
         <View style={styles.titleSection}>
           <Text style={styles.mainTitle}>Where are you going next?</Text>

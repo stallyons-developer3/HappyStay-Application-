@@ -147,13 +147,24 @@ const ActivitiesScreen = ({ navigation }) => {
   const buildCarousels = () => {
     const carousels = [];
 
-    // 1. "During Your Stay" — event-type activities within user's trip dates (±3 days)
     const addDays = (dateStr, days) => {
       const d = new Date(dateStr);
       d.setDate(d.getDate() + days);
       return d.toISOString().slice(0, 10);
     };
 
+    // 1. "Our Best Choices" — flagged by admin
+    const bestChoices = activities.filter(a => a.is_best_choice);
+    if (bestChoices.length > 0) {
+      carousels.push({
+        key: 'best_choices',
+        title: 'Our Best Choices',
+        subtitle: 'Hand-picked by the hostel',
+        activities: bestChoices,
+      });
+    }
+
+    // 2. "During Your Stay" — event-type activities within user's trip dates (±3 days)
     if (user?.check_in && user?.check_out) {
       const checkIn = addDays(user.check_in.slice(0, 10), -3);
       const checkOut = addDays(user.check_out.slice(0, 10), 3);
@@ -173,33 +184,14 @@ const ActivitiesScreen = ({ navigation }) => {
       }
     }
 
-    // 2. Carousels by typology
-    const typologyGroups = {};
-    activities.forEach(a => {
-      const typ = a.typology;
-      if (!typ) return;
-      if (!typologyGroups[typ]) typologyGroups[typ] = [];
-      typologyGroups[typ].push(a);
-    });
-
-    Object.entries(typologyGroups).forEach(([typ, items]) => {
+    // 3. "Events" — all event-type activities
+    const events = activities.filter(a => a.activity_type === 'event');
+    if (events.length > 0) {
       carousels.push({
-        key: `typology_${typ}`,
-        title: typologyLabels[typ] || typ,
-        activities: items,
-      });
-    });
-
-    // 3. "Free Activities" — price = 0 or null
-    const freeActivities = activities.filter(
-      a => !a.price || parseFloat(a.price) === 0,
-    );
-    if (freeActivities.length > 0) {
-      carousels.push({
-        key: 'free',
-        title: 'Free Activities',
-        subtitle: 'No cost, just fun',
-        activities: freeActivities,
+        key: 'events',
+        title: 'Events',
+        subtitle: 'Upcoming events',
+        activities: events,
       });
     }
 
@@ -215,6 +207,23 @@ const ActivitiesScreen = ({ navigation }) => {
         activities: liked,
       });
     }
+
+    // 5. Carousels by typology (categories)
+    const typologyGroups = {};
+    activities.forEach(a => {
+      const typ = a.typology;
+      if (!typ) return;
+      if (!typologyGroups[typ]) typologyGroups[typ] = [];
+      typologyGroups[typ].push(a);
+    });
+
+    Object.entries(typologyGroups).forEach(([typ, items]) => {
+      carousels.push({
+        key: `typology_${typ}`,
+        title: typologyLabels[typ] || typ,
+        activities: items,
+      });
+    });
 
     return carousels;
   };

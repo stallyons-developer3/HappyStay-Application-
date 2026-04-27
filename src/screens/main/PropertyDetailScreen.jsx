@@ -517,15 +517,24 @@ const PropertyDetailScreen = ({ navigation, route }) => {
               <SectionHeader title="Operating Hours" sectionKey="hours" />
               {expandedSections.hours && (
                 <View style={styles.sectionContent}>
-                  {property.opening_hours.map((hour, index) => (
-                    <View key={index} style={styles.bulletItem}>
-                      <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
-                      <Text style={styles.bulletText}>
-                        <Text style={styles.infoLabel}>{hour.title}: </Text>
-                        From: {hour.start_time || '-'}  To: {hour.end_time || '-'}
-                      </Text>
-                    </View>
-                  ))}
+                  {property.opening_hours.map((hour, index) => {
+                    // Support new time_ranges + legacy start_time/end_time
+                    let ranges = hour.time_ranges;
+                    if ((!ranges || ranges.length === 0) && (hour.start_time || hour.end_time)) {
+                      ranges = [{ start_time: hour.start_time, end_time: hour.end_time }];
+                    }
+                    return (
+                      <View key={index} style={styles.bulletItem}>
+                        <Image source={require('../../assets/images/icons/check-circle.png')} style={styles.bulletIcon} resizeMode="contain" />
+                        <Text style={styles.bulletText}>
+                          <Text style={styles.infoLabel}>{hour.title}: </Text>
+                          {ranges && ranges.length > 0
+                            ? ranges.map(r => `${r.start_time || '-'} - ${r.end_time || '-'}`).join(', ')
+                            : '-'}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </View>
               )}
             </>

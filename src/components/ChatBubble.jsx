@@ -8,6 +8,32 @@ import {
 } from 'react-native';
 import { Colors, Fonts } from '../constants/Constants';
 
+const URL_REGEX = /(https?:\/\/[^\s,)>\]]+)/gi;
+
+const parseMessageWithLinks = (text, isSent) => {
+  if (!text) return null;
+
+  const parts = text.split(URL_REGEX);
+  if (parts.length === 1) return null; // No URLs found
+
+  return parts.map((part, index) => {
+    if (URL_REGEX.test(part)) {
+      // Reset regex lastIndex since it's global
+      URL_REGEX.lastIndex = 0;
+      return (
+        <Text
+          key={index}
+          style={[styles.inlineLink, isSent && styles.inlineLinkSent]}
+          onPress={() => Linking.openURL(part)}
+        >
+          {part}
+        </Text>
+      );
+    }
+    return part;
+  });
+};
+
 const ChatBubble = ({
   message,
   time,
@@ -16,12 +42,13 @@ const ChatBubble = ({
   linkText = '',
   linkUrl = '',
 }) => {
-  // Handle Link Press
   const handleLinkPress = () => {
     if (linkUrl) {
       Linking.openURL(linkUrl);
     }
   };
+
+  const parsedMessage = parseMessageWithLinks(message, isSent);
 
   return (
     <View
@@ -43,7 +70,7 @@ const ChatBubble = ({
             isSent ? styles.sentMessage : styles.receivedMessage,
           ]}
         >
-          {message}
+          {parsedMessage || message}
         </Text>
 
         {/* Link (if any) */}
@@ -61,11 +88,13 @@ const ChatBubble = ({
         ) : null}
 
         {/* Time */}
-        <Text
-          style={[styles.time, isSent ? styles.sentTime : styles.receivedTime]}
-        >
-          {time}
-        </Text>
+        {time ? (
+          <Text
+            style={[styles.time, isSent ? styles.sentTime : styles.receivedTime]}
+          >
+            {time}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -106,6 +135,15 @@ const styles = StyleSheet.create({
   },
   receivedMessage: {
     color: Colors.textDark,
+  },
+  inlineLink: {
+    color: '#1A73E8',
+    textDecorationLine: 'underline',
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+  },
+  inlineLinkSent: {
+    color: '#B3E5FC',
   },
   linkText: {
     fontFamily: Fonts.RobotoRegular,

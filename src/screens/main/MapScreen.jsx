@@ -71,7 +71,7 @@ const MapScreen = ({ navigation }) => {
             typology_color: a.typology_color || '#27AE60',
             date: a.start_date || '',
             time: a.start_time || '',
-            price: a.price || '0.00',
+            price: a.price && parseFloat(a.price) > 0 ? `€${a.price}` : 'FREE',
           })),
         );
 

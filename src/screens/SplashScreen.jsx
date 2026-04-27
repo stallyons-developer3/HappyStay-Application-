@@ -22,9 +22,9 @@ const SplashScreen = ({ navigation }) => {
     const timer = setTimeout(() => {
       if (isAuthenticated && user) {
         if (user.is_profile_complete) {
-          navigation.replace(Screens.MainApp);
+          navigation.reset({ index: 0, routes: [{ name: Screens.MainApp }] });
         } else {
-          navigation.replace(Screens.Onboarding1);
+          navigation.reset({ index: 0, routes: [{ name: Screens.Onboarding1 }] });
         }
       } else {
         navigation.replace(Screens.Welcome);

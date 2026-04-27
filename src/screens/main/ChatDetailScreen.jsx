@@ -87,6 +87,10 @@ const ChatDetailScreen = ({ navigation, route }) => {
   const [isSending, setIsSending] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
   const [showEndChatModal, setShowEndChatModal] = useState(false);
+  const [streamingMsg, setStreamingMsg] = useState(null);
+  const [streamedText, setStreamedText] = useState('');
+  const streamIntervalRef = useRef(null);
+  const streamIndexRef = useRef(0);
   const [isBotActive, setIsBotActive] = useState(true);
   const scrollViewRef = useRef(null);
   const messageIdsRef = useRef(new Set());
@@ -134,9 +138,14 @@ const ChatDetailScreen = ({ navigation, route }) => {
     }
   }, [clearInactivityTimer]);
 
-  // Cleanup timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
-    return () => clearInactivityTimer();
+    return () => {
+      clearInactivityTimer();
+      if (streamIntervalRef.current) {
+        clearTimeout(streamIntervalRef.current);
+      }
+    };
   }, [clearInactivityTimer]);
 
   useEffect(() => {
@@ -238,7 +247,13 @@ const ChatDetailScreen = ({ navigation, route }) => {
         time: msg.time || '',
       };
       messageIdsRef.current.add(msgId);
-      setMessages(prev => [...prev, newMessage]);
+
+      // Bot messages get streaming animation
+      if (newMessage.is_bot) {
+        startStreaming(newMessage);
+      } else {
+        setMessages(prev => [...prev, newMessage]);
+      }
 
       // If we receive a non-bot message from support/admin, bot is OFF
       if (!newMessage.is_bot) {
@@ -273,6 +288,46 @@ const ChatDetailScreen = ({ navigation, route }) => {
     }
     return user?.name || 'You';
   };
+
+  const startStreaming = useCallback((botMsg) => {
+    // Clear any existing stream
+    if (streamIntervalRef.current) {
+      clearTimeout(streamIntervalRef.current);
+      streamIntervalRef.current = null;
+    }
+    const fullText = botMsg.message || '';
+    console.log('[Streaming] Starting:', fullText.substring(0, 30) + '...');
+    streamIndexRef.current = 0;
+    setStreamingMsg(botMsg);
+    setStreamedText('');
+
+    const tick = () => {
+      streamIndexRef.current += 2;
+      if (streamIndexRef.current >= fullText.length) {
+        streamIntervalRef.current = null;
+        setStreamedText(fullText);
+        console.log('[Streaming] Complete');
+        // Move to regular messages after a brief pause
+        setTimeout(() => {
+          setStreamingMsg(null);
+          setStreamedText('');
+          setMessages(prev => {
+            if (prev.some(m => m.id === botMsg.id)) return prev;
+            return [...prev, botMsg];
+          });
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }, 50);
+        }, 300);
+      } else {
+        setStreamedText(fullText.slice(0, streamIndexRef.current));
+        streamIntervalRef.current = setTimeout(tick, 30);
+      }
+    };
+
+    // Start first tick after a small delay to ensure state is set
+    streamIntervalRef.current = setTimeout(tick, 100);
+  }, []);
 
   const handleSend = async () => {
     if (!message.trim() || isSending) return;
@@ -329,7 +384,7 @@ const ChatDetailScreen = ({ navigation, route }) => {
           const botMsg = response.data.bot_reply;
           if (!messageIdsRef.current.has(botMsg.id)) {
             messageIdsRef.current.add(botMsg.id);
-            setMessages(prev => [...prev, botMsg]);
+            startStreaming(botMsg);
           }
         }
         // Track bot status from response (may change after escalation)
@@ -557,7 +612,17 @@ const ChatDetailScreen = ({ navigation, route }) => {
                 ))
               : renderGroupMessages()}
 
-            {isSupport && isSending && (
+            {/* Streaming bot reply - rendered separately to avoid re-render issues */}
+            {isSupport && streamingMsg && (
+              <ChatBubble
+                key={`streaming-${streamingMsg.id}`}
+                message={streamedText + '...'}
+                time=""
+                isSent={false}
+              />
+            )}
+
+            {isSupport && isSending && !streamingMsg && (
               <View style={styles.typingContainer}>
                 <ActivityIndicator size="small" color={Colors.primary} />
                 <Text style={styles.typingText}>Support is typing...</Text>

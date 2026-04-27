@@ -154,7 +154,7 @@ const JoinedScreen = ({ navigation }) => {
                     key={`joined-activity-${activity.id}`}
                     image={activity.thumbnail}
                     title={activity.title}
-                    price={activity.price ? `€${activity.price}` : 'Free'}
+                    price={activity.price && parseFloat(activity.price) > 0 ? `€${activity.price}` : 'FREE'}
                     description={activity.description}
                     time={
                       activity.all_day

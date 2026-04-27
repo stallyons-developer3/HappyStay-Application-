@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Linking,
   Platform,
   Keyboard,
+  RefreshControl,
 } from 'react-native';
 import { Shadow } from 'react-native-shadow-2';
 import { useSelector } from 'react-redux';
@@ -19,6 +20,7 @@ import { Colors, Fonts, Screens } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { HANGOUT } from '../../api/endpoints';
 import { useToast } from '../../context/ToastContext';
+import { getFlagByNationality } from '../../utils/countries';
 
 const { width } = Dimensions.get('window');
 const INPUT_WIDTH = width - 40 - 48 - 12;
@@ -79,7 +81,9 @@ const HangoutDetailScreen = ({ navigation, route }) => {
 
   const [hangout, setHangout] = useState(null);
   const [comments, setComments] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -114,6 +118,7 @@ const HangoutDetailScreen = ({ navigation, route }) => {
   useEffect(() => {
     fetchHangoutDetail();
     fetchComments();
+    fetchChatMessages();
   }, [hangoutId]);
 
   useEffect(() => {
@@ -144,6 +149,30 @@ const HangoutDetailScreen = ({ navigation, route }) => {
     } catch (error) {
     }
   };
+
+  const fetchChatMessages = async () => {
+    try {
+      const response = await api.get(HANGOUT.GET_CHAT(hangoutId));
+      if (response.data?.messages) {
+        // API returns latest first — take first 2 and reverse so newest is last
+        const latestTwo = response.data.messages.slice(0, 2).reverse();
+        setChatMessages(latestTwo);
+      }
+    } catch (error) {
+      // Silently fail — user may not have access to chat
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchHangoutDetail(),
+      fetchComments(),
+      fetchChatMessages(),
+      isOwner && hangoutId ? fetchRequests() : Promise.resolve(),
+    ]);
+    setRefreshing(false);
+  }, [hangoutId, isOwner]);
 
   const fetchRequests = async () => {
     try {
@@ -256,10 +285,6 @@ const HangoutDetailScreen = ({ navigation, route }) => {
     );
   }
 
-  const ageRange =
-    hangout.min_age && hangout.max_age
-      ? `${hangout.min_age}-${hangout.max_age}`
-      : null;
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
 
@@ -270,6 +295,14 @@ const HangoutDetailScreen = ({ navigation, route }) => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
       >
         <View style={styles.header}>
           <TouchableOpacity
@@ -284,12 +317,24 @@ const HangoutDetailScreen = ({ navigation, route }) => {
             />
           </TouchableOpacity>
 
-          <View style={styles.imageContainer}>
+          {hangout.user?.profile_picture ? (
             <Image
-              source={require('../../assets/images/hangoutheader.png')}
-              style={styles.hangoutImage}
+              source={{ uri: hangout.user.profile_picture }}
+              style={styles.ownerAvatar}
               resizeMode="cover"
             />
+          ) : (
+            <View style={styles.ownerInitialCircle}>
+              <Text style={styles.ownerInitialText}>
+                {hangout.user?.name?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            </View>
+          )}
+          <View style={styles.ownerNameRow}>
+            <Text style={styles.ownerName}>{hangout.user?.name || 'User'}</Text>
+            {hangout.user?.nationality ? (
+              <Text style={styles.ownerFlag}>{getFlagByNationality(hangout.user.nationality)}</Text>
+            ) : null}
           </View>
         </View>
 
@@ -321,14 +366,14 @@ const HangoutDetailScreen = ({ navigation, route }) => {
             </View>
           )}
 
-          {ageRange && (
+          {hangout.date && (
             <View style={styles.infoItem}>
               <Image
-                source={require('../../assets/images/icons/users.png')}
+                source={require('../../assets/images/icons/calendar-small.png')}
                 style={styles.infoIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.infoText}>{ageRange}</Text>
+              <Text style={styles.infoText}>{formatDateDisplay(hangout.date)}</Text>
             </View>
           )}
 
@@ -374,13 +419,34 @@ const HangoutDetailScreen = ({ navigation, route }) => {
             <Text style={styles.description}>{hangout.description}</Text>
           ) : null}
 
+          {hangout.linked_activity ? (
+            <TouchableOpacity
+              style={styles.linkedActivityCard}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate(Screens.ActivityDetail, { activityId: hangout.linked_activity.id })}
+            >
+              <Text style={styles.linkedActivityLabel}>Linked Activity</Text>
+              <View style={styles.linkedActivityContent}>
+                <Text style={styles.linkedActivityIcon}>🎯</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.linkedActivityTitle} numberOfLines={1}>{hangout.linked_activity.title}</Text>
+                </View>
+                <Text style={styles.linkedActivityArrow}>›</Text>
+              </View>
+            </TouchableOpacity>
+          ) : null}
+
           <Text style={styles.peopleJoined}>
             {hangout.joined_count || 0}{' '}
             {(hangout.joined_count || 0) === 1 ? 'Person' : 'People'} Joined
           </Text>
 
           <View style={styles.actionButtons}>
-            {!isOwner && !isPublic && (
+            {isOwner || hangout?.user_request_status === 'accepted' ? (
+              <View style={[styles.joinButton, styles.joinedButton]}>
+                <Text style={styles.joinButtonText}>YOU ARE IN</Text>
+              </View>
+            ) : (
               <TouchableOpacity
                 style={[
                   styles.joinButton,
@@ -390,37 +456,24 @@ const HangoutDetailScreen = ({ navigation, route }) => {
                 onPress={handleJoinRequest}
                 disabled={isJoinDisabled}
               >
-                <Text style={styles.joinButtonText}>{getJoinButtonText()}</Text>
+                <Text style={styles.joinButtonText}>
+                  {isJoining ? 'SENDING...' : hangout?.user_request_status === 'pending' ? 'REQUEST PENDING' : 'JOIN THE GROUP'}
+                </Text>
               </TouchableOpacity>
             )}
 
-            {(() => {
-              const chatAllowed =
-                isOwner ||
-                hangout?.user_request_status === 'accepted' ||
-                canJoinHangout.canJoin;
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.chatButton,
-                    (isOwner || isPublic) && { flex: 1 },
-                    !chatAllowed && styles.disabledButton,
-                  ]}
-                  activeOpacity={0.8}
-                  disabled={!chatAllowed}
-                  onPress={() =>
-                    navigation.navigate(Screens.ChatDetail, {
-                      hangoutId: hangout.id,
-                      title: hangout.title,
-                    })
-                  }
-                >
-                  <Text style={styles.chatButtonText}>
-                    {isOwner ? 'Chat' : 'Join Chat'}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })()}
+            <TouchableOpacity
+              style={styles.openChatButton}
+              activeOpacity={0.8}
+              onPress={() =>
+                navigation.navigate(Screens.ChatDetail, {
+                  hangoutId: hangout.id,
+                  title: hangout.title,
+                })
+              }
+            >
+              <Text style={styles.openChatButtonText}>OPEN CHAT</Text>
+            </TouchableOpacity>
           </View>
 
           {isOwner && pendingRequests.length > 0 && (
@@ -479,77 +532,34 @@ const HangoutDetailScreen = ({ navigation, route }) => {
             </>
           )}
 
-          <Text style={styles.commentsTitle}>Comments</Text>
-
-          {comments.length === 0 && (
-            <Text style={styles.noComments}>No comments yet</Text>
-          )}
-
-          {comments.map(comment => {
-            const hasAvatar = comment.user?.profile_picture;
-            return (
-              <View key={comment.id} style={styles.commentItem}>
-                {hasAvatar ? (
-                  <Image
-                    source={{ uri: comment.user.profile_picture }}
-                    style={styles.commentAvatar}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={styles.commentInitialCircle}>
-                    <Text style={styles.commentInitialText}>
-                      {getInitial(comment.user?.name)}
-                    </Text>
-                  </View>
-                )}
-                <View style={styles.commentBubble}>
-                  <Text style={styles.commentName}>
-                    {comment.user?.name || 'User'}
+          {/* Chat Preview - last 2 messages */}
+          {chatMessages.length > 0 && (
+            <View style={styles.chatPreview}>
+              {chatMessages.map(msg => (
+                <View key={`chat-${msg.id}`} style={styles.chatPreviewItem}>
+                  {msg.user?.profile_picture ? (
+                    <Image
+                      source={{ uri: msg.user.profile_picture }}
+                      style={styles.chatPreviewAvatar}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.chatPreviewInitial}>
+                      <Text style={styles.chatPreviewInitialText}>
+                        {getInitial(msg.user?.name)}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={styles.chatPreviewText} numberOfLines={1}>
+                    <Text style={styles.chatPreviewName}>{msg.user?.name || 'User'}: </Text>
+                    {msg.message}
                   </Text>
-                  <Text style={styles.commentText}>{comment.comment}</Text>
                 </View>
-              </View>
-            );
-          })}
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
-
-      <View
-        style={[
-          styles.commentInputContainer,
-          Platform.OS === 'android' &&
-            keyboardHeight > 0 && { paddingBottom: keyboardHeight + 16 },
-        ]}
-      >
-        <Shadow
-          distance={8}
-          startColor="rgba(0, 0, 0, 0.06)"
-          endColor="rgba(0, 0, 0, 0)"
-          offset={[0, 0]}
-        >
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Write a comment"
-              placeholderTextColor={Colors.textLight}
-              value={commentText}
-              onChangeText={setCommentText}
-            />
-          </View>
-        </Shadow>
-        <TouchableOpacity
-          style={[styles.sendButton, isSending && { opacity: 0.6 }]}
-          onPress={handleSendComment}
-          activeOpacity={0.8}
-          disabled={isSending}
-        >
-          <Image
-            source={require('../../assets/images/icons/send.png')}
-            style={styles.sendIcon}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
@@ -922,6 +932,127 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     tintColor: Colors.white,
+  },
+  linkedActivityCard: {
+    backgroundColor: '#F0F9F4',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
+  },
+  linkedActivityLabel: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 11,
+    color: Colors.textGray,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  linkedActivityContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  linkedActivityIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  linkedActivityTitle: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.primary,
+  },
+  linkedActivityDate: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.textGray,
+    marginTop: 2,
+  },
+  linkedActivityArrow: {
+    fontSize: 24,
+    color: Colors.primary,
+    marginLeft: 8,
+    fontWeight: 'bold',
+  },
+  ownerAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginTop: 20,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  ownerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 6,
+  },
+  ownerFlag: {
+    fontSize: 18,
+  },
+  joinedButton: {
+    backgroundColor: Colors.textGray,
+    opacity: 1,
+  },
+  openChatButton: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    paddingVertical: 14,
+    borderRadius: 25,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  openChatButtonText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 12,
+    color: Colors.primary,
+  },
+  chatPreview: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  chatPreviewTitle: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 16,
+    color: Colors.primary,
+    marginBottom: 10,
+  },
+  chatPreviewItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  chatPreviewAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 8,
+  },
+  chatPreviewInitial: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  chatPreviewInitialText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 12,
+    color: Colors.white,
+  },
+  chatPreviewText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.textGray,
+    flex: 1,
+  },
+  chatPreviewName: {
+    fontFamily: Fonts.RobotoBold,
+    color: Colors.textBlack,
   },
 });
 

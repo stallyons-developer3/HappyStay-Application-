@@ -20,16 +20,14 @@ const categoryOptions = [
   { id: 'transport', name: 'Transport' },
 ];
 
-const interestOptions = [
+const hangoutCategoryOptions = [
   { id: 'all', name: 'All' },
-  { id: 'Hiking', name: 'Hiking' },
-  { id: 'Swimming', name: 'Swimming' },
-  { id: 'Camping', name: 'Camping' },
-  { id: 'Beach Party', name: 'Beach Party' },
-  { id: 'Bonfire', name: 'Bonfire' },
-  { id: 'City Tour', name: 'City Tour' },
-  { id: 'Food Tasting', name: 'Food Tasting' },
-  { id: 'Night Club', name: 'Night Club' },
+  { id: 'Nature & Active', name: 'Nature & Active' },
+  { id: 'Sightseeing', name: 'Sightseeing' },
+  { id: 'Party', name: 'Party' },
+  { id: 'Events', name: 'Events' },
+  { id: 'Food & Drink', name: 'Food & Drink' },
+  { id: 'Transport', name: 'Transport' },
 ];
 
 const priceOptions = [
@@ -50,37 +48,32 @@ const activitySortOptions = [
 ];
 
 const hangoutSortOptions = [
-  { id: 'recommended', name: 'Recommended', value: '' },
-  { id: 'newest', name: 'Newest', value: 'newest' },
-  { id: 'popular', name: 'Most Popular', value: 'popular' },
+  { id: 'newest', name: 'Latest Added', value: 'newest' },
+  { id: 'date_asc', name: 'By Date', value: 'date_asc' },
 ];
 
 const FilterModal = ({ visible, onClose, onApply, type = 'activities' }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedPrice, setSelectedPrice] = useState('all');
-  const [selectedSort, setSelectedSort] = useState('recommended');
+  const [selectedSort, setSelectedSort] = useState(type === 'hangouts' ? 'newest' : 'recommended');
 
   const sortOptions =
     type === 'hangouts' ? hangoutSortOptions : activitySortOptions;
   const showPrice = type === 'activities';
-  const filterOptions = type === 'hangouts' ? interestOptions : categoryOptions;
-  const filterLabel = type === 'hangouts' ? 'Interest' : 'Category';
+  const filterOptions = type === 'hangouts' ? hangoutCategoryOptions : categoryOptions;
+  const filterLabel = type === 'hangouts' ? 'Category' : 'Category';
 
   const handleReset = () => {
     setSelectedCategory('all');
     setSelectedPrice('all');
-    setSelectedSort('recommended');
+    setSelectedSort(type === 'hangouts' ? 'newest' : 'recommended');
   };
 
   const handleApply = () => {
     const params = {};
 
     if (selectedCategory !== 'all') {
-      if (type === 'hangouts') {
-        params.interests = selectedCategory;
-      } else {
-        params.typology = selectedCategory;
-      }
+      params.typology = selectedCategory;
     }
 
     if (showPrice && selectedPrice !== 'all') {
@@ -121,11 +114,7 @@ const FilterModal = ({ visible, onClose, onApply, type = 'activities' }) => {
               </TouchableOpacity>
             </View>
             <Text style={styles.modalTitle}>Filter</Text>
-            <View style={styles.resetButton}>
-              <TouchableOpacity onPress={handleReset}>
-                <Text style={styles.resetText}>Reset</Text>
-              </TouchableOpacity>
-            </View>
+            <View style={styles.headerSpacer} />
           </View>
 
           <ScrollView
@@ -187,7 +176,7 @@ const FilterModal = ({ visible, onClose, onApply, type = 'activities' }) => {
               </>
             )}
 
-            {/* <Text style={styles.sectionTitle}>Sort By</Text>
+            <Text style={styles.sectionTitle}>Sort By</Text>
             <View style={styles.sortContainer}>
               {sortOptions.map(option => (
                 <TouchableOpacity
@@ -216,11 +205,14 @@ const FilterModal = ({ visible, onClose, onApply, type = 'activities' }) => {
                   </View>
                 </TouchableOpacity>
               ))}
-            </View> */}
+            </View>
           </ScrollView>
 
           <View style={styles.buttonContainer}>
             <Button title="Apply Filters" onPress={handleApply} size="full" />
+            <TouchableOpacity style={styles.resetFilterButton} onPress={() => { handleReset(); onApply({}); onClose(); }} activeOpacity={0.7}>
+              <Text style={styles.resetFilterText}>Reset Filters</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -262,20 +254,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.primary,
   },
-  resetButton: {
+  headerSpacer: {
     width: 80,
-    alignItems: 'flex-end',
-  },
-  resetText: {
-    fontFamily: Fonts.poppinsBold,
-    fontSize: 14,
-    color: Colors.primary,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    textTransform: 'lowercase',
   },
   scrollView: {
     paddingHorizontal: 24,
@@ -356,6 +336,21 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
+    gap: 12,
+  },
+  resetFilterButton: {
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderRadius: 50,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  resetFilterText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 20,
+    color: Colors.primary,
+    textTransform: 'lowercase',
   },
 });
 

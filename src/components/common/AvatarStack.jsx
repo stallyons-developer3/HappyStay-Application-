@@ -17,7 +17,7 @@ const AvatarStack = ({
       {displayImages.map((item, index) => {
         const isObject = typeof item === 'object' && item !== null && !item.uri;
         const imageUrl = isObject
-          ? item.image
+          ? (item.profile_picture || item.image)
           : typeof item === 'string'
           ? item
           : null;

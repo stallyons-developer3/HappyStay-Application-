@@ -1,6 +1,5 @@
-export const BASE_URL =
-  'https://sty1.devmail-sty.online/HappyStay-2/public/api';
-export const STORAGE_URL = 'https://sty1.devmail-sty.online/HappyStay-2/public';
+export const BASE_URL = 'https://appystay.com/api';
+export const STORAGE_URL = 'https://appystay.com';
 
 export const AUTH = {
   LOGIN: '/login',
@@ -36,6 +35,7 @@ export const ACTIVITY = {
   SEND_CHAT: id => `/activities/${id}/chat`,
   WHATSAPP_CLICK: id => `/activities/${id}/whatsapp-click`,
   TOGGLE_LIKE: id => `/activities/${id}/like`,
+  TOGGLE_INTEREST: id => `/activities/${id}/interest`,
 };
 
 export const HANGOUT = {

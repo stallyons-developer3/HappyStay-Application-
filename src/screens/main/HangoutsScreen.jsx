@@ -308,30 +308,21 @@ const HangoutsScreen = ({ navigation }) => {
                   key={`hangout-${hangout.id}`}
                   profileImage={hangout.user?.profile_picture}
                   name={hangout.user?.name || 'User'}
+                  nationality={hangout.user?.nationality}
+                  propertyName={hangout.user?.property_name}
                   title={hangout.title}
                   typology={hangout.typology}
+                  hangoutPropertyName={hangout.property_name}
+                  linkedActivity={hangout.linked_activity}
                   description={hangout.description}
                   peopleCount={hangout.joined_count || 0}
                   peopleImages={peopleData}
-                  isOwner={hangout.user?.id === user?.id}
-                  isPublic={!hangout.is_private}
-                  requestStatus={hangout.user_request_status}
-                  joinLoading={joiningId === hangout.id}
-                  canJoin={joinCheck.canJoin}
-                  canJoinMessage={joinCheck.message}
                   isLiked={hangout.is_liked || false}
                   likesCount={hangout.likes_count || 0}
                   onLikePress={() => handleLikePress(hangout.id)}
                   onPress={() =>
                     navigation.navigate(Screens.HangoutDetail, {
                       hangoutId: hangout.id,
-                    })
-                  }
-                  onJoinPress={() => handleJoinRequest(hangout.id)}
-                  onChatPress={() =>
-                    navigation.navigate(Screens.ChatDetail, {
-                      hangoutId: hangout.id,
-                      title: hangout.title,
                     })
                   }
                 />

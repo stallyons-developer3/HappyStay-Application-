@@ -36,6 +36,8 @@ const ActivityCard = ({
   activityType = 'event',
   scheduleText = null,
   partnerWhatsapp = null,
+  interestedCount = 0,
+  propertyName = null,
 }) => {
   const imageSource =
     typeof image === 'string' ? { uri: image } : image || defaultImage;
@@ -53,8 +55,11 @@ const ActivityCard = ({
       </View>
 
       <View style={styles.content}>
+        {propertyName ? (
+          <Text style={styles.propertyTag} numberOfLines={1}>{propertyName}</Text>
+        ) : null}
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title} numberOfLines={1}>{title}</Text>
           <Text style={styles.price}>{price}</Text>
         </View>
 
@@ -121,26 +126,13 @@ const ActivityCard = ({
           </TouchableOpacity>
         </View>
 
-        <View style={styles.joinSection}>
-          {isOwner || requestStatus === 'accepted' ? (
-            <Button title="Joined" size="full" disabled={true} />
-          ) : requestStatus === 'pending' ? (
-            <Button title="Pending" size="full" disabled={true} />
-          ) : !canJoin ? (
-            <Button
-              title={canJoinMessage || 'Cannot Join'}
-              size="full"
-              disabled={true}
-            />
-          ) : (
-            <Button
-              title={isPrivate ? 'Request to Join' : 'Join'}
-              size="full"
-              onPress={onJoinPress}
-              loading={joinLoading}
-              disabled={joinLoading}
-            />
+        <View style={styles.discoverSection}>
+          {interestedCount > 0 && (
+            <Text style={styles.interestedCount}>
+              {interestedCount} {interestedCount === 1 ? 'person' : 'people'} interested
+            </Text>
           )}
+          <Text style={styles.discoverMore}>EXPLORE ACTIVITIES &gt;</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -181,15 +173,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  propertyTag: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 11,
+    color: Colors.textGray,
+    marginBottom: 4,
+  },
   title: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.primary,
+    flex: 1,
+    marginRight: 12,
   },
   price: {
     fontFamily: Fonts.RobotoBold,
     fontSize: 14,
     color: Colors.primary,
+    flexShrink: 0,
   },
   description: {
     fontFamily: Fonts.RobotoRegular,
@@ -249,9 +250,20 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.primary,
     textTransform: 'lowercase',
   },
-  joinSection: {
+  discoverSection: {
     marginTop: 12,
-    gap: 8,
+    alignItems: 'flex-end',
+  },
+  interestedCount: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  discoverMore: {
+    fontFamily: Fonts.poppinsSemiBold,
+    fontSize: 13,
+    color: Colors.primary,
   },
 });
 

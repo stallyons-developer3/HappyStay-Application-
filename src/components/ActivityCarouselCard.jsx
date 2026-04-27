@@ -43,11 +43,11 @@ const ActivityCarouselCard = ({
 
   const priceText = activity.price && parseFloat(activity.price) > 0
     ? `€${activity.price}`
-    : 'Free';
+    : 'FREE';
 
-  const providerText = activity.provided_by === 'partner' && activity.partner_name
+  const providerText = activity.property_name || (activity.provided_by === 'partner' && activity.partner_name
     ? activity.partner_name
-    : 'By the hostel';
+    : 'By the hostel');
 
   const typologyLabel = typologyLabels[activity.typology] || activity.typology || '';
 

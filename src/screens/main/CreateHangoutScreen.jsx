@@ -19,7 +19,7 @@ import { WebView } from 'react-native-webview';
 import { useSelector } from 'react-redux';
 import { Colors, Fonts, GOOGLE_MAPS_API_KEY } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
-import { HANGOUT } from '../../api/endpoints';
+import { HANGOUT, ACTIVITY } from '../../api/endpoints';
 import { useToast } from '../../context/ToastContext';
 
 const typologyOptions = [
@@ -65,6 +65,11 @@ const CreateHangoutScreen = ({ navigation, route }) => {
   const [showTypologyModal, setShowTypologyModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [linkedActivity, setLinkedActivity] = useState(null);
+  const [showActivityModal, setShowActivityModal] = useState(false);
+  const [availableActivities, setAvailableActivities] = useState([]);
+  const [activitySearch, setActivitySearch] = useState('');
+  const [isLoadingActivities, setIsLoadingActivities] = useState(false);
 
   const webViewRef = useRef(null);
 
@@ -105,6 +110,10 @@ const CreateHangoutScreen = ({ navigation, route }) => {
           if (parsed) setTime(parsed);
         }
 
+        if (h.linked_activity) {
+          setLinkedActivity(h.linked_activity);
+        }
+
         if (h.latitude && h.longitude) {
           setMarkerPosition({
             latitude: parseFloat(h.latitude),
@@ -117,6 +126,35 @@ const CreateHangoutScreen = ({ navigation, route }) => {
     } finally {
       setIsFetching(false);
     }
+  };
+
+  const fetchActivitiesForDate = async () => {
+    setIsLoadingActivities(true);
+    try {
+      const response = await api.get(`${ACTIVITY.GET_ALL}?per_page=100`);
+      if (response.data?.activities) {
+        const hangoutDateStr = formatDateForAPI(date);
+        const filtered = response.data.activities.filter(a => {
+          // Open activities (no date) — always available to tag
+          if (a.activity_type === 'open' || !a.start_date) return true;
+          // Event activities — hangout date must fall within activity dates
+          const startDate = a.start_date.slice(0, 10);
+          const endDate = (a.end_date || a.start_date).slice(0, 10);
+          return hangoutDateStr >= startDate && hangoutDateStr <= endDate;
+        });
+        setAvailableActivities(filtered);
+      }
+    } catch (error) {
+      setAvailableActivities([]);
+    } finally {
+      setIsLoadingActivities(false);
+    }
+  };
+
+  const openActivityPicker = () => {
+    setActivitySearch('');
+    fetchActivitiesForDate();
+    setShowActivityModal(true);
   };
 
   const parseTimeString = timeStr => {
@@ -354,6 +392,7 @@ const CreateHangoutScreen = ({ navigation, route }) => {
         meeting_point: meetingPoint.trim() || null,
         description: description.trim(),
         is_private: isPrivate,
+        activity_id: linkedActivity?.id || null,
       };
 
       let response;
@@ -504,6 +543,28 @@ const CreateHangoutScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       </View>
+
+      <Text style={styles.inputLabel}>Link an Activity (optional)</Text>
+      <TouchableOpacity
+        style={styles.inputContainer}
+        activeOpacity={0.7}
+        onPress={openActivityPicker}
+      >
+        <Text style={linkedActivity ? styles.inputText : styles.placeholderText} numberOfLines={1}>
+          {linkedActivity ? linkedActivity.title : 'Select an activity'}
+        </Text>
+        {linkedActivity ? (
+          <TouchableOpacity onPress={() => setLinkedActivity(null)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Text style={{ fontSize: 16, color: Colors.textGray }}>✕</Text>
+          </TouchableOpacity>
+        ) : (
+          <Image
+            source={require('../../assets/images/arrow-down.png')}
+            style={styles.dropdownIcon}
+            resizeMode="contain"
+          />
+        )}
+      </TouchableOpacity>
 
       <View style={styles.spacer} />
 
@@ -673,6 +734,71 @@ const CreateHangoutScreen = ({ navigation, route }) => {
               }
               showsVerticalScrollIndicator={false}
             />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showActivityModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowActivityModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Link an Activity</Text>
+              <TouchableOpacity onPress={() => setShowActivityModal(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.activitySearchInput}
+              placeholder="Search activities..."
+              placeholderTextColor={Colors.textLight}
+              value={activitySearch}
+              onChangeText={setActivitySearch}
+            />
+            {isLoadingActivities ? (
+              <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 20 }} />
+            ) : (
+              <FlatList
+                data={availableActivities.filter(a =>
+                  a.title.toLowerCase().includes(activitySearch.toLowerCase())
+                )}
+                keyExtractor={item => String(item.id)}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.activityPickerItem}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setLinkedActivity(item);
+                      setShowActivityModal(false);
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.activityPickerTitle} numberOfLines={1}>{item.title}</Text>
+                      <Text style={styles.activityPickerDate}>
+                        {item.start_date}{item.end_date && item.end_date !== item.start_date ? ` - ${item.end_date}` : ''}
+                      </Text>
+                    </View>
+                    {item.typology_color && (
+                      <View style={[styles.activityPickerBadge, { backgroundColor: item.typology_color }]}>
+                        <Text style={styles.activityPickerBadgeText}>
+                          {(item.typology || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <Text style={styles.activityPickerEmpty}>
+                    No activities found for {formatDateDisplay(date)}
+                  </Text>
+                }
+                showsVerticalScrollIndicator={false}
+              />
+            )}
           </View>
         </View>
       </Modal>
@@ -921,6 +1047,57 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoRegular,
     fontSize: 16,
     color: Colors.textDark,
+  },
+  activitySearchInput: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textBlack,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 10,
+  },
+  activityPickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  activityPickerTitle: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 14,
+    color: Colors.textBlack,
+  },
+  activityPickerDate: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.textGray,
+    marginTop: 2,
+  },
+  activityPickerBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  activityPickerBadgeText: {
+    fontFamily: Fonts.poppinsSemiBold,
+    fontSize: 9,
+    color: '#fff',
+    textTransform: 'uppercase',
+  },
+  activityPickerEmpty: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 14,
+    color: Colors.textGray,
+    textAlign: 'center',
+    marginTop: 30,
   },
 });
 

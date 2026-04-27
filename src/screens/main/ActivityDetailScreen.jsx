@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Linking,
   Platform,
   Keyboard,
+  RefreshControl,
 } from 'react-native';
 import { Shadow } from 'react-native-shadow-2';
 import { useSelector } from 'react-redux';
@@ -21,6 +22,8 @@ import { ACTIVITY } from '../../api/endpoints';
 import { useToast } from '../../context/ToastContext';
 import JoinActivityModal from '../../components/JoinActivityModal';
 import HeartIcon from '../../components/common/HeartIcon';
+import AvatarStack from '../../components/common/AvatarStack';
+import Svg, { Path } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
 const INPUT_WIDTH = width - 40 - 48 - 12;
@@ -67,7 +70,9 @@ const ActivityDetailScreen = ({ navigation, route }) => {
 
   const [activity, setActivity] = useState(null);
   const [comments, setComments] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
   const [commentText, setCommentText] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -75,6 +80,8 @@ const ActivityDetailScreen = ({ navigation, route }) => {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
+  const [isInterested, setIsInterested] = useState(false);
+  const [interestedCount, setInterestedCount] = useState(0);
 
   const scrollViewRef = React.useRef(null);
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
@@ -102,6 +109,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
   useEffect(() => {
     fetchActivityDetail();
     fetchComments();
+    fetchChatMessages();
   }, [activityId]);
 
   const fetchActivityDetail = async () => {
@@ -111,6 +119,8 @@ const ActivityDetailScreen = ({ navigation, route }) => {
         setActivity(response.data.activity);
         setIsLiked(response.data.activity.is_liked || false);
         setLikesCount(response.data.activity.likes_count || 0);
+        setIsInterested(response.data.activity.is_interested || false);
+        setInterestedCount(response.data.activity.interested_count || 0);
       }
     } catch (error) {
       showToast('error', 'Failed to load activity details');
@@ -128,6 +138,28 @@ const ActivityDetailScreen = ({ navigation, route }) => {
     } catch (error) {
     }
   };
+
+  const fetchChatMessages = async () => {
+    try {
+      const response = await api.get(ACTIVITY.GET_CHAT(activityId));
+      if (response.data?.messages) {
+        const latestTwo = response.data.messages.slice(0, 2).reverse();
+        setChatMessages(latestTwo);
+      }
+    } catch (error) {
+      // Silently fail — user may not have access to chat
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchActivityDetail(),
+      fetchComments(),
+      fetchChatMessages(),
+    ]);
+    setRefreshing(false);
+  }, [activityId]);
 
   const handleSendComment = async () => {
     if (!commentText.trim()) return;
@@ -222,6 +254,19 @@ const ActivityDetailScreen = ({ navigation, route }) => {
     Linking.openURL(`https://wa.me/${phone}?text=${message}`);
   };
 
+  const handleToggleInterest = async () => {
+    // Optimistic update
+    setIsInterested(prev => !prev);
+    setInterestedCount(prev => isInterested ? prev - 1 : prev + 1);
+    try {
+      await api.post(ACTIVITY.TOGGLE_INTEREST(activity.id));
+    } catch (e) {
+      // Revert
+      setIsInterested(prev => !prev);
+      setInterestedCount(prev => isInterested ? prev + 1 : prev - 1);
+    }
+  };
+
   const getJoinButtonText = () => {
     if (isJoining) return 'Sending...';
     if (!activity) return 'Join';
@@ -285,6 +330,14 @@ const ActivityDetailScreen = ({ navigation, route }) => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
       >
         <View style={styles.imageContainer}>
           <Image
@@ -458,159 +511,142 @@ const ActivityDetailScreen = ({ navigation, route }) => {
             )}
           </View>
 
+          {activity?.partner_email ? (
+            <TouchableOpacity style={[styles.infoItem, { marginBottom: 10 }]} activeOpacity={0.7}
+              onPress={() => Linking.openURL(`mailto:${activity.partner_email}`)}>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
+                <Path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d="M22 6l-10 7L2 6" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <Text style={[styles.infoText, { color: Colors.primary, textDecorationLine: 'underline' }]}>{activity.partner_email}</Text>
+            </TouchableOpacity>
+          ) : null}
+          {activity?.partner_phone ? (
+            <TouchableOpacity style={[styles.infoItem, { marginBottom: 10 }]} activeOpacity={0.7}
+              onPress={() => Linking.openURL(`tel:${activity.partner_phone}`)}>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: 6 }}>
+                <Path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <Text style={[styles.infoText, { color: Colors.primary, textDecorationLine: 'underline' }]}>{activity.partner_phone}</Text>
+            </TouchableOpacity>
+          ) : null}
+
           {activity.description ? (
             <Text style={styles.description}>{activity.description}</Text>
           ) : null}
 
+          {activity.activity_type === 'event' && interestedCount > 0 && (
+            <View style={styles.interestedAboveRow}>
+              <Text style={styles.interestedCount}>
+                {interestedCount} {interestedCount === 1 ? 'person' : 'people'} interested
+              </Text>
+            </View>
+          )}
+
           <View style={styles.priceRow}>
             <Text style={styles.price}>
-              {activity.price ? `€${activity.price}` : 'Free'}
+              {activity.price && parseFloat(activity.price) > 0
+                ? `€${activity.price}${activity.price_type === 'per_person' ? '/person' : activity.price_type === 'per_hour' ? '/hour' : ''}`
+                : 'FREE'}
             </Text>
-            <Text style={styles.peopleJoined}>
-              {activity.joined_count || 0} People Joined
-            </Text>
+            {activity.activity_type === 'event' ? (
+              <View style={styles.joinedRow}>
+                <AvatarStack
+                  images={activity.people_images || []}
+                  maxDisplay={3}
+                  size={28}
+                  overlap={8}
+                />
+                <Text style={styles.peopleJoined}>
+                  {activity.joined_count || 0} People Joined
+                </Text>
+              </View>
+            ) : interestedCount > 0 ? (
+              <Text style={styles.interestedCount}>
+                {interestedCount} {interestedCount === 1 ? 'person' : 'people'} interested
+              </Text>
+            ) : null}
           </View>
 
           <View style={styles.actionButtons}>
-            <View style={styles.actionRow}>
+            {/* Row 1: WhatsApp + I'm Interested side by side */}
+            <View style={styles.actionRowSplit}>
+              {activity?.partner_whatsapp ? (
+                <TouchableOpacity style={[styles.whatsappButton, { flex: 1, marginRight: 8 }]} activeOpacity={0.8} onPress={handleWhatsAppPress}>
+                  <Text style={styles.whatsappButtonText}>book via whatsapp</Text>
+                </TouchableOpacity>
+              ) : null}
+
               <TouchableOpacity
-                style={[
-                  styles.joinButton,
-                  isJoinDisabled && styles.disabledButton,
-                ]}
+                style={[styles.interestedButton, isInterested && styles.interestedButtonActive, { flex: 1 }]}
                 activeOpacity={0.8}
-                onPress={() => {
-                  setSelectedSeats(1);
-                  setShowJoinModal(true);
-                }}
+                onPress={handleToggleInterest}
+              >
+                <Text style={[styles.interestedButtonText, isInterested && styles.interestedButtonTextActive]} numberOfLines={1}>
+                  {isInterested ? 'interested' : "i'm interested"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Row 2: Join button (event only) */}
+            {activity.activity_type === 'event' && (
+              <TouchableOpacity
+                style={[styles.joinButton, isJoinDisabled && styles.disabledButton]}
+                activeOpacity={0.8}
+                onPress={() => { setSelectedSeats(1); setShowJoinModal(true); }}
                 disabled={isJoinDisabled}
               >
                 <Text style={styles.joinButtonText}>{getJoinButtonText()}</Text>
               </TouchableOpacity>
+            )}
 
-              {(() => {
-                const chatAllowed =
-                isOwner ||
-                activity?.user_request_status === 'accepted' ||
-                canJoinActivity.canJoin;
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.chatButton,
-                    !chatAllowed && styles.disabledButton,
-                  ]}
-                  activeOpacity={0.8}
-                  disabled={!chatAllowed}
-                  onPress={() =>
-                    navigation.navigate(Screens.ChatDetail, {
-                      activityId: activity.id,
-                      title: activity.title,
-                    })
-                  }
-                >
-                  <Text style={styles.chatButtonText}>Join Chat</Text>
-                </TouchableOpacity>
-              );
-            })()}
-            </View>
-
-            {activity?.partner_whatsapp ? (
-              <TouchableOpacity
-                style={styles.whatsappButton}
-                activeOpacity={0.8}
-                onPress={handleWhatsAppPress}
-              >
-                <Text style={styles.whatsappButtonText}>Book via WhatsApp</Text>
-              </TouchableOpacity>
-            ) : null}
           </View>
 
-          <Text style={styles.commentsTitle}>Comments</Text>
-
-          {comments.length === 0 && (
-            <Text style={styles.noComments}>No comments yet</Text>
-          )}
-
-          {comments.map(comment => {
-            const hasAvatar = comment.user?.profile_picture;
-            return (
-              <View key={comment.id} style={styles.commentItem}>
-                {hasAvatar ? (
-                  <Image
-                    source={{ uri: comment.user.profile_picture }}
-                    style={styles.commentAvatar}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={styles.commentInitialCircle}>
-                    <Text style={styles.commentInitialText}>
-                      {getInitial(comment.user?.name)}
-                    </Text>
-                  </View>
-                )}
-                <View style={styles.commentBubble}>
-                  <Text style={styles.commentName}>
-                    {comment.user?.name || 'User'}
+          {/* Chat Preview - last 2 messages (event activities only) */}
+          {activity.activity_type === 'event' && chatMessages.length > 0 && (
+            <View style={styles.chatPreview}>
+              {chatMessages.map(msg => (
+                <View key={`chat-${msg.id}`} style={styles.chatPreviewItem}>
+                  {msg.user?.profile_picture ? (
+                    <Image
+                      source={{ uri: msg.user.profile_picture }}
+                      style={styles.chatPreviewAvatar}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.chatPreviewInitial}>
+                      <Text style={styles.chatPreviewInitialText}>
+                        {getInitial(msg.user?.name)}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={styles.chatPreviewText} numberOfLines={1}>
+                    <Text style={styles.chatPreviewName}>{msg.user?.name || 'User'}: </Text>
+                    {msg.message}
                   </Text>
-                  <Text style={styles.commentText}>{comment.comment}</Text>
                 </View>
-              </View>
-            );
-          })}
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
 
-      <JoinActivityModal
-        visible={showJoinModal}
-        onClose={() => setShowJoinModal(false)}
-        onConfirm={seats => {
-          setSelectedSeats(seats);
-          setShowJoinModal(false);
-          handleJoinRequest(seats);
-        }}
-        price={activity?.price}
-        isPrivate={activity?.is_private}
-        loading={isJoining}
-        maxGuests={activity?.max_guests}
-        joinedCount={activity?.joined_count}
-      />
-
-      <View
-        style={[
-          styles.commentInputContainer,
-          Platform.OS === 'android' &&
-            keyboardHeight > 0 && { paddingBottom: keyboardHeight + 16 },
-        ]}
-      >
-        <Shadow
-          distance={8}
-          startColor="rgba(0, 0, 0, 0.06)"
-          endColor="rgba(0, 0, 0, 0)"
-          offset={[0, 0]}
-        >
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Write a comment"
-              placeholderTextColor={Colors.textLight}
-              value={commentText}
-              onChangeText={setCommentText}
-            />
-          </View>
-        </Shadow>
-        <TouchableOpacity
-          style={[styles.sendButton, isSending && { opacity: 0.6 }]}
-          onPress={handleSendComment}
-          activeOpacity={0.8}
-          disabled={isSending}
-        >
-          <Image
-            source={require('../../assets/images/icons/send.png')}
-            style={styles.sendIcon}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </View>
+      {activity?.activity_type === 'event' && (
+        <JoinActivityModal
+          visible={showJoinModal}
+          onClose={() => setShowJoinModal(false)}
+          onConfirm={seats => {
+            setSelectedSeats(seats);
+            setShowJoinModal(false);
+            handleJoinRequest(seats);
+          }}
+          price={activity?.price}
+          isPrivate={activity?.is_private}
+          loading={isJoining}
+          maxGuests={activity?.max_guests}
+          joinedCount={activity?.joined_count}
+        />
+      )}
     </View>
   );
 };
@@ -670,7 +706,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   title: {
     fontFamily: Fonts.RobotoBold,
@@ -682,7 +718,7 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   locationText: {
     fontFamily: Fonts.RobotoRegular,
@@ -737,8 +773,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 10,
   },
   mapButton: {
     flexDirection: 'row',
@@ -762,7 +798,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textGray,
     lineHeight: 22,
-    marginBottom: 20,
+    marginTop: 6,
+    marginBottom: 10,
   },
   priceRow: {
     flexDirection: 'row',
@@ -774,6 +811,11 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.RobotoBold,
     fontSize: 20,
     color: Colors.primary,
+  },
+  joinedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   peopleJoined: {
     fontFamily: Fonts.RobotoBold,
@@ -830,6 +872,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 10,
   },
+  actionRowSplit: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   actionRow: {
     flexDirection: 'row',
     gap: 10,
@@ -842,14 +888,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   whatsappButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#25D366',
     paddingVertical: 14,
+    paddingHorizontal: 12,
     borderRadius: 25,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   whatsappButtonText: {
     fontFamily: Fonts.poppinsBold,
-    fontSize: 12,
+    fontSize: 11,
     color: '#fff',
     textTransform: 'lowercase',
   },
@@ -964,6 +1012,77 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     tintColor: Colors.white,
+  },
+  interestedButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  interestedButtonActive: {
+    backgroundColor: Colors.backgroundGray,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  interestedButtonText: {
+    fontFamily: Fonts.poppinsBold,
+    fontSize: 11,
+    color: Colors.white,
+  },
+  interestedButtonTextActive: {
+    color: Colors.primary,
+  },
+  interestedCount: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 13,
+    color: Colors.primary,
+    marginTop: 8,
+  },
+  interestedAboveRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 4,
+  },
+  chatPreview: {
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  chatPreviewItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  chatPreviewAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 8,
+  },
+  chatPreviewInitial: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  chatPreviewInitialText: {
+    fontFamily: Fonts.RobotoBold,
+    fontSize: 12,
+    color: Colors.white,
+  },
+  chatPreviewText: {
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.textGray,
+    flex: 1,
+  },
+  chatPreviewName: {
+    fontFamily: Fonts.RobotoBold,
+    color: Colors.textBlack,
   },
 });
 
