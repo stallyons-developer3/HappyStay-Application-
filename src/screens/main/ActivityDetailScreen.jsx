@@ -20,6 +20,7 @@ import { Colors, Fonts, Screens } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { ACTIVITY } from '../../api/endpoints';
 import { useToast } from '../../context/ToastContext';
+import { useBadgeCounts } from '../../context/BadgeContext';
 import JoinActivityModal from '../../components/JoinActivityModal';
 import HeartIcon from '../../components/common/HeartIcon';
 import AvatarStack from '../../components/common/AvatarStack';
@@ -65,6 +66,7 @@ const formatTypology = value => {
 
 const ActivityDetailScreen = ({ navigation, route }) => {
   const { showToast } = useToast();
+  const { registerGroupChats } = useBadgeCounts();
   const { user } = useSelector(state => state.auth);
   const { activityId } = route.params || {};
 
@@ -186,7 +188,8 @@ const ActivityDetailScreen = ({ navigation, route }) => {
       const response = await api.post(ACTIVITY.SEND_REQUEST(activityId), {
         seats: seatCount,
       });
-      const newStatus = response.data?.request_status || 'pending';
+      const newStatus = response.data?.request_status
+        || (activity?.is_private ? 'pending' : 'accepted');
       showToast('success', response.data?.message || 'Request sent!');
       setActivity(prev => ({
         ...prev,
@@ -196,6 +199,11 @@ const ActivityDetailScreen = ({ navigation, route }) => {
             ? (prev.joined_count || 0) + seatCount
             : prev.joined_count,
       }));
+      // Subscribe to this chat's Pusher channel immediately so the bottom-nav
+      // bubble updates in real-time even before the user opens the chat
+      if (newStatus === 'accepted') {
+        registerGroupChats([{ type: 'activity', id: activityId }]);
+      }
     } catch (error) {
       const msg =
         error.response?.data?.message || 'Failed to send join request';
@@ -603,7 +611,7 @@ const ActivityDetailScreen = ({ navigation, route }) => {
           </View>
 
           {/* Chat Preview - last 2 messages (event activities only) */}
-          {activity.activity_type === 'event' && chatMessages.length > 0 && (
+          {activity.activity_type === 'event' && (isOwner || activity?.user_request_status === 'accepted') && chatMessages.length > 0 && (
             <View style={styles.chatPreview}>
               {chatMessages.map(msg => (
                 <View key={`chat-${msg.id}`} style={styles.chatPreviewItem}>

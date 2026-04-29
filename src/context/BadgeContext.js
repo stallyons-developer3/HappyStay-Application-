@@ -6,10 +6,11 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
+import { AppState } from 'react-native';
 import { useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../api/axiosInstance';
-import { NOTIFICATION, SUPPORT } from '../api/endpoints';
+import { NOTIFICATION, SUPPORT, CHAT } from '../api/endpoints';
 import { subscribeToChannel } from '../services/pusherService';
 
 const STORAGE_KEY = 'chat_unreads';
@@ -95,23 +96,7 @@ export const BadgeProvider = ({ children }) => {
     }
   }, []);
 
-  // Initial fetch
-  useEffect(() => {
-    if (user?.id) {
-      fetchNotifCount();
-      fetchSupportUnread();
-    }
-  }, [user?.id, fetchNotifCount, fetchSupportUnread]);
-
-  // Poll every 30s
-  useEffect(() => {
-    if (!user?.id) return;
-    const interval = setInterval(() => {
-      fetchNotifCount();
-      fetchSupportUnread();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [user?.id, fetchNotifCount, fetchSupportUnread]);
+  // (fetchAndSubscribeGroupChats is defined after subscribeGroupChannel below)
 
   // Real-time: notification channel
   useEffect(() => {
@@ -193,6 +178,74 @@ export const BadgeProvider = ({ children }) => {
     },
     [subscribeGroupChannel],
   );
+
+  // Fetch user's group chats, populate per-chat unread counts, and subscribe
+  // to each Pusher channel so bubbles update even before the user opens the
+  // Chat tab. This also catches messages received while the app was killed.
+  const fetchAndSubscribeGroupChats = useCallback(async () => {
+    try {
+      const res = await api.get(CHAT.MY_GROUPS).catch(() => null);
+      const groups = res?.data?.chat_groups || res?.data?.groups || [];
+
+      // Subscribe to each chat's Pusher channel
+      groups.forEach(g => {
+        if (g?.type && g?.id != null) {
+          subscribeGroupChannel(g.type, g.id);
+        }
+      });
+
+      // Populate per-chat unread counts from server (preserves support count)
+      setChatUnreads(prev => {
+        const next = { support: prev.support || 0 };
+        groups.forEach(g => {
+          if (g?.type && g?.id != null) {
+            const chatKey = `${g.type}-${g.id}`;
+            // Don't overwrite the count for the chat the user is currently viewing
+            if (activeChatRef.current === chatKey) return;
+            const count = Number(g.unread_count || 0);
+            if (count > 0) {
+              next[chatKey] = count;
+            }
+          }
+        });
+        return next;
+      });
+    } catch (e) {
+    }
+  }, [subscribeGroupChannel]);
+
+  // Initial fetch + subscribe (after user logs in)
+  useEffect(() => {
+    if (user?.id) {
+      fetchNotifCount();
+      fetchSupportUnread();
+      fetchAndSubscribeGroupChats();
+    }
+  }, [user?.id, fetchNotifCount, fetchSupportUnread, fetchAndSubscribeGroupChats]);
+
+  // Poll every 30s
+  useEffect(() => {
+    if (!user?.id) return;
+    const interval = setInterval(() => {
+      fetchNotifCount();
+      fetchSupportUnread();
+      fetchAndSubscribeGroupChats();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [user?.id, fetchNotifCount, fetchSupportUnread, fetchAndSubscribeGroupChats]);
+
+  // Refresh counts when app returns to foreground (covers killed-app case)
+  useEffect(() => {
+    if (!user?.id) return;
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        fetchNotifCount();
+        fetchSupportUnread();
+        fetchAndSubscribeGroupChats();
+      }
+    });
+    return () => sub.remove();
+  }, [user?.id, fetchNotifCount, fetchSupportUnread, fetchAndSubscribeGroupChats]);
 
   // Increment a specific chat's unread count
   const incrementChatUnread = useCallback(chatKey => {

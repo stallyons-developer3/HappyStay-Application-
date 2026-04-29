@@ -57,6 +57,7 @@ export const HANGOUT = {
 
 export const CHAT = {
   MY_GROUPS: '/my-chat-groups',
+  MARK_SEEN: '/chat-seen',
 };
 
 export const SUPPORT = {

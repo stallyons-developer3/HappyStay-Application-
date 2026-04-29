@@ -20,6 +20,7 @@ import { Colors, Fonts, Screens } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
 import { HANGOUT } from '../../api/endpoints';
 import { useToast } from '../../context/ToastContext';
+import { useBadgeCounts } from '../../context/BadgeContext';
 import { getFlagByNationality } from '../../utils/countries';
 
 const { width } = Dimensions.get('window');
@@ -76,6 +77,7 @@ const getTimeAgo = dateStr => {
 
 const HangoutDetailScreen = ({ navigation, route }) => {
   const { showToast } = useToast();
+  const { registerGroupChats } = useBadgeCounts();
   const { hangoutId } = route.params || {};
   const { user } = useSelector(state => state.auth);
 
@@ -207,7 +209,22 @@ const HangoutDetailScreen = ({ navigation, route }) => {
     try {
       const response = await api.post(HANGOUT.SEND_REQUEST(hangoutId));
       showToast('success', response.data?.message || 'Request sent!');
-      setHangout(prev => ({ ...prev, user_request_status: 'pending' }));
+      // Public hangouts auto-accept; private ones go to pending
+      const newStatus = response.data?.request?.status
+        || response.data?.request_status
+        || (hangout?.is_private ? 'pending' : 'accepted');
+      setHangout(prev => ({
+        ...prev,
+        user_request_status: newStatus,
+        joined_count: newStatus === 'accepted'
+          ? (prev.joined_count || 0) + 1
+          : prev.joined_count,
+      }));
+      // Subscribe to this chat's Pusher channel immediately so the bottom-nav
+      // bubble updates in real-time even before the user opens the chat
+      if (newStatus === 'accepted') {
+        registerGroupChats([{ type: 'hangout', id: hangoutId }]);
+      }
     } catch (error) {
       const msg =
         error.response?.data?.message || 'Failed to send join request';
@@ -462,18 +479,26 @@ const HangoutDetailScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              style={styles.openChatButton}
-              activeOpacity={0.8}
-              onPress={() =>
-                navigation.navigate(Screens.ChatDetail, {
-                  hangoutId: hangout.id,
-                  title: hangout.title,
-                })
-              }
-            >
-              <Text style={styles.openChatButtonText}>OPEN CHAT</Text>
-            </TouchableOpacity>
+            {isOwner || hangout?.user_request_status === 'accepted' ? (
+              <TouchableOpacity
+                style={styles.openChatButton}
+                activeOpacity={0.8}
+                onPress={() =>
+                  navigation.navigate(Screens.ChatDetail, {
+                    hangoutId: hangout.id,
+                    title: hangout.title,
+                  })
+                }
+              >
+                <Text style={styles.openChatButtonText}>OPEN CHAT</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.chatLockedText}>
+                {hangout?.user_request_status === 'pending'
+                  ? 'Your request is pending. Once accepted, the chat will be enabled.'
+                  : 'Please join this hangout first to access the chat.'}
+              </Text>
+            )}
           </View>
 
           {isOwner && pendingRequests.length > 0 && (
@@ -532,8 +557,8 @@ const HangoutDetailScreen = ({ navigation, route }) => {
             </>
           )}
 
-          {/* Chat Preview - last 2 messages */}
-          {chatMessages.length > 0 && (
+          {/* Chat Preview - last 2 messages (only for owner or accepted members) */}
+          {(isOwner || hangout?.user_request_status === 'accepted') && chatMessages.length > 0 && (
             <View style={styles.chatPreview}>
               {chatMessages.map(msg => (
                 <View key={`chat-${msg.id}`} style={styles.chatPreviewItem}>
@@ -1008,6 +1033,14 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.poppinsBold,
     fontSize: 12,
     color: Colors.primary,
+  },
+  chatLockedText: {
+    flex: 1,
+    fontFamily: Fonts.RobotoRegular,
+    fontSize: 12,
+    color: Colors.textLight,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   chatPreview: {
     marginTop: 8,

@@ -17,7 +17,7 @@ import { useSelector } from 'react-redux';
 import { Shadow } from 'react-native-shadow-2';
 import { Colors, Fonts } from '../../constants/Constants';
 import api from '../../api/axiosInstance';
-import { SUPPORT, ACTIVITY, HANGOUT } from '../../api/endpoints';
+import { SUPPORT, ACTIVITY, HANGOUT, CHAT } from '../../api/endpoints';
 import { subscribeToChannel } from '../../services/pusherService';
 import ChatBubble from '../../components/ChatBubble';
 import { useBadgeCounts } from '../../context/BadgeContext';
@@ -68,14 +68,28 @@ const ChatDetailScreen = ({ navigation, route }) => {
   // Clear unread badge when entering chat, unset when leaving
   useEffect(() => {
     clearChatUnread(chatKey);
-    // Mark support messages as read on backend
+    // Mark messages as read on backend
     if (isSupport) {
       api.post(SUPPORT.MARK_READ).catch(() => {});
+    } else {
+      api
+        .post(CHAT.MARK_SEEN, {
+          type: isActivityChat ? 'activity' : 'hangout',
+          id: groupId,
+        })
+        .catch(() => {});
     }
     return () => {
       // Mark read again on leave so any real-time messages received while in chat are marked
       if (isSupport) {
         api.post(SUPPORT.MARK_READ).catch(() => {});
+      } else {
+        api
+          .post(CHAT.MARK_SEEN, {
+            type: isActivityChat ? 'activity' : 'hangout',
+            id: groupId,
+          })
+          .catch(() => {});
       }
       unsetActiveChat();
     };
@@ -416,7 +430,8 @@ const ChatDetailScreen = ({ navigation, route }) => {
       setMessages(prev => prev.filter(m => m.id !== tempId));
       setMessage(text);
       if (error.response?.status === 403) {
-        showToast('error', 'You need to be accepted to send messages.');
+        const msg = error.response?.data?.message || 'Please join this hangout/activity first to chat.';
+        showToast('error', msg);
       }
     } finally {
       setIsSending(false);
